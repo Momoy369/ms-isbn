@@ -9,7 +9,7 @@ use App\Models\BookReview;
 class AuthorDashboardController
 {
     /** Biaya per copy buku untuk estimasi royalti (IDR). */
-    private const ROYALTY_RATE = 0.10;
+    private const ROYALTY_RATE = 0.20;
 
     /** Asumsi harga jual per copy jika tidak ada data. */
     private const DEFAULT_BOOK_PRICE = 80_000;
@@ -26,6 +26,7 @@ class AuthorDashboardController
             'publishingPackage.items',
             'packageItems',
             'authorInvoices',
+            'externalSales',
             'files' => fn($q) => $q->where('is_active', true),
         ])
             ->where('author_user_id', $userId)
@@ -62,6 +63,23 @@ class AuthorDashboardController
             $bookPrice = optional($book->publishingPackage)->price > 0
                 ? (float) $book->publishingPackage->price
                 : self::DEFAULT_BOOK_PRICE;
+
+            $actualGross = (float) $book->externalSales->sum('gross_amount');
+            $actualQty = (int) $book->externalSales->sum('quantity');
+
+            if ($actualGross > 0) {
+                $estimated = $actualGross * self::ROYALTY_RATE;
+
+                return [
+                    'book_id' => $book->id,
+                    'judul' => $book->judul,
+                    'print_qty' => $actualQty,
+                    'book_price' => $actualQty > 0 ? ($actualGross / $actualQty) : $bookPrice,
+                    'estimated_royalty' => $estimated,
+                    'is_complete' => true,
+                    'royalty_status' => 'actual',
+                ];
+            }
 
             $estimated = $printQty * $bookPrice * self::ROYALTY_RATE;
             $isComplete = in_array($book->workflow_status, ['isbn_approved', 'selesai']);

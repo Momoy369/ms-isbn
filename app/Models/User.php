@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->role === 'owner';
     }
 
+    public function isFinance()
+    {
+        return $this->role === 'finance';
+    }
+
     public function assignments()
     {
         return $this->hasMany(
@@ -103,6 +108,16 @@ class User extends Authenticatable
         return $this->hasMany(
             Notification::class
         );
+    }
+
+    public function externalSalesInputs()
+    {
+        return $this->hasMany(ExternalSalesRecord::class, 'input_by_user_id');
+    }
+
+    public function authorOrders()
+    {
+        return $this->hasMany(AuthorBookOrder::class);
     }
 
     public function isAuthorProfileComplete(): bool

@@ -16,6 +16,9 @@ use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorReviewController;
 use App\Http\Controllers\AuthorInvoiceController;
 use App\Http\Controllers\FinanceInvoiceController;
+use App\Http\Controllers\AdminPrintPriceController;
+use App\Http\Controllers\AdminExternalSalesController;
+use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
 use App\Http\Controllers\NotificationController;
@@ -355,6 +358,24 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/finance/books/{book}/delivery-links', [FinanceInvoiceController::class, 'updateBookLinks'])
                 ->name('finance.books.delivery-links');
+
+            Route::get('/print-prices', [AdminPrintPriceController::class, 'index'])
+                ->name('print-prices.index');
+
+            Route::post('/print-prices', [AdminPrintPriceController::class, 'store'])
+                ->name('print-prices.store');
+
+            Route::put('/print-prices/{printPrice}', [AdminPrintPriceController::class, 'update'])
+                ->name('print-prices.update');
+
+            Route::delete('/print-prices/{printPrice}', [AdminPrintPriceController::class, 'destroy'])
+                ->name('print-prices.destroy');
+
+            Route::get('/external-sales', [AdminExternalSalesController::class, 'index'])
+                ->name('external-sales.index');
+
+            Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
+                ->name('external-sales.store');
         });
 
         Route::get('/my-assignments', [AssignmentController::class, 'myAssignments'])
@@ -439,6 +460,15 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/author/invoices/{invoice}/pay-now', [AuthorInvoiceController::class, 'payNow'])
                 ->name('author.invoices.pay-now');
+
+            Route::get('/author/orders', [AuthorOrderController::class, 'index'])
+                ->name('author.orders.index');
+
+            Route::post('/author/orders/buy-package', [AuthorOrderController::class, 'buyPackage'])
+                ->name('author.orders.buy-package');
+
+            Route::post('/author/orders/reprint', [AuthorOrderController::class, 'reorderPrint'])
+                ->name('author.orders.reprint');
 
             Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
                 ->name('author.claims.index');

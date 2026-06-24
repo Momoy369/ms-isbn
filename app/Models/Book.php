@@ -502,6 +502,16 @@ class Book extends Model
         return $this->hasMany(\App\Models\AuthorInvoice::class);
     }
 
+    public function orders()
+    {
+        return $this->hasMany(\App\Models\AuthorBookOrder::class);
+    }
+
+    public function externalSales()
+    {
+        return $this->hasMany(\App\Models\ExternalSalesRecord::class);
+    }
+
     public function canAuthorAccessDeliveryLinks(): bool
     {
         if ($this->links_unlocked_manually) {

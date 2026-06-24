@@ -336,6 +336,18 @@ return [
         ],
 
         [
+            'text' => 'Harga Cetak',
+            'route' => 'print-prices.index',
+            'icon' => 'fas fa-print',
+        ],
+
+        [
+            'text' => 'Penjualan Eksternal',
+            'route' => 'external-sales.index',
+            'icon' => 'fas fa-store',
+        ],
+
+        [
             'text' => 'Invoice Penulis',
             'route' => 'author.invoices.index',
             'icon' => 'fas fa-money-check-alt',
@@ -345,6 +357,12 @@ return [
             'text' => 'Claim Buku Penulis',
             'route' => 'author.claims.index',
             'icon' => 'fas fa-id-card',
+        ],
+
+        [
+            'text' => 'Order Penulis',
+            'route' => 'author.orders.index',
+            'icon' => 'fas fa-shopping-cart',
         ],
 
         [

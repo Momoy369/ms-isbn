@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
 use Illuminate\Http\Request;
@@ -88,6 +89,11 @@ class AuthorInvoiceController extends Controller
             'payment_method' => 'author_online',
             'payment_reference' => 'AUTH-' . strtoupper((string) \Illuminate\Support\Str::random(10)),
             'verified_by_user_id' => auth()->id(),
+        ]);
+
+        AuthorBookOrder::where('author_invoice_id', $invoice->id)->update([
+            'status' => 'paid',
+            'paid_at' => now(),
         ]);
 
         return back()->with('success', 'Pembayaran berhasil. Invoice #' . $invoice->invoice_number . ' sudah lunas.');

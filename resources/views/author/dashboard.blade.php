@@ -130,6 +130,10 @@
                         <p class="mb-0 opacity-75">Pantau produksi buku, invoice, royalti, dan review dari satu tempat.</p>
                     </div>
                     <div class="d-flex align-items-center" style="gap:.45rem;">
+                        <a href="{{ route('author.orders.index') }}"
+                            class="btn btn-success btn-sm font-weight-bold shadow-sm">
+                            <i class="fas fa-shopping-cart mr-1"></i> Order Paket/Cetak
+                        </a>
                         <a href="{{ route('author.claims.index') }}"
                             class="btn btn-warning btn-sm font-weight-bold shadow-sm">
                             <i class="fas fa-id-card mr-1"></i> Claim Buku
@@ -290,8 +294,8 @@
                 <div class="card-body pt-0">
                     <div class="alert alert-light border mb-3 py-2 small">
                         <i class="fas fa-info-circle text-info mr-1"></i>
-                        Royalti diestimasi <strong>10%</strong> dari (Jumlah Cetak &times; Harga Paket).
-                        Angka ini bersifat estimasi dan dikonfirmasi saat buku selesai diproduksi.
+                        Royalti dihitung <strong>20%</strong> dari omzet penjualan tercatat (sumber eksternal).
+                        Jika belum ada data penjualan, sistem menampilkan estimasi sementara.
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
@@ -316,10 +320,14 @@
                                                 Rp {{ number_format($row['estimated_royalty'], 0, ',', '.') }}
                                             </td>
                                             <td>
-                                                <span
-                                                    class="badge badge-{{ $row['is_complete'] ? 'success' : 'secondary' }}">
-                                                    {{ $row['is_complete'] ? 'Siap dihitung' : 'Estimasi' }}
-                                                </span>
+                                                @if (($row['royalty_status'] ?? '') === 'actual')
+                                                    <span class="badge badge-success">Aktual Penjualan</span>
+                                                @else
+                                                    <span
+                                                        class="badge badge-{{ $row['is_complete'] ? 'info' : 'secondary' }}">
+                                                        {{ $row['is_complete'] ? 'Estimasi Produksi' : 'Estimasi' }}
+                                                    </span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endif

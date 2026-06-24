@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
 use Illuminate\Http\Request;
@@ -94,6 +95,11 @@ class FinanceInvoiceController extends Controller
             'notes' => $data['notes'] ?? $invoice->notes,
         ]);
 
+        AuthorBookOrder::where('author_invoice_id', $invoice->id)->update([
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
         return back()->with('success', 'Invoice #' . $invoice->invoice_number . ' berhasil ditandai lunas.');
     }
 
@@ -103,6 +109,11 @@ class FinanceInvoiceController extends Controller
             'status' => 'pending',
             'paid_at' => null,
             'verified_by_user_id' => null,
+        ]);
+
+        AuthorBookOrder::where('author_invoice_id', $invoice->id)->update([
+            'status' => 'invoiced',
+            'paid_at' => null,
         ]);
 
         return back()->with('success', 'Invoice #' . $invoice->invoice_number . ' dikembalikan ke status pending.');
