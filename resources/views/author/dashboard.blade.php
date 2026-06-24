@@ -714,6 +714,70 @@
 
                             {{-- TAB: INVOICE PER NASKAH --}}
                             <div class="tab-pane fade" id="tab-invoice-{{ $tabId }}">
+                                @php
+                                    $canAccessDeliveryLinks = $book->canAuthorAccessDeliveryLinks();
+                                    $hasAnyDeliveryLink =
+                                        !empty($book->final_drive_link) || !empty($book->final_ebook_link);
+                                @endphp
+
+                                <div class="alert alert-{{ $canAccessDeliveryLinks ? 'success' : 'warning' }} py-2">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap"
+                                        style="gap:.5rem;">
+                                        <div>
+                                            <i class="fas fa-lock-open mr-1"></i>
+                                            <strong>Akses File Hasil Produksi</strong>
+                                            <div class="small mt-1">
+                                                @if ($canAccessDeliveryLinks)
+                                                    Pelunasan paket telah terverifikasi. Link Drive/Ebook dapat diakses.
+                                                @else
+                                                    Link Drive/Ebook akan aktif setelah pelunasan paket lunas atau dibuka
+                                                    manual oleh admin finance.
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <span
+                                            class="badge badge-{{ $canAccessDeliveryLinks ? 'success' : 'secondary' }} px-2 py-1">
+                                            {{ $canAccessDeliveryLinks ? 'AKTIF' : 'TERKUNCI' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                @if ($hasAnyDeliveryLink)
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-2">
+                                            <div class="border rounded p-2 bg-light h-100">
+                                                <div class="small text-muted mb-1">Link Drive</div>
+                                                @if (!empty($book->final_drive_link) && $canAccessDeliveryLinks)
+                                                    <a href="{{ $book->final_drive_link }}" target="_blank"
+                                                        class="btn btn-sm btn-success">
+                                                        <i class="fas fa-external-link-alt mr-1"></i> Buka Link Drive
+                                                    </a>
+                                                @elseif (!empty($book->final_drive_link))
+                                                    <span class="badge badge-secondary">Terkunci</span>
+                                                @else
+                                                    <span class="text-muted small">Belum tersedia.</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="border rounded p-2 bg-light h-100">
+                                                <div class="small text-muted mb-1">Link Ebook</div>
+                                                @if (!empty($book->final_ebook_link) && $canAccessDeliveryLinks)
+                                                    <a href="{{ $book->final_ebook_link }}" target="_blank"
+                                                        class="btn btn-sm btn-success">
+                                                        <i class="fas fa-external-link-alt mr-1"></i> Buka Link Ebook
+                                                    </a>
+                                                @elseif (!empty($book->final_ebook_link))
+                                                    <span class="badge badge-secondary">Terkunci</span>
+                                                @else
+                                                    <span class="text-muted small">Belum termasuk paket / belum
+                                                        tersedia.</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 @if ($bookInvoices->isEmpty())
                                     <div class="alert alert-light border">
                                         <i class="fas fa-file-invoice mr-1 text-muted"></i>
@@ -767,7 +831,8 @@
                                                 <tr>
                                                     <td colspan="3" class="text-right font-weight-bold">Total</td>
                                                     <td class="text-right font-weight-bold text-primary">Rp
-                                                        {{ number_format($bookInvoices->sum('amount'), 0, ',', '.') }}</td>
+                                                        {{ number_format($bookInvoices->sum('amount'), 0, ',', '.') }}
+                                                    </td>
                                                     <td colspan="3"></td>
                                                 </tr>
                                             </tfoot>

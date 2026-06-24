@@ -39,6 +39,10 @@ class Book extends Model
 
         'link_produk',
 
+        'final_drive_link',
+
+        'final_ebook_link',
+
         'jumlah_cetak',
 
         'tahun_terbit',
@@ -80,6 +84,12 @@ class Book extends Model
         'author_user_id',
 
         'claimed_at',
+
+        'links_unlocked_manually',
+
+        'links_unlocked_at',
+
+        'links_unlocked_by_user_id',
 
         'book_type',
 
@@ -490,6 +500,31 @@ class Book extends Model
     public function authorInvoices()
     {
         return $this->hasMany(\App\Models\AuthorInvoice::class);
+    }
+
+    public function canAuthorAccessDeliveryLinks(): bool
+    {
+        if ($this->links_unlocked_manually) {
+            return true;
+        }
+
+        $packageInvoices = $this->authorInvoices()
+            ->where('is_package_billing', true)
+            ->get();
+
+        if ($packageInvoices->isEmpty()) {
+            return false;
+        }
+
+        return $packageInvoices->every(fn($invoice) => $invoice->isPaid());
+    }
+
+    public function hasOutstandingPackageBalance(): bool
+    {
+        return $this->authorInvoices()
+            ->where('is_package_billing', true)
+            ->where('status', '!=', 'paid')
+            ->exists();
     }
 
     public function syncPackageItems(): void

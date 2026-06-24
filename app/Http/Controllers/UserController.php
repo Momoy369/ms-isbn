@@ -36,7 +36,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author'])],
+            'role' => ['required', Rule::in(['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance'])],
             'ktp_number' => ['nullable', 'string', 'max:32', 'unique:users,ktp_number'],
             'ktp_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],
@@ -100,7 +100,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role' => ['required', Rule::in(['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author'])],
+            'role' => ['required', Rule::in(['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance'])],
             'ktp_number' => ['nullable', 'string', 'max:32', Rule::unique('users', 'ktp_number')->ignore($user->id)],
             'ktp_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],

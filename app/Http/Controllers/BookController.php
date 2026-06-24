@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Services\ReadinessService;
 use App\Services\ApprovalService;
 use App\Services\BookActivityService;
+use App\Models\AuthorInvoice;
 use App\Models\User;
 use App\Models\PublishingPackage;
 use App\Services\AssignmentRecommendationService;
@@ -77,7 +78,7 @@ class BookController extends Controller
 
         $author = $this->resolveAuthorFromRequest($request);
 
-        Book::create([
+        $book = Book::create([
 
             'nomor_naskah' =>
                 $request->nomor_naskah,
@@ -107,6 +108,11 @@ class BookController extends Controller
                 $author?->id
 
         ]);
+
+        if ($book->publishing_package_id) {
+            $book->load('publishingPackage');
+            AuthorInvoice::createPackageInvoice($book);
+        }
 
         return redirect()
             ->route('books.index')
@@ -384,6 +390,9 @@ class BookController extends Controller
                     'jumlah_cetak' => $package->default_print_quantity,
                 ]);
             }
+
+            $book->load('publishingPackage');
+            AuthorInvoice::createPackageInvoice($book);
         }
 
         $activity->log(
@@ -522,6 +531,10 @@ class BookController extends Controller
             $book->update(
                 $data
             );
+
+            if ($nextWorkflow === 'selesai') {
+                AuthorInvoice::createFinalPackageInvoice($book);
+            }
 
             app(
                 BookActivityService::class
@@ -672,6 +685,9 @@ class BookController extends Controller
                 'selesai'
 
         ]);
+
+        $book->load('publishingPackage');
+        AuthorInvoice::createFinalPackageInvoice($book);
 
         $activity->log(
 

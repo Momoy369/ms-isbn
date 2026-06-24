@@ -15,6 +15,7 @@ use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorReviewController;
 use App\Http\Controllers\AuthorInvoiceController;
+use App\Http\Controllers\FinanceInvoiceController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
 use App\Http\Controllers\NotificationController;
@@ -83,7 +84,7 @@ Route::middleware('auth')->group(function () {
         );
 
     Route::middleware([
-        'role:admin,editor,layouter,isbn,owner'
+        'role:admin,editor,layouter,isbn,owner,finance'
     ])->group(function () {
 
         Route::get(
@@ -339,6 +340,23 @@ Route::middleware('auth')->group(function () {
                 );
         });
 
+        Route::middleware(['role:admin,owner,finance'])->group(function () {
+            Route::get('/finance/invoices', [FinanceInvoiceController::class, 'index'])
+                ->name('finance.invoices.index');
+
+            Route::post('/finance/invoices/{invoice}/mark-paid', [FinanceInvoiceController::class, 'markPaid'])
+                ->name('finance.invoices.mark-paid');
+
+            Route::post('/finance/invoices/{invoice}/mark-pending', [FinanceInvoiceController::class, 'markPending'])
+                ->name('finance.invoices.mark-pending');
+
+            Route::post('/finance/books/{book}/create-final-invoice', [FinanceInvoiceController::class, 'createFinalInvoice'])
+                ->name('finance.books.create-final-invoice');
+
+            Route::post('/finance/books/{book}/delivery-links', [FinanceInvoiceController::class, 'updateBookLinks'])
+                ->name('finance.books.delivery-links');
+        });
+
         Route::get('/my-assignments', [AssignmentController::class, 'myAssignments'])
             ->name('assignments.my');
 
@@ -418,6 +436,9 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/author/invoices/{invoice}/upload-proof', [AuthorInvoiceController::class, 'uploadProof'])
                 ->name('author.invoices.upload-proof');
+
+            Route::post('/author/invoices/{invoice}/pay-now', [AuthorInvoiceController::class, 'payNow'])
+                ->name('author.invoices.pay-now');
 
             Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
                 ->name('author.claims.index');

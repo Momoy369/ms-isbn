@@ -12,6 +12,8 @@ class AuthorInvoice extends Model
         'book_id',
         'user_id',
         'type',
+        'is_package_billing',
+        'installment_number',
         'description',
         'amount',
         'status',
@@ -20,6 +22,9 @@ class AuthorInvoice extends Model
         'due_date',
         'paid_at',
         'payment_proof',
+        'payment_method',
+        'payment_reference',
+        'verified_by_user_id',
         'notes',
     ];
 
@@ -28,6 +33,8 @@ class AuthorInvoice extends Model
         'due_date' => 'date',
         'paid_at' => 'datetime',
         'revision_count' => 'integer',
+        'is_package_billing' => 'boolean',
+        'installment_number' => 'integer',
     ];
 
     protected static function booted(): void
@@ -35,10 +42,6 @@ class AuthorInvoice extends Model
         static::creating(function (self $invoice): void {
             if (empty($invoice->invoice_number)) {
                 $invoice->invoice_number = self::generateNumber($invoice->type);
-            }
-
-            if (empty($invoice->due_date)) {
-                $invoice->due_date = now()->addDays(14)->format('Y-m-d');
             }
         });
     }
@@ -73,6 +76,11 @@ class AuthorInvoice extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
     public function isPending(): bool
     {
         return $this->status === 'pending';
@@ -90,6 +98,14 @@ class AuthorInvoice extends Model
 
     public function getTypeLabel(): string
     {
+        if ($this->is_package_billing && $this->installment_number === 1) {
+            return 'Paket Penerbitan (DP 50%)';
+        }
+
+        if ($this->is_package_billing && $this->installment_number === 2) {
+            return 'Paket Penerbitan (Pelunasan 50%)';
+        }
+
         return match ($this->type) {
             'package' => 'Paket Penerbitan',
             'revision' => 'Revisi Berbayar',
@@ -133,6 +149,11 @@ class AuthorInvoice extends Model
         return $query->where('user_id', $userId);
     }
 
+    public function scopePackageBilling($query)
+    {
+        return $query->where('is_package_billing', true);
+    }
+
     /**
      * Auto-create a package invoice when a book is linked to a publishing package.
      */
@@ -150,23 +171,67 @@ class AuthorInvoice extends Model
             return null;
         }
 
-        // Prevent duplicate package invoices
+        // Prevent duplicate first installment package invoices
         $existing = self::where('book_id', $book->id)
-            ->where('type', 'package')
+            ->where('is_package_billing', true)
+            ->where('installment_number', 1)
             ->first();
 
         if ($existing) {
             return $existing;
         }
 
+        $dpAmount = round(((float) $package->price) * 0.5, 2);
+
         return self::create([
             'book_id' => $book->id,
             'user_id' => $authorUserId,
             'type' => 'package',
-            'description' => 'Biaya Paket Penerbitan: ' . $package->name,
-            'amount' => $package->price,
+            'is_package_billing' => true,
+            'installment_number' => 1,
+            'description' => 'DP 50% Paket Penerbitan: ' . $package->name,
+            'amount' => $dpAmount,
             'status' => 'pending',
-            'notes' => 'Invoice diterbitkan otomatis saat paket penerbitan dipilih.',
+            'notes' => 'Invoice DP 50% diterbitkan saat paket penerbitan dipilih.',
+        ]);
+    }
+
+    /**
+     * Auto-create final installment invoice once production is complete.
+     */
+    public static function createFinalPackageInvoice(Book $book): ?self
+    {
+        $package = $book->publishingPackage;
+
+        if (!$package || $package->price <= 0 || !$book->author_user_id) {
+            return null;
+        }
+
+        $existing = self::where('book_id', $book->id)
+            ->where('is_package_billing', true)
+            ->where('installment_number', 2)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $finalAmount = ((float) $package->price) - round(((float) $package->price) * 0.5, 2);
+
+        if ($finalAmount <= 0) {
+            return null;
+        }
+
+        return self::create([
+            'book_id' => $book->id,
+            'user_id' => $book->author_user_id,
+            'type' => 'package',
+            'is_package_billing' => true,
+            'installment_number' => 2,
+            'description' => 'Pelunasan 50% Paket Penerbitan: ' . $package->name,
+            'amount' => $finalAmount,
+            'status' => 'pending',
+            'notes' => 'Invoice pelunasan diterbitkan saat produksi dinyatakan selesai.',
         ]);
     }
 

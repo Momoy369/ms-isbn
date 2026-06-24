@@ -64,10 +64,33 @@ class AuthorInvoiceController extends Controller
         $invoice->update([
             'payment_proof' => $path,
             'notes' => $data['notes'] ?? $invoice->notes,
+            'payment_method' => 'author_upload',
             'status' => 'pending', // Admin yang confirm paid
         ]);
 
         return back()->with('success', 'Bukti pembayaran berhasil dikirim. Admin akan mengkonfirmasi dalam 1×24 jam.');
+    }
+
+    /**
+     * Simulasi pembayaran langsung dari panel author.
+     */
+    public function payNow(AuthorInvoice $invoice)
+    {
+        $this->authorizeAuthor($invoice);
+
+        if (!$invoice->isPending()) {
+            return back()->with('warning', 'Invoice ini sudah ' . $invoice->getStatusLabel() . '.');
+        }
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => now(),
+            'payment_method' => 'author_online',
+            'payment_reference' => 'AUTH-' . strtoupper((string) \Illuminate\Support\Str::random(10)),
+            'verified_by_user_id' => auth()->id(),
+        ]);
+
+        return back()->with('success', 'Pembayaran berhasil. Invoice #' . $invoice->invoice_number . ' sudah lunas.');
     }
 
     /**

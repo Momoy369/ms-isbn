@@ -25,6 +25,7 @@ class AuthorDashboardController
             'reviews',
             'publishingPackage.items',
             'packageItems',
+            'authorInvoices',
             'files' => fn($q) => $q->where('is_active', true),
         ])
             ->where('author_user_id', $userId)

@@ -121,6 +121,35 @@
                             Dibayar pada: <strong>{{ optional($invoice->paid_at)->format('d F Y H:i') ?? '-' }}</strong>
                         </div>
                     @endif
+
+                    @php
+                        $canAccessDeliveryLinks = $invoice->book && $invoice->book->canAuthorAccessDeliveryLinks();
+                        $hasAnyDeliveryLink =
+                            !empty($invoice->book->final_drive_link) || !empty($invoice->book->final_ebook_link);
+                    @endphp
+                    @if ($hasAnyDeliveryLink)
+                        <div class="p-3 rounded border bg-light">
+                            <div class="font-weight-bold mb-2"><i class="fas fa-link mr-1"></i> Link Hasil Produksi</div>
+                            @if ($canAccessDeliveryLinks)
+                                <div class="small text-success mb-2">Akses terbuka karena invoice paket telah lunas.</div>
+                                @if (!empty($invoice->book->final_drive_link))
+                                    <a href="{{ $invoice->book->final_drive_link }}" target="_blank"
+                                        class="btn btn-sm btn-success mr-1 mb-1">
+                                        <i class="fas fa-external-link-alt mr-1"></i> Buka Link Drive
+                                    </a>
+                                @endif
+                                @if (!empty($invoice->book->final_ebook_link))
+                                    <a href="{{ $invoice->book->final_ebook_link }}" target="_blank"
+                                        class="btn btn-sm btn-success mb-1">
+                                        <i class="fas fa-external-link-alt mr-1"></i> Buka Link Ebook
+                                    </a>
+                                @endif
+                            @else
+                                <div class="small text-warning">Link masih terkunci sampai pelunasan terverifikasi atau
+                                    dibuka manual oleh finance.</div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -158,6 +187,14 @@
                             </div>
                             <button type="submit" class="btn btn-primary btn-block">
                                 <i class="fas fa-paper-plane mr-1"></i> Kirim Bukti Pembayaran
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ route('author.invoices.pay-now', $invoice) }}" class="mt-2"
+                            onsubmit="return confirm('Konfirmasi pembayaran invoice ini sekarang?')">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-block">
+                                <i class="fas fa-credit-card mr-1"></i> Bayar Sekarang (Online)
                             </button>
                         </form>
 

@@ -330,6 +330,24 @@ return [
         ],
 
         [
+            'text' => 'Finance Invoice',
+            'route' => 'finance.invoices.index',
+            'icon' => 'fas fa-file-invoice-dollar',
+        ],
+
+        [
+            'text' => 'Invoice Penulis',
+            'route' => 'author.invoices.index',
+            'icon' => 'fas fa-money-check-alt',
+        ],
+
+        [
+            'text' => 'Claim Buku Penulis',
+            'route' => 'author.claims.index',
+            'icon' => 'fas fa-id-card',
+        ],
+
+        [
             'text' => 'Naskah',
 
             'route' => 'books.index',

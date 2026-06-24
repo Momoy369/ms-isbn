@@ -32,7 +32,7 @@
                     <div class="col-md-6 form-group">
                         <label>Role <span class="text-danger">*</span></label>
                         <select name="role" class="form-control @error('role') is-invalid @enderror" required>
-                            @foreach (['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author'] as $role)
+                            @foreach (['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance'] as $role)
                                 <option value="{{ $role }}" @selected(old('role', $user->role) === $role)>{{ strtoupper($role) }}
                                 </option>
                             @endforeach
