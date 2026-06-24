@@ -3,43 +3,50 @@
 @section('title', 'Preview Buku: ' . $book->judul)
 
 @section('css')
-<style>
-    /* Styling khusus untuk area preview mirip PDF Viewer */
-    .preview-container {
-        background-color: #525659;
-        padding: 40px 20px;
-        border-radius: 0.25rem;
-        overflow-y: auto;
-    }
-    .book-page {
-        width: 148mm;
-        min-height: 210mm;
-        margin: 0 auto 40px auto; /* Memberikan jarak antar halaman */
-        background: white;
-        padding: 25mm;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        position: relative;
-    }
-    
-    /* Pengaturan saat dicetak (CTRL+P) */
-    @media print {
+    <style>
+        /* Styling khusus untuk area preview mirip PDF Viewer */
         .preview-container {
-            background-color: transparent !important;
-            padding: 0 !important;
+            background-color: #525659;
+            padding: 40px 20px;
+            border-radius: 0.25rem;
+            overflow-y: auto;
         }
+
         .book-page {
-            margin: 0 !important;
-            box-shadow: none !important;
-            page-break-after: always;
+            width: 148mm;
+            min-height: 210mm;
+            margin: 0 auto 40px auto;
+            /* Memberikan jarak antar halaman */
+            background: white;
+            padding: 25mm;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
         }
-        .no-print {
-            display: none !important;
+
+        /* Pengaturan saat dicetak (CTRL+P) */
+        @media print {
+            .preview-container {
+                background-color: transparent !important;
+                padding: 0 !important;
+            }
+
+            .book-page {
+                margin: 0 !important;
+                box-shadow: none !important;
+                page-break-after: always;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .main-footer,
+            .main-header,
+            .main-sidebar {
+                display: none !important;
+            }
         }
-        .main-footer, .main-header, .main-sidebar {
-            display: none !important;
-        }
-    }
-</style>
+    </style>
 @stop
 
 @section('content_header')
@@ -66,7 +73,7 @@
 
         <div class="card-body p-0">
             <div class="preview-container">
-                
+
                 {{-- HALAMAN 1: COVER & JUDUL --}}
                 <div class="book-page text-center">
                     <br><br><br><br><br>
@@ -75,11 +82,12 @@
                     @endphp
 
                     @if ($cover)
-                        <img src="{{ asset('storage/' . $cover->file_path) }}" class="img-fluid mb-4 shadow-sm" style="max-height:600px; object-fit: contain;">
+                        <img src="{{ asset('storage/' . $cover->file_path) }}" class="img-fluid mb-4 shadow-sm"
+                            style="max-height:600px; object-fit: contain;">
                     @endif
 
                     <h1 class="font-weight-bold">{{ $book->judul }}</h1>
-                    @if($book->subjudul)
+                    @if ($book->subjudul)
                         <h4 class="text-muted">{{ $book->subjudul }}</h4>
                     @endif
                     <h5 class="mt-4">{{ $book->penulis_1 }}</h5>
@@ -134,14 +142,13 @@
 
                 @foreach ($book->sectionsGenerator->sortBy('sort_order') as $section)
                     @switch($section->section_type)
-                        
                         @case('preface')
                             <div class="book-page">
                                 <h2 class="text-center font-weight-bold">KATA PENGANTAR</h2>
                                 <hr>
                                 {!! $section->content !!}
                             </div>
-                            @break
+                        @break
 
                         @case('chapter')
                             <div class="book-page">
@@ -153,7 +160,7 @@
                             @php
                                 $chapterNumber++;
                             @endphp
-                            @break
+                        @break
 
                         @case('subchapter')
                             <div class="book-page">
@@ -161,15 +168,16 @@
                                 <hr>
                                 {!! $section->content !!}
                             </div>
-                            @break
+                        @break
 
                         @case('about_author')
+                        @case('author')
                             <div class="book-page">
                                 <h2 class="text-center font-weight-bold">TENTANG PENULIS</h2>
                                 <hr>
                                 {!! $section->content !!}
                             </div>
-                            @break
+                        @break
 
                         @case('bibliography')
                             <div class="book-page">
@@ -177,7 +185,7 @@
                                 <hr>
                                 {!! $section->content !!}
                             </div>
-                            @break
+                        @break
 
                         @case('appendix')
                             <div class="book-page">
@@ -185,12 +193,11 @@
                                 <hr>
                                 {!! $section->content !!}
                             </div>
-                            @break
-
+                        @break
                     @endswitch
                 @endforeach
 
             </div>
-            </div>
+        </div>
     </div>
 @endsection

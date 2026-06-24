@@ -7,6 +7,7 @@ use App\Models\AssignmentHistory;
 use App\Models\User;
 use App\Models\BookReview;
 use App\Models\BookChapter;
+use App\Models\BookClaimRequest;
 
 /**
  * @property \Illuminate\Database\Eloquent\Collection $chapters
@@ -25,6 +26,8 @@ class Book extends Model
         'subjudul',
 
         'penulis_1',
+
+        'author_ktp_number',
 
         'penulis_2',
 
@@ -75,6 +78,8 @@ class Book extends Model
         'tanggal_mulai_cover',
 
         'author_user_id',
+
+        'claimed_at',
 
         'book_type',
 
@@ -472,9 +477,19 @@ class Book extends Model
         );
     }
 
+    public function claimRequests()
+    {
+        return $this->hasMany(BookClaimRequest::class);
+    }
+
     public function packageItems()
     {
         return $this->hasMany(BookPackageItem::class)->orderBy('created_at');
+    }
+
+    public function authorInvoices()
+    {
+        return $this->hasMany(\App\Models\AuthorInvoice::class);
     }
 
     public function syncPackageItems(): void

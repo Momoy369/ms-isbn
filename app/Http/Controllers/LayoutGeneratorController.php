@@ -2,116 +2,119 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Book;
 use App\Models\BookSection;
-use PhpOffice\PhpWord\PhpWord;
+use App\Services\BookLayoutGeneratorService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Validation\Rule;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\TemplateProcessor;
-use App\Services\LayoutExportService;
-use App\Services\BookLayoutGeneratorService;
+use Symfony\Component\HttpFoundation\Response;
+
+use function collect;
+use function now;
+use function storage_path;
+use function strip_tags;
 
 class LayoutGeneratorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $books = Book::latest()
+        $query = Book::query()
+            ->with([
+                'sectionsGenerator:id,book_id,section_type,content,sort_order,title',
+                'files' => fn($fileQuery) => $fileQuery
+                    ->select('id', 'book_id', 'type', 'is_active')
+                    ->where('type', 'cover')
+                    ->where('is_active', true),
+            ]);
+
+        $search = trim((string) $request->input('q', ''));
+        $bookType = (string) $request->input('book_type', '');
+        $readiness = (string) $request->input('readiness', '');
+
+        if ($search !== '') {
+            $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery->where('nomor_naskah', 'like', "%{$search}%")
+                    ->orWhere('judul', 'like', "%{$search}%")
+                    ->orWhere('penulis_1', 'like', "%{$search}%");
+            });
+        }
+
+        if ($bookType !== '') {
+            $query->where('book_type', $bookType);
+        }
+
+        $books = $query
+            ->latest()
             ->paginate(20);
+
+        $books->getCollection()->transform(function (Book $book) {
+            $validation = $this->buildLayoutValidation($book);
+
+            $book->setAttribute('layout_validation', $validation);
+            $book->setAttribute('layout_ready', $this->isReadyForLayout($validation));
+
+            return $book;
+        });
+
+        if ($readiness !== '') {
+            $filtered = $books->getCollection()->filter(function (Book $book) use ($readiness): bool {
+                return $readiness === 'ready'
+                    ? (bool) $book->getAttribute('layout_ready')
+                    : !(bool) $book->getAttribute('layout_ready');
+            })->values();
+
+            $books->setCollection($filtered);
+        }
+
+        $summary = [
+            'listed' => $books->count(),
+            'ready' => $books->getCollection()->where('layout_ready', true)->count(),
+            'needs_attention' => $books->getCollection()->where('layout_ready', false)->count(),
+        ];
 
         return view(
             'layout-generator.index',
-            compact('books')
+            compact('books', 'summary', 'search', 'bookType', 'readiness')
         );
     }
 
     public function show(
         Book $book
     ) {
-
-        $validation = [
-
-            'judul' =>
-                !empty(
-                $book->judul
-            ),
-
-            'penulis' =>
-                !empty(
-                $book->penulis_1
-            ),
-
-            'isbn' =>
-                !empty(
-                $book->isbn
-            ),
-
-            'cover' =>
-                $book->files()
-                    ->where(
-                        'type',
-                        'cover'
-                    )
-                    ->where(
-                        'is_active',
-                        true
-                    )
-                    ->exists(),
-
-            'kata_pengantar' =>
-                $book->sectionsGenerator
-                    ->where(
-                        'section_type',
-                        'preface'
-                    )
-                    ->count() > 0,
-
-            'tentang_penulis' =>
-                $book->sectionsGenerator
-                    ->where(
-                        'section_type',
-                        'author'
-                    )
-                    ->count() > 0,
-
-        ];
-
-        $isReadyForLayout =
-            collect(
-                $validation
-            )->every(
-                    fn($item)
-                    => $item
-                );
-
         $book->load(
-            'sectionsGenerator'
+            'sectionsGenerator',
+            'files'
         );
 
-        $totalWords = 0;
+        $validation = $this->buildLayoutValidation($book);
+        $isReadyForLayout = $this->isReadyForLayout($validation);
 
-        foreach (
-            $book->sectionsGenerator
-            as $section
-        ) {
+        $totalWords = (int) $book->getWordCount();
+        $estimatedPages = (int) $book->getEstimatedPages();
 
-            $text =
-                strip_tags(
-                    $section->content
-                );
+        $validationLabels = [
+            'judul' => 'Judul',
+            'penulis' => 'Penulis',
+            'isbn' => 'ISBN',
+            'cover' => 'Cover Aktif',
+            'kata_pengantar' => 'Kata Pengantar',
+            'tentang_penulis' => 'Tentang Penulis',
+            'isi_utama' => 'Isi Utama',
+        ];
 
-            $words =
-                str_word_count(
-                    $text
-                );
+        $missingRequirements = collect($validation)
+            ->filter(fn(bool $passed): bool => $passed === false)
+            ->keys()
+            ->map(fn(string $key): string => $validationLabels[$key] ?? $key)
+            ->values();
 
-            $totalWords +=
-                $words;
-        }
-
-        $estimatedPages =
-            ceil(
-                $totalWords / 250
-            );
+        $sectionBreakdown = $book->sectionsGenerator
+            ->groupBy('section_type')
+            ->map(fn($items): int => $items->count())
+            ->sortDesc();
 
         return view(
 
@@ -122,7 +125,9 @@ class LayoutGeneratorController extends Controller
                 'totalWords',
                 'estimatedPages',
                 'validation',
-                'isReadyForLayout'
+                'isReadyForLayout',
+                'missingRequirements',
+                'sectionBreakdown'
             )
 
         );
@@ -132,13 +137,24 @@ class LayoutGeneratorController extends Controller
         Book $book,
         Request $request
     ) {
-        $request->validate([
+        $allowedSectionTypes = $this->allowedSectionTypesByBook($book);
 
-            'section_type' => 'required',
-
-            'title' => 'required'
-
+        $data = $request->validate([
+            'section_type' => ['required', 'string', Rule::in($allowedSectionTypes)],
+            'title' => ['required', 'string', 'max:255'],
+            'heading_level' => ['nullable', 'integer', 'min:1', 'max:6'],
         ]);
+
+        if (
+            in_array($data['section_type'], $this->singletonSectionTypes(), true)
+            && $book->sectionsGenerator()->where('section_type', $data['section_type'])->exists()
+        ) {
+            return back()
+                ->withErrors([
+                    'section_type' => 'Jenis bagian ini hanya boleh satu per naskah.',
+                ])
+                ->withInput();
+        }
 
         $lastOrder =
 
@@ -151,13 +167,16 @@ class LayoutGeneratorController extends Controller
             ->create([
 
                 'section_type' =>
-                    $request->section_type,
+                    $data['section_type'],
 
                 'title' =>
-                    $request->title,
+                    $data['title'],
 
                 'content' =>
                     '',
+
+                'heading_level' =>
+                    $data['heading_level'] ?? 1,
 
                 'sort_order' =>
                     ($lastOrder ?? 0) + 1
@@ -187,21 +206,18 @@ class LayoutGeneratorController extends Controller
         BookSection $section,
         Request $request
     ) {
-        $request->validate([
-
-            'title' => 'required',
-
-            'content' => 'nullable'
-
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
         ]);
 
         $section->update([
 
             'title' =>
-                $request->title,
+                $data['title'],
 
             'content' =>
-                $request->content
+                $data['content'] ?? null
 
         ]);
 
@@ -219,7 +235,11 @@ class LayoutGeneratorController extends Controller
     public function deleteSection(
         BookSection $section
     ) {
+        $bookId = $section->book_id;
+
         $section->delete();
+
+        $this->normalizeSortOrder($bookId);
 
         return back()
             ->with(
@@ -263,6 +283,8 @@ class LayoutGeneratorController extends Controller
                     $currentOrder
 
             ]);
+
+            $this->normalizeSortOrder($section->book_id);
         }
 
         return back();
@@ -303,6 +325,8 @@ class LayoutGeneratorController extends Controller
                     $currentOrder
 
             ]);
+
+            $this->normalizeSortOrder($section->book_id);
         }
 
         return back();
@@ -312,15 +336,28 @@ class LayoutGeneratorController extends Controller
         Book $book,
         BookLayoutGeneratorService $generator
     ) {
+        $book->load('sectionsGenerator', 'files');
+
+        $validation = $this->buildLayoutValidation($book);
+
+        if (!$this->isReadyForLayout($validation)) {
+            return back()->with(
+                'warning',
+                'Layout belum siap di-generate. Lengkapi checklist validasi terlebih dahulu.'
+            );
+        }
+
         $phpWord =
             $generator->build(
                 $book
             );
 
-        $file =
-            storage_path(
-                'app/public/layout.docx'
-            );
+        $directory = storage_path('app/public/layout-exports');
+        File::ensureDirectoryExists($directory);
+
+        $safeTitle = $this->safeFileName($book->judul);
+        $fileName = 'layout-' . $book->id . '-' . $safeTitle . '-' . now()->format('YmdHis') . '.docx';
+        $file = $directory . DIRECTORY_SEPARATOR . $fileName;
 
         IOFactory
             ::createWriter(
@@ -486,6 +523,15 @@ class LayoutGeneratorController extends Controller
             'sectionsGenerator'
         );
 
+        $validation = $this->buildLayoutValidation($book);
+
+        if (!$this->isReadyForLayout($validation)) {
+            return back()->with(
+                'warning',
+                'Template DOCX belum bisa dibuat karena naskah belum memenuhi validasi layout.'
+            );
+        }
+
         $template =
             new TemplateProcessor(
 
@@ -598,13 +644,19 @@ class LayoutGeneratorController extends Controller
         $fileName =
             'layout-' .
             $book->id .
+            '-' .
+            $this->safeFileName($book->judul) .
+            '-' .
+            now()->format('YmdHis') .
             '.docx';
 
+        $directory = storage_path('app/public/layout-exports');
+        File::ensureDirectoryExists($directory);
+
         $path =
-            storage_path(
-                'app/public/' .
-                $fileName
-            );
+            $directory .
+            DIRECTORY_SEPARATOR .
+            $fileName;
 
         $template->saveAs(
             $path
@@ -616,5 +668,78 @@ class LayoutGeneratorController extends Controller
             )
             ->deleteFileAfterSend();
 
+    }
+
+    private function buildLayoutValidation(Book $book): array
+    {
+        $sections = $book->relationLoaded('sectionsGenerator')
+            ? $book->sectionsGenerator
+            : $book->sectionsGenerator()->get();
+
+        $coverExists = $book->relationLoaded('files')
+            ? $book->files->contains(fn($file): bool => $file->type === 'cover' && (bool) $file->is_active)
+            : $book->files()->where('type', 'cover')->where('is_active', true)->exists();
+
+        return [
+            'judul' => !empty($book->judul),
+            'penulis' => !empty($book->penulis_1),
+            'isbn' => !empty($book->isbn),
+            'cover' => $coverExists,
+            'kata_pengantar' => $sections->where('section_type', 'preface')->count() > 0,
+            'tentang_penulis' => $sections->whereIn('section_type', ['author', 'about_author'])->count() > 0,
+            'isi_utama' => $sections->whereIn('section_type', ['chapter', 'poem'])->count() > 0,
+        ];
+    }
+
+    private function isReadyForLayout(array $validation): bool
+    {
+        return collect($validation)->every(fn(bool $item): bool => $item === true);
+    }
+
+    private function singletonSectionTypes(): array
+    {
+        return ['preface', 'foreword', 'author', 'about_author', 'bibliography', 'appendix'];
+    }
+
+    private function allowedSectionTypesByBook(Book $book): array
+    {
+        if ($book->book_type === 'poetry') {
+            return ['preface', 'poem', 'author', 'bibliography'];
+        }
+
+        if ($book->book_type === 'nonfiction') {
+            return ['preface', 'foreword', 'chapter', 'subchapter', 'bibliography', 'appendix', 'author'];
+        }
+
+        return ['preface', 'chapter', 'subchapter', 'author', 'bibliography'];
+    }
+
+    private function normalizeSortOrder(int $bookId): void
+    {
+        BookSection::where('book_id', $bookId)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->values()
+            ->each(function (BookSection $item, int $index): void {
+                $targetOrder = $index + 1;
+
+                if ((int) $item->sort_order !== $targetOrder) {
+                    $item->update(['sort_order' => $targetOrder]);
+                }
+            });
+    }
+
+    private function safeFileName(?string $value): string
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return 'dokumen';
+        }
+
+        $text = preg_replace('/[^A-Za-z0-9\-_ ]+/', '', $text) ?? '';
+        $text = trim(preg_replace('/\s+/', '-', $text) ?? '');
+
+        return $text !== '' ? strtolower($text) : 'dokumen';
     }
 }

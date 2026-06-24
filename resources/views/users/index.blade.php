@@ -4,120 +4,118 @@
 
 @section('content')
 
-<div class="card">
+    <div class="card">
 
-    <div class="card-header">
+        <div class="card-header">
 
-        <a
-            href="{{ route(
-                'users.create'
-            ) }}"
-            class="
+            <a href="{{ route('users.create') }}"
+                class="
                 btn
                 btn-primary
-            "
-        >
+            ">
 
-            Tambah User
+                Tambah User
 
-        </a>
+            </a>
 
-    </div>
+        </div>
 
-    <div class="card-body">
+        <div class="card-body">
 
-        <table
-            class="
+            <table class="
                 table
                 table-bordered
-            "
-        >
+            ">
 
-            <thead>
-
-                <tr>
-
-                    <th>Nama</th>
-
-                    <th>Email</th>
-
-                    <th>Role</th>
-
-                    <th width="150">
-
-                        Aksi
-
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach(
-                    $users
-                    as $user
-                )
+                <thead>
 
                     <tr>
 
-                        <td>
+                        <th>Nama</th>
 
-                            {{
-                                $user->name
-                            }}
+                        <th>Email</th>
 
-                        </td>
+                        <th>KTP</th>
 
-                        <td>
+                        <th>Profil Author</th>
 
-                            {{
-                                $user->email
-                            }}
+                        <th>Role</th>
 
-                        </td>
+                        <th width="150">
 
-                        <td>
+                            Aksi
 
-                            {{
-                                strtoupper(
-                                    $user->role
-                                )
-                            }}
-
-                        </td>
-
-                        <td>
-
-                            <a
-                                href="{{ route(
-                                    'users.edit',
-                                    $user
-                                ) }}"
-                                class="
-                                    btn
-                                    btn-warning
-                                    btn-sm
-                                "
-                            >
-
-                                Edit
-
-                            </a>
-
-                        </td>
+                        </th>
 
                     </tr>
 
-                @endforeach
+                </thead>
 
-            </tbody>
+                <tbody>
 
-        </table>
+                    @foreach ($users as $user)
+                        <tr>
+
+                            <td>
+
+                                {{ $user->name }}
+
+                            </td>
+
+                            <td>
+
+                                {{ $user->email }}
+
+                            </td>
+
+                            <td>
+
+                                {{ $user->ktp_number ?? '-' }}
+
+                            </td>
+
+                            <td>
+                                @if ($user->role === 'author')
+                                    @if ($user->is_profile_complete)
+                                        <span class="badge badge-success">LENGKAP</span>
+                                    @else
+                                        <span class="badge badge-danger">BELUM LENGKAP</span>
+                                    @endif
+                                @else
+                                    <span class="badge badge-secondary">N/A</span>
+                                @endif
+                            </td>
+
+                            <td>
+
+                                {{ strtoupper($user->role) }}
+
+                            </td>
+
+                            <td>
+
+                                <a href="{{ route('users.edit', $user) }}"
+                                    class="
+                                    btn
+                                    btn-warning
+                                    btn-sm
+                                ">
+
+                                    Edit
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    @endforeach
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
-
-</div>
 
 @endsection

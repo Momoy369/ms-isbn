@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuthorInvoice;
 use App\Models\Book;
 use App\Models\BookReview;
 use App\Services\BookActivityService;
-use Illuminate\Http\Request;
 use App\Services\NotificationService;
+use Illuminate\Http\Request;
 
 class AuthorReviewController extends Controller
 {
@@ -274,12 +275,15 @@ class AuthorReviewController extends Controller
 
         );
 
-        return back()->with(
+        // Buat invoice revisi berbayar jika ini bukan revisi pertama pada stage ini
+        $revisionInvoice = AuthorInvoice::createRevisionInvoiceIfNeeded($book, $request->stage);
 
-            'success',
+        $successMessage = 'Revisi berhasil dikirim.';
+        if ($revisionInvoice) {
+            $successMessage .= ' Invoice revisi berbayar #' . $revisionInvoice->invoice_number
+                . ' (Rp ' . number_format($revisionInvoice->amount, 0, ',', '.') . ') telah diterbitkan.';
+        }
 
-            'Revisi berhasil dikirim'
-
-        );
+        return back()->with('success', $successMessage);
     }
 }

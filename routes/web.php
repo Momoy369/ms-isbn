@@ -14,6 +14,9 @@ use App\Http\Controllers\AssignmentHistoryController;
 use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorReviewController;
+use App\Http\Controllers\AuthorInvoiceController;
+use App\Http\Controllers\AuthorBookClaimController;
+use App\Http\Controllers\AdminBookClaimController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductionTimelineController;
 use App\Http\Controllers\BookMessageController;
@@ -316,6 +319,15 @@ Route::middleware('auth')->group(function () {
                 UserController::class
             );
 
+            Route::get('/book-claims', [AdminBookClaimController::class, 'index'])
+                ->name('book-claims.index');
+
+            Route::post('/book-claims/{claim}/approve', [AdminBookClaimController::class, 'approve'])
+                ->name('book-claims.approve');
+
+            Route::post('/book-claims/{claim}/reject', [AdminBookClaimController::class, 'reject'])
+                ->name('book-claims.reject');
+
             Route::get(
                 '/reports/production',
                 [
@@ -396,6 +408,22 @@ Route::middleware('auth')->group(function () {
             )->name(
                     'author.review.revision'
                 );
+
+            // ── Invoice author ────────────────────────────────────────────
+            Route::get('/author/invoices', [AuthorInvoiceController::class, 'index'])
+                ->name('author.invoices.index');
+
+            Route::get('/author/invoices/{invoice}', [AuthorInvoiceController::class, 'show'])
+                ->name('author.invoices.show');
+
+            Route::post('/author/invoices/{invoice}/upload-proof', [AuthorInvoiceController::class, 'uploadProof'])
+                ->name('author.invoices.upload-proof');
+
+            Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
+                ->name('author.claims.index');
+
+            Route::post('/author/claims/books/{book}', [AuthorBookClaimController::class, 'store'])
+                ->name('author.claims.store');
 
         });
 });

@@ -17,8 +17,24 @@
         {{-- CARD HEADER --}}
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="card-title mb-0">
-                <span class="badge badge-{{ $book->book_type == 'fiction' ? 'primary' : 'success' }} mr-2">
-                    <i class="fas fa-bookmark mr-1"></i> {{ $book->book_type == 'fiction' ? 'FIKSI' : 'NON-FIKSI' }}
+                @php
+                    $bookTypeLabel =
+                        [
+                            'fiction' => 'FIKSI',
+                            'nonfiction' => 'NON-FIKSI',
+                            'poetry' => 'PUISI',
+                        ][$book->book_type] ?? strtoupper((string) $book->book_type);
+
+                    $bookTypeBadge =
+                        [
+                            'fiction' => 'primary',
+                            'nonfiction' => 'success',
+                            'poetry' => 'warning',
+                        ][$book->book_type] ?? 'secondary';
+                @endphp
+
+                <span class="badge badge-{{ $bookTypeBadge }} mr-2">
+                    <i class="fas fa-bookmark mr-1"></i> {{ $bookTypeLabel }}
                 </span>
                 <strong>{{ $book->judul }}</strong>
             </h3>
@@ -26,8 +42,9 @@
                 <a href="{{ route('layout-generator.preview', $book) }}" class="btn btn-info btn-sm mr-1">
                     <i class="fas fa-eye mr-1"></i> Preview Layout
                 </a>
-                <a href="{{ route('layout-generator.generate', $book) }}" class="btn btn-success btn-sm">
-                    {{-- {{ !$isReadyForLayout ? 'disabled' : '' }} --}}
+                <a href="{{ route('layout-generator.generate', $book) }}"
+                    class="btn btn-success btn-sm {{ !$isReadyForLayout ? 'disabled' : '' }}"
+                    {{ !$isReadyForLayout ? 'aria-disabled=true tabindex=-1' : '' }}>
                     <i class="fas fa-file-word mr-1"></i> Generate DOCX
                 </a>
             </div>
@@ -46,6 +63,38 @@
                 <div class="alert alert-warning alert-dismissible rounded">
                     <h5><i class="icon fas fa-exclamation-triangle"></i> Belum Siap Generate</h5>
                     Naskah belum memenuhi syarat kelengkapan layout. Silakan periksa bagian validasi di bawah.
+                    @if (!empty($missingRequirements) && $missingRequirements->isNotEmpty())
+                        <hr>
+                        <p class="mb-1"><strong>Yang masih perlu dilengkapi:</strong></p>
+                        <ul class="mb-0 pl-3">
+                            @foreach ($missingRequirements as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            @endif
+
+            @if (session('success'))
+                <div class="alert alert-success rounded">
+                    <i class="fas fa-check-circle mr-1"></i> {{ session('success') }}
+                </div>
+            @endif
+
+            @if (session('warning'))
+                <div class="alert alert-warning rounded">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> {{ session('warning') }}
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="alert alert-danger rounded">
+                    <h6 class="mb-1"><i class="fas fa-times-circle mr-1"></i> Periksa input Anda:</h6>
+                    <ul class="mb-0 pl-3">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
             @endif
 
@@ -101,6 +150,7 @@
                                 'cover' => 'Cover',
                                 'kata_pengantar' => 'Pengantar',
                                 'tentang_penulis' => 'Profil Penulis',
+                                'isi_utama' => 'Isi Utama',
                             ];
                         @endphp
 
@@ -115,6 +165,27 @@
                             </div>
                         @endforeach
                     </div>
+                </div>
+            </div>
+
+            <div class="card bg-white border shadow-none mb-4">
+                <div class="card-header bg-light border-0">
+                    <h3 class="card-title text-muted mb-0">
+                        <i class="fas fa-chart-pie mr-1"></i> Komposisi Section Saat Ini
+                    </h3>
+                </div>
+                <div class="card-body py-2">
+                    @if ($sectionBreakdown->isEmpty())
+                        <p class="text-muted mb-0">Belum ada section. Tambahkan section agar layout bisa disusun.</p>
+                    @else
+                        <div class="d-flex flex-wrap">
+                            @foreach ($sectionBreakdown as $type => $count)
+                                <span class="badge badge-light border mr-2 mb-2 px-3 py-2">
+                                    {{ ucfirst(str_replace('_', ' ', $type)) }}: <strong>{{ $count }}</strong>
+                                </span>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -229,30 +300,63 @@
 
                                 <div class="form-group">
                                     <label>Jenis Bagian <span class="text-danger">*</span></label>
-                                    <select name="section_type" class="form-control" required>
+                                    <select name="section_type"
+                                        class="form-control @error('section_type') is-invalid @enderror" required>
                                         <option value="">-- Pilih Jenis --</option>
                                         @if ($book->book_type === 'fiction')
-                                            <option value="preface">Kata Pengantar</option>
-                                            <option value="chapter">Bab</option>
-                                            <option value="subchapter">Sub Bab</option>
-                                            <option value="author">Tentang Penulis</option>
-                                            <option value="bibliography">Daftar Pustaka</option>
+                                            <option value="preface"
+                                                {{ old('section_type') === 'preface' ? 'selected' : '' }}>Kata Pengantar
+                                            </option>
+                                            <option value="chapter"
+                                                {{ old('section_type') === 'chapter' ? 'selected' : '' }}>Bab</option>
+                                            <option value="subchapter"
+                                                {{ old('section_type') === 'subchapter' ? 'selected' : '' }}>Sub Bab
+                                            </option>
+                                            <option value="author"
+                                                {{ old('section_type') === 'author' ? 'selected' : '' }}>Tentang Penulis
+                                            </option>
+                                            <option value="bibliography"
+                                                {{ old('section_type') === 'bibliography' ? 'selected' : '' }}>Daftar
+                                                Pustaka</option>
                                         @else
-                                            <option value="preface">Kata Pengantar</option>
-                                            <option value="foreword">Prakata</option>
-                                            <option value="chapter">Bab</option>
-                                            <option value="subchapter">Sub Bab</option>
-                                            <option value="bibliography">Daftar Pustaka</option>
-                                            <option value="appendix">Lampiran</option>
-                                            <option value="author">Tentang Penulis</option>
+                                            <option value="preface"
+                                                {{ old('section_type') === 'preface' ? 'selected' : '' }}>Kata Pengantar
+                                            </option>
+                                            <option value="foreword"
+                                                {{ old('section_type') === 'foreword' ? 'selected' : '' }}>Prakata</option>
+                                            <option value="chapter"
+                                                {{ old('section_type') === 'chapter' ? 'selected' : '' }}>Bab</option>
+                                            <option value="subchapter"
+                                                {{ old('section_type') === 'subchapter' ? 'selected' : '' }}>Sub Bab
+                                            </option>
+                                            <option value="bibliography"
+                                                {{ old('section_type') === 'bibliography' ? 'selected' : '' }}>Daftar
+                                                Pustaka</option>
+                                            <option value="appendix"
+                                                {{ old('section_type') === 'appendix' ? 'selected' : '' }}>Lampiran
+                                            </option>
+                                            <option value="author"
+                                                {{ old('section_type') === 'author' ? 'selected' : '' }}>Tentang Penulis
+                                            </option>
                                         @endif
                                     </select>
+                                    @error('section_type')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        Gunakan section yang relevan agar hasil DOCX terstruktur dan mudah diproses tim
+                                        produksi.
+                                    </small>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Judul Bagian <span class="text-danger">*</span></label>
-                                    <input type="text" name="title" class="form-control"
-                                        placeholder="Contoh: Bab 1 Pendahuluan" required>
+                                    <input type="text" name="title"
+                                        class="form-control @error('title') is-invalid @enderror"
+                                        value="{{ old('title') }}" placeholder="Contoh: Bab 1 Pendahuluan" required>
+                                    @error('title')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
 
                                 <button type="submit" class="btn btn-primary btn-block">

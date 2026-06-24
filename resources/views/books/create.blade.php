@@ -79,6 +79,20 @@
                                 </div>
 
                                 <div class="form-group">
+                                    <label for="author_ktp_number">No. KTP Penulis <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" id="author_ktp_number" name="author_ktp_number"
+                                        class="form-control @error('author_ktp_number') is-invalid @enderror"
+                                        value="{{ old('author_ktp_number') }}" placeholder="16 digit KTP penulis" required>
+                                    @error('author_ktp_number')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        Wajib diisi untuk naskah manual agar penulis bisa claim buku lewat portal.
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
                                     <label for="link_produk">Link Produk</label>
                                     <input type="text" id="link_produk" name="link_produk"
                                         class="form-control @error('link_produk') is-invalid @enderror"

@@ -91,6 +91,20 @@
                                 </div>
 
                                 <div class="form-group">
+                                    <label for="author_ktp_number">No. KTP Penulis <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" id="author_ktp_number" name="author_ktp_number"
+                                        class="form-control @error('author_ktp_number') is-invalid @enderror"
+                                        value="{{ old('author_ktp_number', $book->author_ktp_number) }}" required>
+                                    @error('author_ktp_number')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        Data KTP ini dipakai untuk pencocokan claim buku oleh akun penulis.
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
                                     <label for="isbn">ISBN</label>
                                     <input type="text" id="isbn" name="isbn"
                                         class="form-control @error('isbn') is-invalid @enderror"

@@ -67,20 +67,15 @@ class BookController extends Controller
             'penulis_1' =>
                 'required|max:255',
 
+            'author_ktp_number' =>
+                'required|string|max:32',
+
             'jumlah_cetak' =>
                 'required|integer|min:1'
 
         ]);
 
-        $author = User::where(
-            'name',
-            $request->penulis_1
-        )
-            ->where(
-                'role',
-                'author'
-            )
-            ->first();
+        $author = $this->resolveAuthorFromRequest($request);
 
         Book::create([
 
@@ -95,6 +90,9 @@ class BookController extends Controller
 
             'penulis_1' =>
                 $request->penulis_1,
+
+            'author_ktp_number' =>
+                $request->author_ktp_number,
 
             'link_produk' =>
                 $request->link_produk,
@@ -277,6 +275,10 @@ class BookController extends Controller
 
                 'required|max:255',
 
+            'author_ktp_number' =>
+
+                'required|string|max:32',
+
             'jumlah_cetak' =>
 
                 'required|integer|min:1',
@@ -303,19 +305,7 @@ class BookController extends Controller
 
         ]);
 
-        $author = User::where(
-            'name',
-            $request->penulis_1
-        )
-            ->where(
-                'role',
-                'author'
-            )
-            ->first();
-
-        $data['author_user_id'] =
-            $author?->id;
-
+        $author = $this->resolveAuthorFromRequest($request);
 
         if (
             $book->metadata_locked
@@ -339,6 +329,9 @@ class BookController extends Controller
 
             'penulis_1' =>
                 $request->penulis_1,
+
+            'author_ktp_number' =>
+                $request->author_ktp_number,
 
             'link_produk' =>
                 $request->link_produk,
@@ -374,6 +367,9 @@ class BookController extends Controller
 
             'publishing_package_id' =>
                 $request->publishing_package_id,
+
+            'author_user_id' =>
+                $author?->id,
 
         ]);
 
@@ -419,6 +415,23 @@ class BookController extends Controller
     public function destroy(Book $book)
     {
         //
+    }
+
+    private function resolveAuthorFromRequest(Request $request): ?User
+    {
+        if ($request->filled('author_ktp_number')) {
+            $authorByKtp = User::where('role', 'author')
+                ->where('ktp_number', $request->author_ktp_number)
+                ->first();
+
+            if ($authorByKtp) {
+                return $authorByKtp;
+            }
+        }
+
+        return User::where('role', 'author')
+            ->where('name', $request->penulis_1)
+            ->first();
     }
 
     public function nextWorkflow(

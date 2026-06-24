@@ -15,7 +15,13 @@ use App\Models\BookAssignment;
     'name',
     'email',
     'password',
-    'role'
+    'role',
+    'ktp_number',
+    'ktp_name',
+    'phone',
+    'address',
+    'birth_date',
+    'is_profile_complete'
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -33,6 +39,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth_date' => 'date',
+            'is_profile_complete' => 'boolean',
         ];
     }
 
@@ -95,5 +103,14 @@ class User extends Authenticatable
         return $this->hasMany(
             Notification::class
         );
+    }
+
+    public function isAuthorProfileComplete(): bool
+    {
+        return !empty($this->ktp_number)
+            && !empty($this->ktp_name)
+            && !empty($this->phone)
+            && !empty($this->address)
+            && !empty($this->birth_date);
     }
 }
