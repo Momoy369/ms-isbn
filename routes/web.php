@@ -29,6 +29,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductionTimelineController;
 use App\Http\Controllers\BookMessageController;
 use App\Http\Controllers\BookChapterController;
+use App\Http\Controllers\RoleFileController;
 use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
@@ -61,6 +62,26 @@ Route::get('/', function () {
 require __DIR__ . '/auth.php';
 
 Route::middleware('auth')->group(function () {
+
+    Route::middleware(['role:admin,editor,layouter,designer,isbn,owner,finance,superadmin'])->group(function () {
+        Route::get('/role-files', [RoleFileController::class, 'index'])
+            ->name('role-files.index');
+
+        Route::post('/role-files', [RoleFileController::class, 'store'])
+            ->name('role-files.store');
+
+        Route::get('/role-files/{roleFile}/preview', [RoleFileController::class, 'preview'])
+            ->name('role-files.preview');
+
+        Route::get('/role-files/{roleFile}/download', [RoleFileController::class, 'download'])
+            ->name('role-files.download');
+
+        Route::post('/role-files/{roleFile}/share', [RoleFileController::class, 'share'])
+            ->name('role-files.share');
+
+        Route::delete('/role-files/{roleFile}', [RoleFileController::class, 'destroy'])
+            ->name('role-files.destroy');
+    });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -370,6 +391,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/finance/books/{book}/delivery-links', [FinanceInvoiceController::class, 'updateBookLinks'])
                 ->name('finance.books.delivery-links');
 
+            Route::post('/finance/reminders/run', [FinanceInvoiceController::class, 'runReminders'])
+                ->name('finance.reminders.run');
+
             Route::get('/print-prices', [AdminPrintPriceController::class, 'index'])
                 ->name('print-prices.index');
 
@@ -519,3 +543,6 @@ Route::middleware('auth')->group(function () {
 
         });
 });
+
+Route::get('/shared/role-files/{token}', [RoleFileController::class, 'shared'])
+    ->name('role-files.shared');

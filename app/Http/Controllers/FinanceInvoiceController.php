@@ -6,6 +6,7 @@ use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class FinanceInvoiceController extends Controller
 {
@@ -138,5 +139,13 @@ class FinanceInvoiceController extends Controller
         ]);
 
         return back()->with('success', 'Pengaturan link distribusi berhasil diperbarui.');
+    }
+
+    public function runReminders()
+    {
+        Artisan::call('reminders:send');
+        $output = trim((string) Artisan::output());
+
+        return back()->with('success', $output !== '' ? $output : 'Reminder berhasil dijalankan.');
     }
 }

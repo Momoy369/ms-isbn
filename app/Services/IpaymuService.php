@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AuthorInvoice;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class IpaymuService
 {
@@ -12,6 +13,7 @@ class IpaymuService
         $apiKey = (string) config('services.ipaymu.api_key');
         $va = (string) config('services.ipaymu.va');
         $endpoint = rtrim((string) config('services.ipaymu.base_url', 'https://my.ipaymu.com/api/v2'), '/');
+        $verifySsl = (bool) config('services.ipaymu.verify_ssl', true);
 
         if (empty($apiKey) || empty($va)) {
             $ref = 'IPAYMU-DUMMY-' . now()->format('YmdHis') . '-' . $invoice->id;
@@ -36,21 +38,49 @@ class IpaymuService
             'referenceId' => $invoice->invoice_number,
         ];
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            'va' => $va,
-            'apikey' => $apiKey,
-        ])->post($endpoint . '/payment', $payload);
+        $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $requestBody = strtolower(hash('sha256', $jsonBody));
+        $stringToSign = 'POST:' . $va . ':' . $requestBody . ':' . $apiKey;
+        $signature = hash_hmac('sha256', $stringToSign, $apiKey);
+        $timestamp = now()->format('YmdHis');
 
-        $json = $response->json();
+        try {
+            $response = Http::timeout(25)
+                ->withOptions([
+                    'verify' => $verifySsl,
+                ])
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                    'va' => $va,
+                    'signature' => $signature,
+                    'timestamp' => $timestamp,
+                ])->send('POST', $endpoint . '/payment', [
+                        'body' => $jsonBody,
+                    ]);
+
+            $json = $response->json();
+        } catch (Throwable $e) {
+            return [
+                'reference' => null,
+                'checkout_url' => null,
+                'expires_at' => null,
+                'raw' => [
+                    'error' => $e->getMessage(),
+                ],
+                'is_dummy' => false,
+            ];
+        }
 
         if (!$response->ok() || (int) data_get($json, 'Status') !== 200) {
             return [
                 'reference' => null,
                 'checkout_url' => null,
                 'expires_at' => null,
-                'raw' => $json,
+                'raw' => [
+                    'http_status' => $response->status(),
+                    'response' => $json,
+                ],
                 'is_dummy' => false,
             ];
         }

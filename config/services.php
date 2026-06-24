@@ -45,6 +45,7 @@ return [
         'api_key' => env('IPAYMU_API_KEY'),
         'va' => env('IPAYMU_VA'),
         'base_url' => env('IPAYMU_BASE_URL', 'https://my.ipaymu.com/api/v2'),
+        'verify_ssl' => env('IPAYMU_VERIFY_SSL', true),
         'callback_secret' => env('IPAYMU_CALLBACK_SECRET'),
         'verify_callback_signature' => env('IPAYMU_VERIFY_SIGNATURE', true),
     ],

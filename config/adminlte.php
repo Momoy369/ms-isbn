@@ -424,6 +424,12 @@ return [
             'can' => 'menu-author',
         ],
         [
+            'text' => 'Ruang File Role',
+            'route' => 'role-files.index',
+            'icon' => 'fas fa-folder-open',
+            'can' => 'menu-role-files',
+        ],
+        [
             'text' => 'Notifikasi',
             'route' => 'notifications.index',
             'icon' => 'fas fa-bell',

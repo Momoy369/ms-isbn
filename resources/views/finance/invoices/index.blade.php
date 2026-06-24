@@ -69,6 +69,13 @@
                     </button>
                 </div>
             </form>
+            <form method="POST" action="{{ route('finance.reminders.run') }}" class="mt-2"
+                onsubmit="return confirm('Jalankan reminder sekarang?')">
+                @csrf
+                <button class="btn btn-outline-warning" type="submit">
+                    <i class="fas fa-bell mr-1"></i> Jalankan Reminder Sekarang
+                </button>
+            </form>
         </div>
     </div>
 

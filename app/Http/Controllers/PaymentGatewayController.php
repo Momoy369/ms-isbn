@@ -24,7 +24,17 @@ class PaymentGatewayController extends Controller
         $checkout = $ipaymu->createInvoiceCheckout($invoice);
 
         if (empty($checkout['checkout_url'])) {
-            return back()->with('danger', 'Gagal membuat checkout iPaymu. Silakan coba lagi.');
+            $raw = $checkout['raw'] ?? null;
+            $msg = 'Gagal membuat checkout iPaymu.';
+
+            if (is_array($raw)) {
+                $gatewayMessage = data_get($raw, 'response.Message') ?: data_get($raw, 'response.message') ?: data_get($raw, 'error');
+                if (!empty($gatewayMessage)) {
+                    $msg .= ' Detail: ' . $gatewayMessage;
+                }
+            }
+
+            return back()->with('danger', $msg);
         }
 
         $invoice->update([

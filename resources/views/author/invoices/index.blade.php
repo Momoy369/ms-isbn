@@ -12,12 +12,14 @@
 @endsection
 
 @section('content')
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible rounded">
-            <button class="close" data-dismiss="alert">&times;</button>
-            {{ session('success') }}
-        </div>
-    @endif
+    @foreach (['success', 'warning', 'info', 'danger'] as $type)
+        @if (session($type))
+            <div class="alert alert-{{ $type }} alert-dismissible rounded">
+                <button class="close" data-dismiss="alert">&times;</button>
+                {{ session($type) }}
+            </div>
+        @endif
+    @endforeach
 
     {{-- Ringkasan saldo --}}
     <div class="row mb-4">

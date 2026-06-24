@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
 
         $abilityRoles = [
             'menu-authenticated' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance', 'superadmin'],
+            'menu-role-files' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-backoffice-dashboard' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-author' => ['author'],
             'menu-production' => ['admin', 'editor', 'layouter', 'designer', 'owner', 'superadmin'],

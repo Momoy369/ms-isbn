@@ -91,6 +91,10 @@ class AdminFinanceReportController extends Controller
             fputcsv($handle, ['Tanggal', 'Buku', 'Channel', 'Format', 'Qty', 'Harga', 'Gross', 'Royalti20']);
 
             foreach ($rows as $row) {
+                $unitPriceForRoyalty = (float) ((optional($row->book)->selling_price ?? 0) > 0
+                    ? $row->book->selling_price
+                    : $row->unit_price);
+
                 fputcsv($handle, [
                     optional($row->sold_at)->format('Y-m-d'),
                     optional($row->book)->judul,
@@ -99,7 +103,7 @@ class AdminFinanceReportController extends Controller
                     (int) $row->quantity,
                     (float) $row->unit_price,
                     (float) $row->gross_amount,
-                    (float) $row->gross_amount * 0.20,
+                    ((int) $row->quantity) * $unitPriceForRoyalty * 0.20,
                 ]);
             }
 

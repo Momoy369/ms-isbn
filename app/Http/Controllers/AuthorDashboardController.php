@@ -8,11 +8,7 @@ use App\Models\BookReview;
 
 class AuthorDashboardController
 {
-    /** Biaya per copy buku untuk estimasi royalti (IDR). */
     private const ROYALTY_RATE = 0.20;
-
-    /** Asumsi harga jual per copy jika tidak ada data. */
-    private const DEFAULT_BOOK_PRICE = 80_000;
 
     public function index()
     {
@@ -55,26 +51,20 @@ class AuthorDashboardController
             'count_paid' => $invoices->where('status', 'paid')->count(),
         ];
 
-        // ── Royalti estimasi per buku ────────────────────────────────────
-        // Formula: jumlah_cetak × harga_jual × royalty_rate
-        // Harga jual: dari package.price jika ada, fallback ke DEFAULT_BOOK_PRICE
         $royaltyData = $books->map(function (Book $book): array {
             $printQty = (int) ($book->jumlah_cetak ?? 0);
-            $bookPrice = optional($book->publishingPackage)->price > 0
-                ? (float) $book->publishingPackage->price
-                : self::DEFAULT_BOOK_PRICE;
-
-            $actualGross = (float) $book->externalSales->sum('gross_amount');
+            $bookPrice = $book->effectiveSellingPrice();
             $actualQty = (int) $book->externalSales->sum('quantity');
 
-            if ($actualGross > 0) {
-                $estimated = $actualGross * self::ROYALTY_RATE;
+            if ($actualQty > 0) {
+                $grossFromActualSellingPrice = $actualQty * $bookPrice;
+                $estimated = $grossFromActualSellingPrice * self::ROYALTY_RATE;
 
                 return [
                     'book_id' => $book->id,
                     'judul' => $book->judul,
                     'print_qty' => $actualQty,
-                    'book_price' => $actualQty > 0 ? ($actualGross / $actualQty) : $bookPrice,
+                    'book_price' => $bookPrice,
                     'estimated_royalty' => $estimated,
                     'is_complete' => true,
                     'royalty_status' => 'actual',

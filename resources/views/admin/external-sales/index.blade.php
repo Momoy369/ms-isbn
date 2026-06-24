@@ -63,10 +63,13 @@
                 @csrf
                 <div class="col-md-4 form-group">
                     <label>Buku</label>
-                    <select name="book_id" class="form-control" required>
+                    <select name="book_id" class="form-control selling-price-source" required>
                         <option value="">- Pilih Buku -</option>
                         @foreach ($books as $book)
-                            <option value="{{ $book->id }}">{{ $book->judul }} ({{ $book->nomor_naskah }})</option>
+                            <option value="{{ $book->id }}"
+                                data-selling-price="{{ (float) ($book->selling_price ?? 0) }}">
+                                {{ $book->judul }} ({{ $book->nomor_naskah }})
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -118,7 +121,8 @@
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Harga Jual</label>
-                    <input type="number" step="0.01" name="unit_price" class="form-control" min="0" required>
+                    <input type="number" step="0.01" name="unit_price" id="unit-price-input" class="form-control"
+                        min="0" required>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Gross (opsional)</label>
@@ -157,6 +161,13 @@
                 </thead>
                 <tbody>
                     @forelse ($records as $row)
+                        @php
+                            $royaltyUnitPrice =
+                                (float) (($row->book->selling_price ?? 0) > 0
+                                    ? $row->book->selling_price
+                                    : $row->unit_price);
+                            $rowRoyalty = ((int) $row->quantity) * $royaltyUnitPrice * 0.2;
+                        @endphp
                         <tr>
                             <td>{{ $row->sold_at->format('d M Y') }}</td>
                             <td>{{ $row->book->judul ?? '-' }}</td>
@@ -165,8 +176,8 @@
                             <td>{{ number_format($row->quantity) }}</td>
                             <td>Rp {{ number_format($row->unit_price, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($row->gross_amount, 0, ',', '.') }}</td>
-                            <td class="font-weight-bold text-success">Rp
-                                {{ number_format($row->gross_amount * 0.2, 0, ',', '.') }}</td>
+                            <td class="font-weight-bold text-success">Rp {{ number_format($rowRoyalty, 0, ',', '.') }}
+                            </td>
                         </tr>
                     @empty
                         <tr>
@@ -181,4 +192,22 @@
             <div class="card-footer">{{ $records->links() }}</div>
         @endif
     </div>
+
+    <script>
+        (function() {
+            const bookSelect = document.querySelector('.selling-price-source');
+            const unitPriceInput = document.getElementById('unit-price-input');
+            if (!bookSelect || !unitPriceInput) return;
+
+            bookSelect.addEventListener('change', function() {
+                const selected = bookSelect.options[bookSelect.selectedIndex];
+                const sellingPrice = parseFloat(selected ? (selected.getAttribute('data-selling-price') ||
+                    '0') : '0');
+
+                if (!Number.isNaN(sellingPrice) && sellingPrice > 0) {
+                    unitPriceInput.value = sellingPrice.toFixed(2);
+                }
+            });
+        })();
+    </script>
 @endsection

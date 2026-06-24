@@ -10,16 +10,25 @@ class AdminExternalSalesController extends Controller
 {
     public function index()
     {
-        $books = Book::whereNotNull('author_user_id')->orderBy('judul')->get(['id', 'judul', 'nomor_naskah']);
+        $books = Book::whereNotNull('author_user_id')->orderBy('judul')->get(['id', 'judul', 'nomor_naskah', 'selling_price']);
 
         $records = ExternalSalesRecord::with(['book', 'inputBy'])
             ->latest('sold_at')
             ->latest('id')
             ->paginate(30);
 
+        $allSales = ExternalSalesRecord::with('book:id,selling_price')
+            ->get(['book_id', 'quantity', 'unit_price', 'gross_amount']);
+
+        $totalRoyalty = $allSales->sum(function (ExternalSalesRecord $row) {
+            $unitPrice = (float) (optional($row->book)->selling_price ?: $row->unit_price);
+
+            return ((int) $row->quantity) * $unitPrice * 0.20;
+        });
+
         $totals = [
-            'gross' => ExternalSalesRecord::sum('gross_amount'),
-            'royalty' => ExternalSalesRecord::sum('gross_amount') * 0.20,
+            'gross' => (float) $allSales->sum('gross_amount'),
+            'royalty' => (float) $totalRoyalty,
         ];
 
         return view('admin.external-sales.index', compact('books', 'records', 'totals'));
