@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
@@ -100,6 +101,15 @@ class FinanceInvoiceController extends Controller
             'status' => 'paid',
             'paid_at' => now(),
         ]);
+
+        if ($invoice->user_id) {
+            app(NotificationService::class)->send(
+                $invoice->user_id,
+                'Pembayaran Terkonfirmasi',
+                'Invoice ' . $invoice->invoice_number . ' telah dikonfirmasi lunas. Akses file final akan terbuka saat seluruh berkas final sudah siap.',
+                $invoice->book_id
+            );
+        }
 
         return back()->with('success', 'Invoice #' . $invoice->invoice_number . ' berhasil ditandai lunas.');
     }

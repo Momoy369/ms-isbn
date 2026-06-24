@@ -6,6 +6,7 @@ use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\AuthorServiceOrder;
 use App\Services\IpaymuService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -93,6 +94,15 @@ class PaymentGatewayController extends Controller
                 'status' => 'paid',
                 'paid_at' => now(),
             ]);
+
+            if ($invoice->user_id) {
+                app(NotificationService::class)->send(
+                    $invoice->user_id,
+                    'Pembayaran Berhasil',
+                    'Pembayaran invoice ' . $invoice->invoice_number . ' berhasil. Akses file final terbuka setelah seluruh berkas final percetakan lengkap.',
+                    $invoice->book_id
+                );
+            }
 
             Log::info('iPaymu callback marked invoice as paid.', [
                 'invoice_id' => $invoice->id,

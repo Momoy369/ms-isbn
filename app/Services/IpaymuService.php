@@ -31,7 +31,7 @@ class IpaymuService
             'product' => [$invoice->description],
             'qty' => [1],
             'price' => [(float) $invoice->amount],
-            'description' => $invoice->invoice_number,
+            'description' => [$invoice->invoice_number],
             'returnUrl' => url('/author/invoices/' . $invoice->id),
             'cancelUrl' => url('/author/invoices/' . $invoice->id),
             'notifyUrl' => url('/payments/ipaymu/callback'),

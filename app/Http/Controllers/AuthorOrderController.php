@@ -26,7 +26,8 @@ class AuthorOrderController extends Controller
         $packages = PublishingPackage::orderBy('name')->get();
         $printRules = PrintPriceRule::where('is_active', true)->orderBy('name')->get();
         $additionalServices = AdditionalService::where('is_active', true)->orderBy('name')->get();
-        $provinces = $rajaOngkir->provinces();
+        $provinceResult = $rajaOngkir->provincesWithMeta();
+        $provinces = $provinceResult['data'];
 
         $orders = AuthorBookOrder::with(['book', 'invoice', 'package', 'printPriceRule'])
             ->where('user_id', $user->id)
@@ -43,6 +44,7 @@ class AuthorOrderController extends Controller
             'printRules',
             'additionalServices',
             'provinces',
+            'provinceResult',
             'orders',
             'accumulatedPayments'
         ));
@@ -54,9 +56,9 @@ class AuthorOrderController extends Controller
             'province_id' => ['required', 'string', 'max:16'],
         ]);
 
-        return response()->json([
-            'data' => $rajaOngkir->cities($request->province_id),
-        ]);
+        $result = $rajaOngkir->citiesWithMeta($request->province_id);
+
+        return response()->json($result);
     }
 
     public function buyPackage(Request $request)

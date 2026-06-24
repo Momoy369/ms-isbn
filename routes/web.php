@@ -30,6 +30,8 @@ use App\Http\Controllers\ProductionTimelineController;
 use App\Http\Controllers\BookMessageController;
 use App\Http\Controllers\BookChapterController;
 use App\Http\Controllers\RoleFileController;
+use App\Http\Controllers\PrintingWorkspaceController;
+use App\Http\Controllers\AuthorFinalFileController;
 use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
@@ -432,6 +434,21 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'download'])
                 ->name('invoices.pdf');
+
+        });
+
+        Route::middleware(['role:admin,owner,finance,designer,layouter,editor,superadmin'])->group(function () {
+            Route::get('/printing/workspace', [PrintingWorkspaceController::class, 'index'])
+                ->name('printing.workspace.index');
+
+            Route::get('/printing/workspace/orders/{order}', [PrintingWorkspaceController::class, 'show'])
+                ->name('printing.workspace.show');
+
+            Route::post('/printing/workspace/orders/{order}/status', [PrintingWorkspaceController::class, 'updateStatus'])
+                ->name('printing.workspace.update-status');
+
+            Route::post('/printing/workspace/orders/{order}/upload-final-file', [PrintingWorkspaceController::class, 'uploadFinalFile'])
+                ->name('printing.workspace.upload-final-file');
         });
 
         Route::get('/my-assignments', [AssignmentController::class, 'myAssignments'])
@@ -540,6 +557,12 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/author/claims/books/{book}', [AuthorBookClaimController::class, 'store'])
                 ->name('author.claims.store');
+
+            Route::get('/author/books/{book}/final-files', [AuthorFinalFileController::class, 'index'])
+                ->name('author.books.final-files.index');
+
+            Route::get('/author/books/{book}/final-files/{file}', [AuthorFinalFileController::class, 'download'])
+                ->name('author.books.final-files.download');
 
         });
 });

@@ -1,35 +1,39 @@
 <h4>Daftar Berkas</h4>
 
-                    <table class="table table-bordered">
+<table class="table table-bordered">
 
-                        <tr>
-                            <th>Jenis</th>
-                            <th>Nama File</th>
-                            <th>Aksi</th>
-                        </tr>
+    <tr>
+        <th>Jenis</th>
+        <th>Nama File</th>
+        <th>Aksi</th>
+    </tr>
 
-                        @foreach ($book->activeFiles as $file)
-                            <tr>
+    @forelse ($book->activeFiles as $file)
+        <tr>
 
-                                <td>
-                                    {{ ucfirst(str_replace('_', ' ', $file->type)) }}
-                                </td>
+            <td>
+                {{ ucfirst(str_replace('_', ' ', $file->type)) }}
+            </td>
 
-                                <td>
-                                    {{ $file->original_name }}
-                                </td>
+            <td>
+                {{ $file->original_name }}
+            </td>
 
-                                <td>
+            <td>
 
-                                    <a href="{{ route('files.download', $file) }}" class="btn btn-success btn-sm">
+                <a href="{{ route('files.download', $file) }}" class="btn btn-success btn-sm">
 
-                                        Download
+                    Download
 
-                                    </a>
+                </a>
 
-                                </td>
+            </td>
 
-                            </tr>
-                        @endforeach
+        </tr>
+    @empty
+        <tr>
+            <td colspan="3" class="text-center text-muted py-2">Belum ada file aktif.</td>
+        </tr>
+    @endforelse
 
-                    </table>
+</table>

@@ -29,6 +29,8 @@
 
                     @include('books.partials.metadata-summary')
 
+                    @include('books.partials.business-summary')
+
                     @include('books.partials.quick-actions')
 
                 </div>

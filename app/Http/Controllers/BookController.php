@@ -11,6 +11,7 @@ use App\Models\AuthorInvoice;
 use App\Models\User;
 use App\Models\PublishingPackage;
 use App\Services\AssignmentRecommendationService;
+use App\Services\BookCompletionOrchestratorService;
 
 class BookController extends Controller
 {
@@ -138,7 +139,15 @@ class BookController extends Controller
 
             'assignments',
 
-            'assignmentHistories'
+            'assignmentHistories',
+
+            'publishingPackage',
+
+            'authorInvoices',
+
+            'orders.invoice',
+
+            'orders.user'
 
         ]);
 
@@ -533,7 +542,7 @@ class BookController extends Controller
             );
 
             if ($nextWorkflow === 'selesai') {
-                AuthorInvoice::createFinalPackageInvoice($book);
+                app(BookCompletionOrchestratorService::class)->handle($book, 'workflow_next');
             }
 
             app(
@@ -666,6 +675,9 @@ class BookController extends Controller
 
         ]);
 
+        $completion = app(BookCompletionOrchestratorService::class);
+        $completion->handle($book, 'isbn_approved');
+
         return back()->with(
 
             'success',
@@ -686,8 +698,8 @@ class BookController extends Controller
 
         ]);
 
-        $book->load('publishingPackage');
-        AuthorInvoice::createFinalPackageInvoice($book);
+        $completion = app(BookCompletionOrchestratorService::class);
+        $completion->handle($book, 'production_finished');
 
         $activity->log(
 

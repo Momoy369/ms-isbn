@@ -8,12 +8,16 @@ use Throwable;
 
 class RajaOngkirService
 {
-    public function provinces(): array
+    public function provincesWithMeta(): array
     {
         $apiKey = (string) config('services.rajaongkir.key');
 
         if (empty($apiKey)) {
-            return $this->dummyProvinces();
+            return [
+                'data' => $this->dummyProvinces(),
+                'is_fallback' => true,
+                'message' => 'API key RajaOngkir belum disetel. Sistem menggunakan data dummy.',
+            ];
         }
 
         try {
@@ -25,25 +29,46 @@ class RajaOngkirService
                 ->get('https://api.rajaongkir.com/starter/province');
 
             if (!$response->ok()) {
-                return $this->dummyProvinces();
+                return [
+                    'data' => $this->dummyProvinces(),
+                    'is_fallback' => true,
+                    'message' => 'RajaOngkir merespons gagal (' . $response->status() . '). Data dummy dipakai sementara.',
+                ];
             }
 
-            return data_get($response->json(), 'rajaongkir.results', []);
+            return [
+                'data' => data_get($response->json(), 'rajaongkir.results', []),
+                'is_fallback' => false,
+                'message' => null,
+            ];
         } catch (Throwable $e) {
             Log::warning('RajaOngkir provinces fallback used.', [
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->dummyProvinces();
+            return [
+                'data' => $this->dummyProvinces(),
+                'is_fallback' => true,
+                'message' => 'Koneksi API RajaOngkir gagal (' . $e->getMessage() . '). Data dummy dipakai.',
+            ];
         }
     }
 
-    public function cities(string $provinceId): array
+    public function provinces(): array
+    {
+        return $this->provincesWithMeta()['data'];
+    }
+
+    public function citiesWithMeta(string $provinceId): array
     {
         $apiKey = (string) config('services.rajaongkir.key');
 
         if (empty($apiKey)) {
-            return $this->dummyCities();
+            return [
+                'data' => $this->dummyCities(),
+                'is_fallback' => true,
+                'message' => 'API key RajaOngkir belum disetel. Sistem menggunakan data kota dummy.',
+            ];
         }
 
         try {
@@ -57,18 +82,35 @@ class RajaOngkirService
                 ]);
 
             if (!$response->ok()) {
-                return $this->dummyCities();
+                return [
+                    'data' => $this->dummyCities(),
+                    'is_fallback' => true,
+                    'message' => 'RajaOngkir merespons gagal (' . $response->status() . '). Data kota dummy dipakai.',
+                ];
             }
 
-            return data_get($response->json(), 'rajaongkir.results', []);
+            return [
+                'data' => data_get($response->json(), 'rajaongkir.results', []),
+                'is_fallback' => false,
+                'message' => null,
+            ];
         } catch (Throwable $e) {
             Log::warning('RajaOngkir cities fallback used.', [
                 'province_id' => $provinceId,
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->dummyCities();
+            return [
+                'data' => $this->dummyCities(),
+                'is_fallback' => true,
+                'message' => 'Koneksi API kota RajaOngkir gagal (' . $e->getMessage() . '). Data dummy dipakai.',
+            ];
         }
+    }
+
+    public function cities(string $provinceId): array
+    {
+        return $this->citiesWithMeta($provinceId)['data'];
     }
 
     public function estimateCost(string $destinationCityId, int $weightGram, string $courier = 'jne'): array

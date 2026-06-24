@@ -26,6 +26,13 @@
         Rp {{ number_format($accumulatedPayments, 0, ',', '.') }}
     </div>
 
+    @if (!empty($provinceResult['is_fallback']))
+        <div class="alert alert-warning">
+            <strong>Info Ongkir:</strong>
+            {{ $provinceResult['message'] ?? 'RajaOngkir sedang fallback ke data dummy.' }}
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-lg-6 mb-3">
             <div class="card h-100">
@@ -240,7 +247,12 @@
                     const json = await resp.json();
                     const rows = (json && json.data) ? json.data : [];
 
-                    city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                    if (json && json.is_fallback) {
+                        city.innerHTML = '<option value="">Data API fallback (dummy)</option>';
+                    } else {
+                        city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                    }
+
                     rows.forEach(function(row) {
                         const opt = document.createElement('option');
                         opt.value = row.city_name || '';

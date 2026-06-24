@@ -406,6 +406,12 @@ return [
             'can' => 'menu-finance',
         ],
         [
+            'text' => 'Workspace Percetakan',
+            'route' => 'printing.workspace.index',
+            'icon' => 'fas fa-print',
+            'can' => 'menu-printing-workspace',
+        ],
+        [
             'text' => 'Invoice Penulis',
             'route' => 'author.invoices.index',
             'icon' => 'fas fa-money-check-alt',

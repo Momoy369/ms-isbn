@@ -12,8 +12,16 @@
                 Naskah Final
             </option>
 
+            <option value="edited_manuscript">
+                Hasil Editing (untuk Review Author)
+            </option>
+
             <option value="cover">
                 Cover
+            </option>
+
+            <option value="cover_final">
+                Cover Final (untuk Review Author)
             </option>
 
             <option value="skk">
@@ -28,7 +36,15 @@
 
         <label>File</label>
 
-        <input type="file" name="file" class="form-control">
+        <input type="file" name="file" class="form-control" required>
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Catatan (opsional)</label>
+
+        <input type="text" name="note" class="form-control" placeholder="Contoh: revisi bab 3 sudah diperbaiki">
 
     </div>
 

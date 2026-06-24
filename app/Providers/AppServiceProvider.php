@@ -40,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
             'menu-isbn' => ['admin', 'isbn', 'owner', 'superadmin'],
             'menu-user-management' => ['admin', 'isbn', 'superadmin'],
             'menu-finance' => ['admin', 'owner', 'finance', 'superadmin'],
+            'menu-printing-workspace' => ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'],
         ];
 
         foreach ($abilityRoles as $ability => $roles) {

@@ -128,6 +128,12 @@
                             <div class="font-weight-bold mb-2"><i class="fas fa-link mr-1"></i> Link Hasil Produksi</div>
                             @if ($canAccessDeliveryLinks)
                                 <div class="small text-success mb-2">Akses terbuka karena invoice paket telah lunas.</div>
+                                @if ($invoice->book)
+                                    <a href="{{ route('author.books.final-files.index', $invoice->book) }}"
+                                        class="btn btn-sm btn-primary mr-1 mb-1">
+                                        <i class="fas fa-folder-open mr-1"></i> Buka Folder File Final
+                                    </a>
+                                @endif
                                 @if (!empty($invoice->book->final_drive_link))
                                     <a href="{{ $invoice->book->final_drive_link }}" target="_blank"
                                         class="btn btn-sm btn-success mr-1 mb-1">

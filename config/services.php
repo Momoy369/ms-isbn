@@ -54,6 +54,8 @@ return [
         'email_enabled' => env('REMINDER_EMAIL_ENABLED', false),
         'whatsapp_enabled' => env('REMINDER_WHATSAPP_ENABLED', false),
         'sms_enabled' => env('REMINDER_SMS_ENABLED', false),
+        'whatsapp_webhook_url' => env('REMINDER_WHATSAPP_WEBHOOK_URL'),
+        'sms_webhook_url' => env('REMINDER_SMS_WEBHOOK_URL'),
     ],
 
 ];
