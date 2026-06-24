@@ -16,6 +16,10 @@ use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorReviewController;
 use App\Http\Controllers\AuthorInvoiceController;
 use App\Http\Controllers\FinanceInvoiceController;
+use App\Http\Controllers\PaymentGatewayController;
+use App\Http\Controllers\InvoiceDocumentController;
+use App\Http\Controllers\AdminFinanceReportController;
+use App\Http\Controllers\AdditionalServiceController;
 use App\Http\Controllers\AdminPrintPriceController;
 use App\Http\Controllers\AdminExternalSalesController;
 use App\Http\Controllers\AuthorOrderController;
@@ -45,6 +49,10 @@ Route::get('/', function () {
             ->route('author.dashboard');
     }
 
+    if (in_array($user->role, ['editor', 'layouter', 'designer'], true)) {
+        return redirect()->route('assignments.my');
+    }
+
     return redirect()
         ->route('dashboard');
 
@@ -60,6 +68,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/files/{file}/download', [DocumentController::class, 'download'])
         ->name('files.download');
+
+    Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'callback'])
+        ->name('payments.ipaymu.callback');
 
     Route::get(
         '/notifications',
@@ -87,7 +98,7 @@ Route::middleware('auth')->group(function () {
         );
 
     Route::middleware([
-        'role:admin,editor,layouter,isbn,owner,finance'
+        'role:admin,editor,layouter,designer,isbn,owner,finance,superadmin'
     ])->group(function () {
 
         Route::get(
@@ -298,7 +309,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/books/{book}/generate-package', [DocumentController::class, 'generatePackage'])
             ->name('books.generate-package');
 
-        Route::middleware(['role:admin,isbn'])->group(function () {
+        Route::middleware(['role:admin,isbn,superadmin'])->group(function () {
             Route::post('/books/{book}/submit-isbn', [BookController::class, 'submitISBN'])
                 ->name('books.submit-isbn');
 
@@ -343,7 +354,7 @@ Route::middleware('auth')->group(function () {
                 );
         });
 
-        Route::middleware(['role:admin,owner,finance'])->group(function () {
+        Route::middleware(['role:admin,owner,finance,superadmin'])->group(function () {
             Route::get('/finance/invoices', [FinanceInvoiceController::class, 'index'])
                 ->name('finance.invoices.index');
 
@@ -376,6 +387,27 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
                 ->name('external-sales.store');
+
+            Route::post('/external-sales/update-book-price', [AdminExternalSalesController::class, 'updateBookPrice'])
+                ->name('external-sales.update-book-price');
+
+            Route::get('/additional-services', [AdditionalServiceController::class, 'index'])
+                ->name('additional-services.index');
+
+            Route::post('/additional-services', [AdditionalServiceController::class, 'store'])
+                ->name('additional-services.store');
+
+            Route::put('/additional-services/{additionalService}', [AdditionalServiceController::class, 'update'])
+                ->name('additional-services.update');
+
+            Route::get('/finance/export/invoices', [AdminFinanceReportController::class, 'exportInvoicesCsv'])
+                ->name('finance.export.invoices');
+
+            Route::get('/finance/export/sales', [AdminFinanceReportController::class, 'exportSalesCsv'])
+                ->name('finance.export.sales');
+
+            Route::get('/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'download'])
+                ->name('invoices.pdf');
         });
 
         Route::get('/my-assignments', [AssignmentController::class, 'myAssignments'])
@@ -461,6 +493,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/author/invoices/{invoice}/pay-now', [AuthorInvoiceController::class, 'payNow'])
                 ->name('author.invoices.pay-now');
 
+            Route::get('/author/invoices/{invoice}/checkout-ipaymu', [PaymentGatewayController::class, 'checkout'])
+                ->name('payments.ipaymu.checkout');
+
             Route::get('/author/orders', [AuthorOrderController::class, 'index'])
                 ->name('author.orders.index');
 
@@ -469,6 +504,12 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/author/orders/reprint', [AuthorOrderController::class, 'reorderPrint'])
                 ->name('author.orders.reprint');
+
+            Route::post('/author/orders/service', [AuthorOrderController::class, 'orderService'])
+                ->name('author.orders.service');
+
+            Route::get('/author/orders/cities', [AuthorOrderController::class, 'cities'])
+                ->name('author.orders.cities');
 
             Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
                 ->name('author.claims.index');

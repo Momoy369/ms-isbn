@@ -36,6 +36,52 @@
     </div>
 
     <div class="card mb-3">
+        <div class="card-header"><strong>Export CSV Periode</strong></div>
+        <div class="card-body">
+            <form method="GET" action="{{ route('finance.export.sales') }}" class="form-row">
+                <div class="col-md-3 form-group">
+                    <label>Dari Tanggal</label>
+                    <input type="date" name="start_date" class="form-control">
+                </div>
+                <div class="col-md-3 form-group">
+                    <label>Sampai Tanggal</label>
+                    <input type="date" name="end_date" class="form-control">
+                </div>
+                <div class="col-md-2 form-group d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary btn-block">
+                        <i class="fas fa-file-csv mr-1"></i> Export Sales CSV
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><strong>Harga Jual Aktual Buku</strong></div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('external-sales.update-book-price') }}" class="form-row">
+                @csrf
+                <div class="col-md-4 form-group">
+                    <label>Buku</label>
+                    <select name="book_id" class="form-control" required>
+                        <option value="">- Pilih Buku -</option>
+                        @foreach ($books as $book)
+                            <option value="{{ $book->id }}">{{ $book->judul }} ({{ $book->nomor_naskah }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label>Harga Jual Aktual</label>
+                    <input type="number" step="0.01" name="selling_price" class="form-control" min="0" required>
+                </div>
+                <div class="col-md-2 form-group d-flex align-items-end">
+                    <button class="btn btn-warning btn-block" type="submit">Update Harga</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3">
         <div class="card-header"><strong>Tambah Data Penjualan</strong></div>
         <div class="card-body">
             <form method="POST" action="{{ route('external-sales.store') }}" class="row">
@@ -124,7 +170,8 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-3">Belum ada data penjualan eksternal.</td>
+                            <td colspan="8" class="text-center text-muted py-3">Belum ada data penjualan eksternal.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

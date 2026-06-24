@@ -55,6 +55,8 @@ class Book extends Model
 
         'jumlah_halaman',
 
+        'selling_price',
+
         'ukuran_buku',
 
         'cetakan',
@@ -510,6 +512,22 @@ class Book extends Model
     public function externalSales()
     {
         return $this->hasMany(\App\Models\ExternalSalesRecord::class);
+    }
+
+    public function serviceOrders()
+    {
+        return $this->hasMany(\App\Models\AuthorServiceOrder::class);
+    }
+
+    public function effectiveSellingPrice(): float
+    {
+        if (!empty($this->selling_price) && $this->selling_price > 0) {
+            return (float) $this->selling_price;
+        }
+
+        $pkgPrice = (float) optional($this->publishingPackage)->price;
+
+        return $pkgPrice > 0 ? $pkgPrice : 80000;
     }
 
     public function canAuthorAccessDeliveryLinks(): bool

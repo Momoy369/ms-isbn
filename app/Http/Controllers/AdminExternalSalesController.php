@@ -56,4 +56,19 @@ class AdminExternalSalesController extends Controller
 
         return back()->with('success', 'Data penjualan eksternal berhasil ditambahkan.');
     }
+
+    public function updateBookPrice(Request $request)
+    {
+        $data = $request->validate([
+            'book_id' => ['required', 'exists:books,id'],
+            'selling_price' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $book = Book::findOrFail($data['book_id']);
+        $book->update([
+            'selling_price' => $data['selling_price'],
+        ]);
+
+        return back()->with('success', 'Harga jual buku berhasil diperbarui.');
+    }
 }

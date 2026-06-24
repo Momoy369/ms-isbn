@@ -53,6 +53,27 @@
 
     <div class="card shadow-sm mb-3" style="border-radius:14px;">
         <div class="card-header bg-white border-0">
+            <h3 class="card-title mb-0"><i class="fas fa-file-export mr-1"></i> Export Laporan</h3>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ route('finance.export.invoices') }}" class="row">
+                <div class="col-md-3 mb-2">
+                    <input type="date" name="start_date" class="form-control" placeholder="Mulai">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <input type="date" name="end_date" class="form-control" placeholder="Sampai">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary btn-block" type="submit">
+                        <i class="fas fa-file-csv mr-1"></i> Export Invoice CSV
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3" style="border-radius:14px;">
+        <div class="card-header bg-white border-0">
             <h3 class="card-title mb-0"><i class="fas fa-filter mr-1"></i> Filter Invoice</h3>
         </div>
         <div class="card-body">
@@ -151,6 +172,11 @@
                                             </button>
                                         </form>
                                     @endif
+
+                                    <a href="{{ route('invoices.pdf', $inv) }}"
+                                        class="btn btn-xs btn-outline-secondary mt-1">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
                                 </td>
                             </tr>
                         @empty

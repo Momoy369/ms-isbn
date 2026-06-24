@@ -11,6 +11,10 @@ class RoleMiddleware
         Closure $next,
         ...$roles
     ) {
+        if (auth()->user()->role === 'superadmin') {
+            return $next($request);
+        }
+
         if (
             !in_array(
                 auth()->user()->role,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
+use App\Services\IpaymuService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -83,20 +84,8 @@ class AuthorInvoiceController extends Controller
             return back()->with('warning', 'Invoice ini sudah ' . $invoice->getStatusLabel() . '.');
         }
 
-        $invoice->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-            'payment_method' => 'author_online',
-            'payment_reference' => 'AUTH-' . strtoupper((string) \Illuminate\Support\Str::random(10)),
-            'verified_by_user_id' => auth()->id(),
-        ]);
-
-        AuthorBookOrder::where('author_invoice_id', $invoice->id)->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
-
-        return back()->with('success', 'Pembayaran berhasil. Invoice #' . $invoice->invoice_number . ' sudah lunas.');
+        return redirect()
+            ->route('payments.ipaymu.checkout', $invoice);
     }
 
     /**

@@ -299,227 +299,136 @@ return [
     */
 
     'menu' => [
-        // Navbar items:
         [
             'type' => 'navbar-search',
             'text' => 'search',
             'topnav_right' => true,
+            'can' => 'menu-authenticated',
         ],
         [
             'type' => 'fullscreen-widget',
             'topnav_right' => true,
+            'can' => 'menu-authenticated',
         ],
-
-        // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
             'text' => 'search',
+            'can' => 'menu-authenticated',
         ],
-        [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
-        ],
-
         [
             'text' => 'Dasbor',
-
             'route' => 'dashboard',
-
             'icon' => 'fas fa-home',
+            'can' => 'menu-backoffice-dashboard',
         ],
-
         [
-            'text' => 'Finance Invoice',
-            'route' => 'finance.invoices.index',
-            'icon' => 'fas fa-file-invoice-dollar',
+            'text' => 'Dasbor Penulis',
+            'route' => 'author.dashboard',
+            'icon' => 'fas fa-feather-alt',
+            'can' => 'menu-author',
         ],
-
-        [
-            'text' => 'Harga Cetak',
-            'route' => 'print-prices.index',
-            'icon' => 'fas fa-print',
-        ],
-
-        [
-            'text' => 'Penjualan Eksternal',
-            'route' => 'external-sales.index',
-            'icon' => 'fas fa-store',
-        ],
-
-        [
-            'text' => 'Invoice Penulis',
-            'route' => 'author.invoices.index',
-            'icon' => 'fas fa-money-check-alt',
-        ],
-
-        [
-            'text' => 'Claim Buku Penulis',
-            'route' => 'author.claims.index',
-            'icon' => 'fas fa-id-card',
-        ],
-
-        [
-            'text' => 'Order Penulis',
-            'route' => 'author.orders.index',
-            'icon' => 'fas fa-shopping-cart',
-        ],
-
         [
             'text' => 'Naskah',
-
             'route' => 'books.index',
-
             'icon' => 'fas fa-book',
+            'can' => 'menu-backoffice-dashboard',
         ],
-
         [
             'text' => 'Paket Penerbitan',
-
             'route' => 'publishing-packages.index',
-
             'icon' => 'fas fa-cubes',
+            'can' => 'menu-isbn',
         ],
-
-        // [
-        //     'text' => 'Report',
-
-        //     'route' => 'reports.production',
-
-        //     'icon' => 'fas fa-stats',
-        // ],
-
         [
             'text' => 'Antrian ISBN',
-
             'route' => 'isbn.queue',
-
             'icon' => 'fas fa-barcode',
+            'can' => 'menu-isbn',
         ],
-
         [
             'text' => 'Assignment',
-
             'url' => '/assignments',
-
-            'icon' => 'fas fa-tasks'
+            'icon' => 'fas fa-tasks',
+            'can' => 'menu-assignment-all',
         ],
-
         [
             'text' => 'Assignment Saya',
-
             'url' => '/my-assignments',
-
-            'icon' => 'fas fa-user-check'
+            'icon' => 'fas fa-user-check',
+            'can' => 'menu-assignment-worker',
         ],
-
         [
             'text' => 'Production',
             'url' => 'production',
             'icon' => 'fas fa-industry',
+            'can' => 'menu-production',
         ],
-
         [
             'text' => 'Production Timeline',
             'route' => 'production.timeline',
             'icon' => 'fas fa-stream',
+            'can' => 'menu-production',
         ],
-
         [
             'text' => 'Layout Generator',
-
             'url' => 'layout-generator',
-
             'icon' => 'fas fa-book-open',
+            'can' => 'menu-production',
         ],
-
         [
             'text' => 'Users',
-
             'url' => '/users',
-
-            'icon' => 'fas fa-users'
-        ],
-
-        [
-            'text' => 'pages',
-            'url' => 'admin/pages',
-            'icon' => 'far fa-fw fa-file',
-            'label' => 4,
-            'label_color' => 'success',
-        ],
-        ['header' => 'account_settings'],
-        [
-            'text' => 'profile',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-user',
+            'icon' => 'fas fa-users',
+            'can' => 'menu-user-management',
         ],
         [
-            'text' => 'change_password',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-lock',
+            'text' => 'Finance Invoice',
+            'route' => 'finance.invoices.index',
+            'icon' => 'fas fa-file-invoice-dollar',
+            'can' => 'menu-finance',
         ],
-
+        [
+            'text' => 'Harga Cetak',
+            'route' => 'print-prices.index',
+            'icon' => 'fas fa-print',
+            'can' => 'menu-finance',
+        ],
+        [
+            'text' => 'Penjualan Eksternal',
+            'route' => 'external-sales.index',
+            'icon' => 'fas fa-store',
+            'can' => 'menu-finance',
+        ],
+        [
+            'text' => 'Layanan Tambahan',
+            'route' => 'additional-services.index',
+            'icon' => 'fas fa-concierge-bell',
+            'can' => 'menu-finance',
+        ],
+        [
+            'text' => 'Invoice Penulis',
+            'route' => 'author.invoices.index',
+            'icon' => 'fas fa-money-check-alt',
+            'can' => 'menu-author',
+        ],
+        [
+            'text' => 'Claim Buku Penulis',
+            'route' => 'author.claims.index',
+            'icon' => 'fas fa-id-card',
+            'can' => 'menu-author',
+        ],
+        [
+            'text' => 'Order Penulis',
+            'route' => 'author.orders.index',
+            'icon' => 'fas fa-shopping-cart',
+            'can' => 'menu-author',
+        ],
         [
             'text' => 'Notifikasi',
             'route' => 'notifications.index',
             'icon' => 'fas fa-bell',
             'topnav_right' => true,
-        ],
-
-        [
-            'text' => 'multilevel',
-            'icon' => 'fas fa-fw fa-share',
-            'submenu' => [
-                [
-                    'text' => 'level_one',
-                    'url' => '#',
-                ],
-                [
-                    'text' => 'level_one',
-                    'url' => '#',
-                    'submenu' => [
-                        [
-                            'text' => 'level_two',
-                            'url' => '#',
-                        ],
-                        [
-                            'text' => 'level_two',
-                            'url' => '#',
-                            'submenu' => [
-                                [
-                                    'text' => 'level_three',
-                                    'url' => '#',
-                                ],
-                                [
-                                    'text' => 'level_three',
-                                    'url' => '#',
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'text' => 'level_one',
-                    'url' => '#',
-                ],
-            ],
-        ],
-        ['header' => 'labels'],
-        [
-            'text' => 'important',
-            'icon_color' => 'red',
-            'url' => '#',
-        ],
-        [
-            'text' => 'warning',
-            'icon_color' => 'yellow',
-            'url' => '#',
-        ],
-        [
-            'text' => 'information',
-            'icon_color' => 'cyan',
-            'url' => '#',
+            'can' => 'menu-authenticated',
         ],
     ],
 
@@ -544,6 +453,8 @@ return [
         JeroenNoten\LaravelAdminLte\Menu\Filters\LangFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\DataFilter::class,
     ],
+
+    'menu_filters_data' => [],
 
     /*
     |--------------------------------------------------------------------------

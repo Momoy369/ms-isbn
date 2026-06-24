@@ -89,19 +89,23 @@
                             <input type="number" name="quantity" min="1" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label>ID Kota Tujuan RajaOngkir</label>
-                            <input type="text" name="destination_city_id" class="form-control" placeholder="contoh: 39"
-                                required>
+                            <label>Provinsi Tujuan</label>
+                            <select name="destination_province" id="destination-province" class="form-control" required>
+                                <option value="">- Pilih Provinsi -</option>
+                                @foreach ($provinces as $prov)
+                                    <option value="{{ $prov['province'] ?? '' }}"
+                                        data-id="{{ $prov['province_id'] ?? '' }}">
+                                        {{ $prov['province'] ?? '' }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="form-row">
-                            <div class="col form-group">
-                                <label>Provinsi</label>
-                                <input type="text" name="destination_province" class="form-control" required>
-                            </div>
-                            <div class="col form-group">
-                                <label>Kota</label>
-                                <input type="text" name="destination_city" class="form-control" required>
-                            </div>
+                        <div class="form-group">
+                            <label>Kota Tujuan</label>
+                            <select name="destination_city" id="destination-city" class="form-control" required>
+                                <option value="">- Pilih Kota -</option>
+                            </select>
+                            <input type="hidden" name="destination_city_id" id="destination-city-id" required>
                         </div>
                         <div class="form-group">
                             <label>Kode Pos</label>
@@ -125,6 +129,41 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><strong>Tambah Layanan Di Luar Paket</strong></div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('author.orders.service') }}" class="row">
+                @csrf
+                <div class="col-md-4 form-group">
+                    <label>Layanan</label>
+                    <select name="additional_service_id" class="form-control" required>
+                        <option value="">- Pilih Layanan -</option>
+                        @foreach ($additionalServices as $service)
+                            <option value="{{ $service->id }}">{{ $service->name }} - Rp
+                                {{ number_format($service->price, 0, ',', '.') }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4 form-group">
+                    <label>Buku (opsional)</label>
+                    <select name="book_id" class="form-control">
+                        <option value="">- Tidak terkait buku tertentu -</option>
+                        @foreach ($completedBooks as $book)
+                            <option value="{{ $book->id }}">{{ $book->judul }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 form-group">
+                    <label>Qty</label>
+                    <input type="number" name="quantity" class="form-control" min="1" value="1" required>
+                </div>
+                <div class="col-md-2 form-group d-flex align-items-end">
+                    <button class="btn btn-info btn-block" type="submit">Pesan Layanan</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -173,4 +212,51 @@
             <div class="card-footer">{{ $orders->links() }}</div>
         @endif
     </div>
+
+    <script>
+        (function() {
+            const prov = document.getElementById('destination-province');
+            const city = document.getElementById('destination-city');
+            const cityId = document.getElementById('destination-city-id');
+
+            if (!prov || !city || !cityId) return;
+
+            prov.addEventListener('change', async function() {
+                city.innerHTML = '<option value="">Memuat kota...</option>';
+                cityId.value = '';
+
+                const selected = prov.options[prov.selectedIndex];
+                const provinceId = selected ? selected.getAttribute('data-id') : '';
+
+                if (!provinceId) {
+                    city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                    return;
+                }
+
+                try {
+                    const url = '{{ route('author.orders.cities') }}' + '?province_id=' +
+                        encodeURIComponent(provinceId);
+                    const resp = await fetch(url);
+                    const json = await resp.json();
+                    const rows = (json && json.data) ? json.data : [];
+
+                    city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                    rows.forEach(function(row) {
+                        const opt = document.createElement('option');
+                        opt.value = row.city_name || '';
+                        opt.textContent = (row.type ? row.type + ' ' : '') + (row.city_name || '');
+                        opt.setAttribute('data-id', row.city_id || '');
+                        city.appendChild(opt);
+                    });
+                } catch (e) {
+                    city.innerHTML = '<option value="">Gagal memuat kota</option>';
+                }
+            });
+
+            city.addEventListener('change', function() {
+                const selected = city.options[city.selectedIndex];
+                cityId.value = selected ? (selected.getAttribute('data-id') || '') : '';
+            });
+        })();
+    </script>
 @endsection

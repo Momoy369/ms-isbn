@@ -38,6 +38,21 @@ return [
     'rajaongkir' => [
         'key' => env('RAJAONGKIR_API_KEY'),
         'origin_city_id' => env('RAJAONGKIR_ORIGIN_CITY_ID', '501'),
+        'verify_ssl' => env('RAJAONGKIR_VERIFY_SSL', true),
+    ],
+
+    'ipaymu' => [
+        'api_key' => env('IPAYMU_API_KEY'),
+        'va' => env('IPAYMU_VA'),
+        'base_url' => env('IPAYMU_BASE_URL', 'https://my.ipaymu.com/api/v2'),
+        'callback_secret' => env('IPAYMU_CALLBACK_SECRET'),
+        'verify_callback_signature' => env('IPAYMU_VERIFY_SIGNATURE', true),
+    ],
+
+    'reminder' => [
+        'email_enabled' => env('REMINDER_EMAIL_ENABLED', false),
+        'whatsapp_enabled' => env('REMINDER_WHATSAPP_ENABLED', false),
+        'sms_enabled' => env('REMINDER_SMS_ENABLED', false),
     ],
 
 ];

@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->role === 'finance';
     }
 
+    public function isSuperAdmin()
+    {
+        return $this->role === 'superadmin';
+    }
+
     public function assignments()
     {
         return $this->hasMany(

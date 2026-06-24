@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
+use App\Models\AuthorServiceOrder;
 use App\Models\Book;
+use App\Models\AdditionalService;
 use App\Models\PrintPriceRule;
 use App\Models\PublishingPackage;
 use App\Services\RajaOngkirService;
@@ -12,7 +14,7 @@ use Illuminate\Http\Request;
 
 class AuthorOrderController extends Controller
 {
-    public function index()
+    public function index(RajaOngkirService $rajaOngkir)
     {
         $user = auth()->user();
 
@@ -23,6 +25,8 @@ class AuthorOrderController extends Controller
 
         $packages = PublishingPackage::orderBy('name')->get();
         $printRules = PrintPriceRule::where('is_active', true)->orderBy('name')->get();
+        $additionalServices = AdditionalService::where('is_active', true)->orderBy('name')->get();
+        $provinces = $rajaOngkir->provinces();
 
         $orders = AuthorBookOrder::with(['book', 'invoice', 'package', 'printPriceRule'])
             ->where('user_id', $user->id)
@@ -37,9 +41,22 @@ class AuthorOrderController extends Controller
             'completedBooks',
             'packages',
             'printRules',
+            'additionalServices',
+            'provinces',
             'orders',
             'accumulatedPayments'
         ));
+    }
+
+    public function cities(Request $request, RajaOngkirService $rajaOngkir)
+    {
+        $request->validate([
+            'province_id' => ['required', 'string', 'max:16'],
+        ]);
+
+        return response()->json([
+            'data' => $rajaOngkir->cities($request->province_id),
+        ]);
     }
 
     public function buyPackage(Request $request)
@@ -170,5 +187,52 @@ class AuthorOrderController extends Controller
         ]);
 
         return back()->with('success', 'Pesanan cetak ulang berhasil dibuat. Invoice telah diterbitkan.');
+    }
+
+    public function orderService(Request $request)
+    {
+        $user = auth()->user();
+
+        $data = $request->validate([
+            'book_id' => ['nullable', 'exists:books,id'],
+            'additional_service_id' => ['required', 'exists:additional_services,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $service = AdditionalService::where('is_active', true)
+            ->findOrFail($data['additional_service_id']);
+
+        $qty = (int) $data['quantity'];
+        $total = (float) $service->price * $qty;
+
+        $bookId = null;
+        if (!empty($data['book_id'])) {
+            $bookId = Book::where('author_user_id', $user->id)->findOrFail($data['book_id'])->id;
+        }
+
+        $invoice = AuthorInvoice::create([
+            'book_id' => $bookId,
+            'user_id' => $user->id,
+            'type' => 'additional',
+            'description' => 'Layanan tambahan: ' . $service->name,
+            'amount' => $total,
+            'status' => 'pending',
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        AuthorServiceOrder::create([
+            'user_id' => $user->id,
+            'book_id' => $bookId,
+            'additional_service_id' => $service->id,
+            'author_invoice_id' => $invoice->id,
+            'quantity' => $qty,
+            'unit_price' => $service->price,
+            'total_amount' => $total,
+            'status' => 'invoiced',
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Pesanan layanan tambahan berhasil dibuat. Invoice diterbitkan.');
     }
 }
