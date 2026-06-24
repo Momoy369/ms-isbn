@@ -472,6 +472,39 @@ class Book extends Model
         );
     }
 
+    public function packageItems()
+    {
+        return $this->hasMany(BookPackageItem::class)->orderBy('created_at');
+    }
+
+    public function syncPackageItems(): void
+    {
+        $package = $this->publishingPackage()->first();
+
+        if (!$package) {
+            return;
+        }
+
+        $existingNames = [];
+
+        foreach ($package->items as $item) {
+            $record = $this->packageItems()->where('publishing_package_item_id', $item->id)->first();
+
+            if (!$record) {
+                $record = $this->packageItems()->create([
+                    'publishing_package_item_id' => $item->id,
+                    'name' => $item->name,
+                    'assigned_to_role' => $item->assigned_to_role,
+                    'is_required' => $item->is_required,
+                ]);
+            }
+
+            $existingNames[] = $record->id;
+        }
+
+        $this->packageItems()->whereNotIn('id', $existingNames)->delete();
+    }
+
     public function editorAssignment()
     {
         return $this->assignments()

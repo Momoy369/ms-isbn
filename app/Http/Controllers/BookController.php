@@ -378,6 +378,17 @@ class BookController extends Controller
         ]);
 
         $book->syncAssignments();
+        $book->syncPackageItems();
+
+        if ($request->filled('publishing_package_id')) {
+            $package = PublishingPackage::find($request->publishing_package_id);
+
+            if ($package && $package->default_print_quantity && empty($book->jumlah_cetak)) {
+                $book->update([
+                    'jumlah_cetak' => $package->default_print_quantity,
+                ]);
+            }
+        }
 
         $activity->log(
 

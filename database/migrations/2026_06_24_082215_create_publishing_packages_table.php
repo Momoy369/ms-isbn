@@ -17,6 +17,10 @@ return new class extends Migration {
             $table->boolean('includes_editing')->default(true);
             $table->boolean('includes_layout')->default(true);
             $table->boolean('includes_cover_design')->default(true);
+            $table->boolean('includes_author_certificate')->default(false);
+            $table->boolean('includes_google_scholar')->default(false);
+            $table->boolean('requires_hki_registration')->default(false);
+            $table->integer('default_print_quantity')->nullable();
             $table->decimal('price', 10, 2)->default(0);
             $table->timestamps();
         });

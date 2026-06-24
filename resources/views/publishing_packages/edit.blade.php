@@ -50,6 +50,39 @@
                             {{ old('includes_cover_design', $publishingPackage->includes_cover_design) ? 'checked' : '' }}>
                         <label class="custom-control-label" for="includes_cover_design">Termasuk Cover Design</label>
                     </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="includes_author_certificate" value="1"
+                            class="custom-control-input" id="includes_author_certificate"
+                            {{ old('includes_author_certificate', $publishingPackage->includes_author_certificate) ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="includes_author_certificate">Sertifikat Penulis</label>
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="includes_google_scholar" value="1" class="custom-control-input"
+                            id="includes_google_scholar"
+                            {{ old('includes_google_scholar', $publishingPackage->includes_google_scholar) ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="includes_google_scholar">Google Scholar</label>
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="requires_hki_registration" value="1" class="custom-control-input"
+                            id="requires_hki_registration"
+                            {{ old('requires_hki_registration', $publishingPackage->requires_hki_registration) ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="requires_hki_registration">Wajib Daftar HKI</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="default_print_quantity">Jumlah Cetak Default Paket</label>
+                    <input type="number" name="default_print_quantity" id="default_print_quantity" class="form-control"
+                        min="0"
+                        value="{{ old('default_print_quantity', $publishingPackage->default_print_quantity ?? 0) }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="package_items">Daftar Item Paket (satu per baris)</label>
+                    <textarea name="package_items" id="package_items" class="form-control" rows="6"
+                        placeholder="Sertifikat Penulis&#10;Google Scholar&#10;Daftar HKI">{{ old('package_items', $publishingPackage->items->pluck('name')->implode(PHP_EOL)) }}</textarea>
+                    <small class="form-text text-muted">Item ini akan muncul sebagai checklist untuk setiap naskah yang
+                        memakai paket ini.</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Simpan</button>

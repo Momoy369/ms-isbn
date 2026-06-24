@@ -50,6 +50,7 @@
                                 <div class="card-body p-3">
                                     @include('books.partials.upload-form')
                                     @include('books.partials.readiness')
+                                    @include('books.partials.package-items')
                                 </div>
                             </div>
                         </div>

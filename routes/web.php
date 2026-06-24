@@ -20,6 +20,7 @@ use App\Http\Controllers\BookMessageController;
 use App\Http\Controllers\BookChapterController;
 use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
+use App\Http\Controllers\BookPackageItemController;
 
 Route::get('/', function () {
 
@@ -283,6 +284,9 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('publishing-packages', PublishingPackageController::class)
             ->except(['show']);
+
+        Route::post('/books/{book}/package-items/sync', [BookPackageItemController::class, 'sync'])->name('books.package-items.sync');
+        Route::post('/book-package-items/{item}/toggle', [BookPackageItemController::class, 'toggle'])->name('book-package-items.toggle');
 
         Route::post('/books/{book}/generate-package', [DocumentController::class, 'generatePackage'])
             ->name('books.generate-package');

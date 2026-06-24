@@ -27,18 +27,27 @@ class PublishingPackageController extends Controller
             'price' => 'nullable|numeric|min:0',
         ]);
 
-        PublishingPackage::create($request->only([
+        $package = PublishingPackage::create($request->only([
             'name',
             'description',
             'includes_editing',
             'includes_layout',
             'includes_cover_design',
+            'includes_author_certificate',
+            'includes_google_scholar',
+            'requires_hki_registration',
+            'default_print_quantity',
             'price',
         ]) + [
             'includes_editing' => (bool) $request->boolean('includes_editing'),
             'includes_layout' => (bool) $request->boolean('includes_layout'),
             'includes_cover_design' => (bool) $request->boolean('includes_cover_design'),
+            'includes_author_certificate' => (bool) $request->boolean('includes_author_certificate'),
+            'includes_google_scholar' => (bool) $request->boolean('includes_google_scholar'),
+            'requires_hki_registration' => (bool) $request->boolean('requires_hki_registration'),
         ]);
+
+        $this->syncPackageItems($package, $request->input('package_items'));
 
         return redirect()->route('publishing-packages.index')->with('success', 'Paket penerbitan berhasil ditambahkan');
     }
@@ -62,12 +71,21 @@ class PublishingPackageController extends Controller
             'includes_editing',
             'includes_layout',
             'includes_cover_design',
+            'includes_author_certificate',
+            'includes_google_scholar',
+            'requires_hki_registration',
+            'default_print_quantity',
             'price',
         ]) + [
             'includes_editing' => (bool) $request->boolean('includes_editing'),
             'includes_layout' => (bool) $request->boolean('includes_layout'),
             'includes_cover_design' => (bool) $request->boolean('includes_cover_design'),
+            'includes_author_certificate' => (bool) $request->boolean('includes_author_certificate'),
+            'includes_google_scholar' => (bool) $request->boolean('includes_google_scholar'),
+            'requires_hki_registration' => (bool) $request->boolean('requires_hki_registration'),
         ]);
+
+        $this->syncPackageItems($publishingPackage, $request->input('package_items'));
 
         return redirect()->route('publishing-packages.index')->with('success', 'Paket penerbitan berhasil diperbarui');
     }
@@ -77,5 +95,24 @@ class PublishingPackageController extends Controller
         $publishingPackage->delete();
 
         return redirect()->route('publishing-packages.index')->with('success', 'Paket penerbitan berhasil dihapus');
+    }
+
+    protected function syncPackageItems(PublishingPackage $package, ?string $items): void
+    {
+        $package->items()->delete();
+
+        foreach (preg_split('/\r\n|\r|\n/', trim((string) $items)) ?: [] as $index => $line) {
+            $name = trim($line);
+
+            if ($name === '') {
+                continue;
+            }
+
+            $package->items()->create([
+                'name' => $name,
+                'sort_order' => $index,
+                'is_required' => true,
+            ]);
+        }
     }
 }
