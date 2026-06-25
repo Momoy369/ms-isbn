@@ -16,6 +16,11 @@ class AuthorRoyaltyPayoutRequest extends Model
         'bank_branch',
         'requested_at',
         'processed_at',
+        'approved_by_user_id',
+        'approved_at',
+        'paid_by_user_id',
+        'transfer_reference',
+        'transfer_proof_file_path',
         'notes',
     ];
 
@@ -23,6 +28,7 @@ class AuthorRoyaltyPayoutRequest extends Model
         'amount' => 'decimal:2',
         'requested_at' => 'datetime',
         'processed_at' => 'datetime',
+        'approved_at' => 'datetime',
     ];
 
     public function author()
@@ -38,6 +44,11 @@ class AuthorRoyaltyPayoutRequest extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
     }
 
     public function isPaid(): bool

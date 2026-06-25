@@ -25,8 +25,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
-        Gate::before(function ($user) {
-            return $user->role === 'superadmin' ? true : null;
+        Gate::before(function ($user, string $ability) {
+            // Keep superadmin global bypass except author-only navigation abilities.
+            if ($user->role === 'superadmin' && $ability !== 'menu-author') {
+                return true;
+            }
+
+            return null;
         });
 
         $abilityRoles = [

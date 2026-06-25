@@ -136,8 +136,8 @@
         <div class="col-md-4">
             <div class="small-box bg-success mb-0">
                 <div class="inner">
-                    <h3>Rp {{ number_format($summary['royalty'], 0, ',', '.') }}</h3>
-                    <p>Estimasi Royalti Anda</p>
+                    <h3>Rp {{ number_format($summary['net_royalty'] ?? $summary['royalty'], 0, ',', '.') }}</h3>
+                    <p>Royalti Bersih Anda</p>
                 </div>
                 <div class="icon"><i class="fas fa-coins"></i></div>
             </div>
@@ -158,8 +158,9 @@
                         <th class="text-right">Harga Acuan</th>
                         <th class="text-right">Omzet</th>
                         <th class="text-right">Rate Royalti</th>
-                        <th class="text-right">Royalti</th>
+                        <th class="text-right">Royalti Bersih</th>
                         <th>Dokumen</th>
+                        <th>Kontrak</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -188,7 +189,7 @@
                             <td class="text-right">Rp {{ number_format($row['gross'], 0, ',', '.') }}</td>
                             <td class="text-right">{{ number_format($row['rate'] * 100, 2) }}%</td>
                             <td class="text-right font-weight-bold text-success">Rp
-                                {{ number_format($row['royalty'], 0, ',', '.') }}</td>
+                                {{ number_format($row['net_royalty'] ?? $row['royalty'], 0, ',', '.') }}</td>
                             <td>
                                 <div class="d-flex" style="gap:.35rem;">
                                     @if ($book->royalty_agreement_file_path)
@@ -205,10 +206,40 @@
                                     @endif
                                 </div>
                             </td>
+                            <td style="min-width: 260px;">
+                                <div class="small mb-1">
+                                    Status:
+                                    <span
+                                        class="badge badge-{{ $book->royalty_contract_status === 'accepted' ? 'success' : ($book->royalty_contract_status === 'rejected' ? 'danger' : 'warning') }}">
+                                        {{ strtoupper($book->royalty_contract_status ?? 'draft') }}
+                                    </span>
+                                    @if ($book->royalty_contract_version)
+                                        <span class="text-muted">v{{ $book->royalty_contract_version }}</span>
+                                    @endif
+                                </div>
+                                @if ($book->royalty_contract_status === 'pending_author_accept')
+                                    <form method="POST" action="{{ route('author.royalties.contract.accept', $book) }}"
+                                        class="mb-1">
+                                        @csrf
+                                        <textarea name="acknowledgement" rows="2" class="form-control form-control-sm mb-1"
+                                            placeholder="Catatan persetujuan" required></textarea>
+                                        <button class="btn btn-xs btn-success" type="submit">Setujui Kontrak</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('author.royalties.contract.reject', $book) }}">
+                                        @csrf
+                                        <textarea name="acknowledgement" rows="2" class="form-control form-control-sm mb-1"
+                                            placeholder="Alasan penolakan" required></textarea>
+                                        <button class="btn btn-xs btn-danger" type="submit">Tolak Kontrak</button>
+                                    </form>
+                                @elseif($book->royalty_contract_acknowledgement)
+                                    <small class="text-muted">Catatan:
+                                        {{ $book->royalty_contract_acknowledgement }}</small>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 Belum ada buku Anda yang diaktifkan admin untuk distribusi dan program royalti.
                             </td>
                         </tr>
@@ -228,7 +259,11 @@
                         <th>Buku</th>
                         <th class="text-right">Omzet</th>
                         <th class="text-right">Rate</th>
-                        <th class="text-right">Royalti</th>
+                        <th class="text-right">Royalti Bruto</th>
+                        <th class="text-right">Biaya Platform</th>
+                        <th class="text-right">Pajak</th>
+                        <th class="text-right">Cadangan Retur</th>
+                        <th class="text-right">Royalti Bersih</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -241,6 +276,14 @@
                             <td class="text-right">{{ number_format($ledger->royalty_rate * 100, 2) }}%</td>
                             <td class="text-right font-weight-bold text-success">Rp
                                 {{ number_format($ledger->royalty_amount, 0, ',', '.') }}</td>
+                            <td class="text-right">Rp {{ number_format($ledger->platform_fee_amount ?? 0, 0, ',', '.') }}
+                            </td>
+                            <td class="text-right">Rp {{ number_format($ledger->tax_amount ?? 0, 0, ',', '.') }}</td>
+                            <td class="text-right">Rp
+                                {{ number_format($ledger->returns_reserve_amount ?? 0, 0, ',', '.') }}</td>
+                            <td class="text-right font-weight-bold">Rp
+                                {{ number_format($ledger->net_royalty_amount ?? $ledger->royalty_amount, 0, ',', '.') }}
+                            </td>
                             <td>
                                 <span
                                     class="badge badge-{{ $ledger->status === 'accrued' ? 'warning' : ($ledger->status === 'requested' ? 'info' : 'success') }}">{{ strtoupper($ledger->status) }}</span>
@@ -248,7 +291,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-3">Ledger royalti belum tersedia.</td>
+                            <td colspan="10" class="text-center text-muted py-3">Ledger royalti belum tersedia.</td>
                         </tr>
                     @endforelse
                 </tbody>

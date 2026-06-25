@@ -22,6 +22,7 @@ use App\Http\Controllers\AdminFinanceReportController;
 use App\Http\Controllers\AdditionalServiceController;
 use App\Http\Controllers\AdminPrintPriceController;
 use App\Http\Controllers\AdminExternalSalesController;
+use App\Http\Controllers\AdminLegacyBookController;
 use App\Http\Controllers\AdminRoyaltyPayoutController;
 use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
@@ -400,8 +401,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/finance/royalties/{request}/approve', [AdminRoyaltyPayoutController::class, 'approve'])
                 ->name('finance.royalties.approve');
 
+            Route::post('/finance/royalties/{request}/pay', [AdminRoyaltyPayoutController::class, 'pay'])
+                ->name('finance.royalties.pay');
+
             Route::post('/finance/royalties/{request}/reject', [AdminRoyaltyPayoutController::class, 'reject'])
                 ->name('finance.royalties.reject');
+
+            Route::get('/legacy-books', [AdminLegacyBookController::class, 'index'])
+                ->name('legacy-books.index');
+
+            Route::post('/legacy-books', [AdminLegacyBookController::class, 'store'])
+                ->name('legacy-books.store');
+
+            Route::put('/legacy-books/{legacyBook}', [AdminLegacyBookController::class, 'update'])
+                ->name('legacy-books.update');
 
             Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
                 ->name('external-sales.store');
@@ -562,6 +575,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/author/royalties/{book}/documents/{type}', [AuthorRoyaltyController::class, 'downloadDocument'])
                 ->name('author.royalties.document')
                 ->where('type', 'agreement|contract');
+
+            Route::post('/author/royalties/{book}/contract/accept', [AuthorRoyaltyController::class, 'acceptContract'])
+                ->name('author.royalties.contract.accept');
+
+            Route::post('/author/royalties/{book}/contract/reject', [AuthorRoyaltyController::class, 'rejectContract'])
+                ->name('author.royalties.contract.reject');
 
             Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
                 ->name('author.claims.index');

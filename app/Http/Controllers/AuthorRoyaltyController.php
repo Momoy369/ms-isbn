@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\AuthorRoyaltyPayoutRequest;
 use App\Models\Book;
+use App\Models\User;
 use App\Services\AuthorRoyaltyLedgerService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,6 +32,7 @@ class AuthorRoyaltyController extends Controller
                 'gross' => (float) $bookLedgers->sum('gross_amount'),
                 'rate' => $book->royaltyRate(),
                 'royalty' => (float) $bookLedgers->sum('royalty_amount'),
+                'net_royalty' => (float) $bookLedgers->sum('net_royalty_amount'),
             ];
         });
 
@@ -37,6 +40,7 @@ class AuthorRoyaltyController extends Controller
             'books' => $rows->count(),
             'gross' => (float) $rows->sum('gross'),
             'royalty' => (float) $rows->sum('royalty'),
+            'net_royalty' => (float) $rows->sum('net_royalty'),
         ];
 
         $payoutHistory = auth()->user()
@@ -46,7 +50,7 @@ class AuthorRoyaltyController extends Controller
             ->get();
 
         $pendingPayouts = (float) $payoutHistory->whereIn('status', ['pending', 'approved'])->sum('amount');
-        $availablePayout = max(0, (float) $ledgers->where('status', 'accrued')->sum('royalty_amount') - $pendingPayouts);
+        $availablePayout = max(0, (float) $ledgers->where('status', 'accrued')->sum('net_royalty_amount') - $pendingPayouts);
 
         return view('author.royalties.index', compact('rows', 'summary', 'payoutHistory', 'availablePayout', 'ledgers'));
     }
@@ -74,7 +78,7 @@ class AuthorRoyaltyController extends Controller
         return response()->streamDownload(function () use ($books, $ledgers, $startDate, $endDate) {
             $handle = fopen('php://output', 'w');
 
-            fputcsv($handle, ['Judul', 'Nomor Naskah', 'Periode', 'Qty', 'Harga Acuan', 'Omzet', 'Rate', 'Royalti']);
+            fputcsv($handle, ['Judul', 'Nomor Naskah', 'Periode', 'Qty', 'Harga Acuan', 'Omzet', 'Rate', 'Royalti Bruto', 'Royalti Bersih']);
 
             foreach ($books as $book) {
                 /** @var Book $book */
@@ -98,6 +102,7 @@ class AuthorRoyaltyController extends Controller
                         $ledger->gross_amount,
                         $ledger->royalty_rate,
                         $ledger->royalty_amount,
+                        $ledger->net_royalty_amount,
                     ]);
                 }
             }
@@ -123,7 +128,7 @@ class AuthorRoyaltyController extends Controller
         return back()->with('success', 'Data rekening penulis berhasil diperbarui.');
     }
 
-    public function requestPayout(Request $request, AuthorRoyaltyLedgerService $ledgerService)
+    public function requestPayout(Request $request, AuthorRoyaltyLedgerService $ledgerService, NotificationService $notifications)
     {
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:50000'],
@@ -138,7 +143,7 @@ class AuthorRoyaltyController extends Controller
 
         $ledgerService->syncForAuthor($user);
 
-        $availableRoyalty = (float) $user->royaltyLedgers()->where('status', 'accrued')->sum('royalty_amount');
+        $availableRoyalty = (float) $user->royaltyLedgers()->where('status', 'accrued')->sum('net_royalty_amount');
         $pending = (float) $user->royaltyPayoutRequests()->whereIn('status', ['pending', 'approved'])->sum('amount');
         $available = max(0, $availableRoyalty - $pending);
 
@@ -170,7 +175,77 @@ class AuthorRoyaltyController extends Controller
 
         $ledgerService->allocateToPayoutRequest($payoutRequest);
 
+        $financeUsers = User::whereIn('role', ['finance', 'owner', 'superadmin'])
+            ->get(['id']);
+
+        foreach ($financeUsers as $financeUser) {
+            $notifications->send(
+                $financeUser->id,
+                'Request Pencairan Royalti Baru',
+                'Ada request baru sebesar Rp ' . number_format($amount, 0, ',', '.') . ' dari ' . $user->name . '.',
+                null
+            );
+        }
+
         return back()->with('success', 'Permintaan pencairan royalti berhasil dikirim ke admin.');
+    }
+
+    public function acceptContract(Request $request, Book $book, NotificationService $notifications)
+    {
+        if ((int) $book->author_user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'acknowledgement' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        $book->update([
+            'royalty_contract_status' => 'accepted',
+            'royalty_contract_accepted_at' => now(),
+            'royalty_contract_rejected_at' => null,
+            'royalty_contract_acknowledgement' => $data['acknowledgement'],
+        ]);
+
+        if ($book->royalty_enabled_by_user_id) {
+            $notifications->send(
+                $book->royalty_enabled_by_user_id,
+                'Kontrak Royalti Disetujui Penulis',
+                'Kontrak royalti buku "' . $book->judul . '" telah disetujui penulis.',
+                $book->id
+            );
+        }
+
+        return back()->with('success', 'Kontrak royalti berhasil disetujui.');
+    }
+
+    public function rejectContract(Request $request, Book $book, NotificationService $notifications)
+    {
+        if ((int) $book->author_user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'acknowledgement' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        $book->update([
+            'royalty_contract_status' => 'rejected',
+            'royalty_contract_rejected_at' => now(),
+            'royalty_contract_accepted_at' => null,
+            'royalty_contract_acknowledgement' => $data['acknowledgement'],
+        ]);
+
+        if ($book->royalty_enabled_by_user_id) {
+            $notifications->send(
+                $book->royalty_enabled_by_user_id,
+                'Kontrak Royalti Ditolak Penulis',
+                'Kontrak royalti buku "' . $book->judul . '" ditolak penulis. Cek catatan pada halaman royalti.',
+                $book->id
+            );
+        }
+
+        return back()->with('warning', 'Kontrak royalti ditolak. Tim admin akan meninjau kembali.');
     }
 
     public function downloadDocument(Book $book, string $type)

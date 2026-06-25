@@ -8,6 +8,7 @@ class ExternalSalesRecord extends Model
 {
     protected $fillable = [
         'book_id',
+        'legacy_book_id',
         'input_by_user_id',
         'channel',
         'format',
@@ -28,6 +29,11 @@ class ExternalSalesRecord extends Model
     public function book()
     {
         return $this->belongsTo(Book::class);
+    }
+
+    public function legacyBook()
+    {
+        return $this->belongsTo(LegacyBook::class, 'legacy_book_id');
     }
 
     public function inputBy()

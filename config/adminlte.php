@@ -400,6 +400,12 @@ return [
             'can' => 'menu-finance',
         ],
         [
+            'text' => 'Katalog Buku Legacy',
+            'route' => 'legacy-books.index',
+            'icon' => 'fas fa-book-open',
+            'can' => 'menu-finance',
+        ],
+        [
             'text' => 'Royalti & Pencairan',
             'route' => 'finance.royalties.index',
             'icon' => 'fas fa-hand-holding-usd',

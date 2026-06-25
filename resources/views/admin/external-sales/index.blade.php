@@ -15,7 +15,7 @@
     @endif
 
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="small-box bg-info mb-0">
                 <div class="inner">
                     <h3>Rp {{ number_format($totals['gross'], 0, ',', '.') }}</h3>
@@ -24,7 +24,7 @@
                 <div class="icon"><i class="fas fa-cash-register"></i></div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="small-box bg-success mb-0">
                 <div class="inner">
                     <h3>Rp {{ number_format($totals['royalty'], 0, ',', '.') }}</h3>
@@ -32,6 +32,43 @@
                 </div>
                 <div class="icon"><i class="fas fa-coins"></i></div>
             </div>
+        </div>
+        <div class="col-md-4">
+            <div class="small-box bg-primary mb-0">
+                <div class="inner">
+                    <h3>{{ number_format($totals['books_active_royalty'] ?? 0) }}</h3>
+                    <p>Katalog Aktif Royalti</p>
+                </div>
+                <div class="icon"><i class="fas fa-books"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><strong>Ringkasan Penjualan per Channel</strong></div>
+        <div class="card-body table-responsive p-0">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th class="text-right">Jumlah Transaksi</th>
+                        <th class="text-right">Omzet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($channelSummary as $channel => $summary)
+                        <tr>
+                            <td>{{ strtoupper(str_replace('_', ' ', $channel)) }}</td>
+                            <td class="text-right">{{ number_format($summary['count']) }}</td>
+                            <td class="text-right">Rp {{ number_format($summary['gross'], 0, ',', '.') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">Belum ada data channel.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -228,15 +265,25 @@
             <form method="POST" action="{{ route('external-sales.store') }}" class="row">
                 @csrf
                 <div class="col-md-4 form-group">
-                    <label>Buku</label>
-                    <select name="book_id" class="form-control" required>
-                        <option value="">- Pilih Buku Program Royalti -</option>
+                    <label>Buku Naskah (opsional)</label>
+                    <select name="book_id" class="form-control">
+                        <option value="">- Pilih Buku Naskah -</option>
                         @foreach ($eligibleBooks as $book)
                             <option value="{{ $book->id }}">{{ $book->judul }} ({{ $book->nomor_naskah }})</option>
                         @endforeach
                     </select>
-                    @if ($eligibleBooks->isEmpty())
-                        <small class="text-danger">Belum ada buku eligible. Aktifkan di panel kurasi di atas.</small>
+                </div>
+                <div class="col-md-4 form-group">
+                    <label>Buku Legacy (opsional)</label>
+                    <select name="legacy_book_id" class="form-control">
+                        <option value="">- Pilih Buku Legacy -</option>
+                        @foreach ($eligibleLegacyBooks as $legacyBook)
+                            <option value="{{ $legacyBook->id }}">{{ $legacyBook->title }}
+                                ({{ $legacyBook->author_name }})</option>
+                        @endforeach
+                    </select>
+                    @if ($eligibleBooks->isEmpty() && $eligibleLegacyBooks->isEmpty())
+                        <small class="text-danger">Belum ada katalog eligible royalti.</small>
                     @endif
                 </div>
                 <div class="col-md-2 form-group">
@@ -278,7 +325,7 @@
                     <input type="text" name="notes" class="form-control">
                 </div>
                 <div class="col-md-2 form-group d-flex align-items-end">
-                    <button class="btn btn-primary btn-block" type="submit" @disabled($eligibleBooks->isEmpty())>Simpan</button>
+                    <button class="btn btn-primary btn-block" type="submit" @disabled($eligibleBooks->isEmpty() && $eligibleLegacyBooks->isEmpty())>Simpan</button>
                 </div>
             </form>
         </div>
@@ -303,18 +350,26 @@
                 <tbody>
                     @forelse ($records as $row)
                         @php
+                            $bookPrice = (float) ($row->book->selling_price ?? 0);
+                            $legacyPrice = (float) ($row->legacyBook->list_price ?? 0);
                             $royaltyUnitPrice =
-                                (float) (($row->book->selling_price ?? 0) > 0
-                                    ? $row->book->selling_price
-                                    : $row->unit_price);
+                                (float) ($bookPrice > 0
+                                    ? $bookPrice
+                                    : ($legacyPrice > 0
+                                        ? $legacyPrice
+                                        : $row->unit_price));
                             $rowRoyalty =
                                 ((int) $row->quantity) *
                                 $royaltyUnitPrice *
-                                (optional($row->book)->royaltyRate() ?? 0.2);
+                                ($row->book
+                                    ? $row->book->royaltyRate()
+                                    : ($row->legacyBook
+                                        ? $row->legacyBook->royaltyRate()
+                                        : 0.2));
                         @endphp
                         <tr>
                             <td>{{ $row->sold_at->format('d M Y') }}</td>
-                            <td>{{ $row->book->judul ?? '-' }}</td>
+                            <td>{{ $row->book->judul ?? ($row->legacyBook->title ?? '-') }}</td>
                             <td>{{ strtoupper(str_replace('_', ' ', $row->channel)) }}</td>
                             <td>{{ strtoupper($row->format) }}</td>
                             <td>{{ number_format($row->quantity) }}</td>

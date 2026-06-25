@@ -11,6 +11,10 @@ use Illuminate\Support\Collection;
 
 class AuthorRoyaltyLedgerService
 {
+    private const PLATFORM_FEE_RATE = 0.10;
+    private const TAX_RATE = 0.025;
+    private const RETURNS_RESERVE_RATE = 0.01;
+
     public function syncForAuthor(User $author): Collection
     {
         $books = Book::with(['externalSales'])
@@ -42,6 +46,10 @@ class AuthorRoyaltyLedgerService
 
                 $rate = $book->royaltyRate();
                 $royaltyAmount = $grossAmount * $rate;
+                $platformFeeAmount = $royaltyAmount * self::PLATFORM_FEE_RATE;
+                $taxAmount = $royaltyAmount * self::TAX_RATE;
+                $returnsReserveAmount = $royaltyAmount * self::RETURNS_RESERVE_RATE;
+                $netRoyaltyAmount = max(0, $royaltyAmount - $platformFeeAmount - $taxAmount - $returnsReserveAmount);
 
                 $ledger = AuthorRoyaltyLedger::updateOrCreate(
                     [
@@ -52,8 +60,12 @@ class AuthorRoyaltyLedgerService
                     ],
                     [
                         'gross_amount' => $grossAmount,
+                        'platform_fee_amount' => $platformFeeAmount,
+                        'tax_amount' => $taxAmount,
+                        'returns_reserve_amount' => $returnsReserveAmount,
                         'royalty_rate' => $rate,
                         'royalty_amount' => $royaltyAmount,
+                        'net_royalty_amount' => $netRoyaltyAmount,
                         'status' => 'accrued',
                         'generated_at' => now(),
                     ]
@@ -70,7 +82,7 @@ class AuthorRoyaltyLedgerService
     {
         return (float) $this->syncForAuthor($author)
             ->where('status', 'accrued')
-            ->sum('royalty_amount');
+            ->sum('net_royalty_amount');
     }
 
     public function allocateToPayoutRequest(AuthorRoyaltyPayoutRequest $request): void
@@ -88,13 +100,15 @@ class AuthorRoyaltyLedgerService
                 break;
             }
 
-            if ($ledger->royalty_amount <= $remaining + 0.00001) {
+            $ledgerAmount = (float) ($ledger->net_royalty_amount ?? 0);
+
+            if ($ledgerAmount <= $remaining + 0.00001) {
                 $ledger->update([
                     'status' => 'requested',
                     'payout_request_id' => $request->id,
                 ]);
 
-                $remaining -= (float) $ledger->royalty_amount;
+                $remaining -= $ledgerAmount;
             }
         }
     }

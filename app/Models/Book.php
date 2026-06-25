@@ -96,6 +96,18 @@ class Book extends Model
 
         'royalty_enabled_by_user_id',
 
+        'royalty_contract_status',
+
+        'royalty_contract_version',
+
+        'royalty_contract_sent_at',
+
+        'royalty_contract_accepted_at',
+
+        'royalty_contract_rejected_at',
+
+        'royalty_contract_acknowledgement',
+
         'ukuran_buku',
 
         'cetakan',
@@ -144,6 +156,10 @@ class Book extends Model
         'royalty_distribution_marketplace' => 'boolean',
         'royalty_rate' => 'decimal:4',
         'royalty_enabled_at' => 'datetime',
+        'royalty_contract_sent_at' => 'datetime',
+        'royalty_contract_accepted_at' => 'datetime',
+        'royalty_contract_rejected_at' => 'datetime',
+        'royalty_contract_version' => 'integer',
     ];
 
     public function files()
@@ -589,6 +605,11 @@ class Book extends Model
     public function isRoyaltyEligible(): bool
     {
         return (bool) $this->royalty_enabled;
+    }
+
+    public function isRoyaltyContractAccepted(): bool
+    {
+        return $this->royalty_contract_status === 'accepted';
     }
 
     public function royaltyRate(): float
