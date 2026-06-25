@@ -76,6 +76,26 @@ class Book extends Model
 
         'revision_fee_amount',
 
+        'royalty_enabled',
+
+        'royalty_rate',
+
+        'royalty_distribution_online',
+
+        'royalty_distribution_ebook',
+
+        'royalty_distribution_marketplace',
+
+        'royalty_agreement_file_path',
+
+        'royalty_contract_file_path',
+
+        'royalty_notes',
+
+        'royalty_enabled_at',
+
+        'royalty_enabled_by_user_id',
+
         'ukuran_buku',
 
         'cetakan',
@@ -115,6 +135,15 @@ class Book extends Model
         'book_type',
 
         'publishing_package_id',
+    ];
+
+    protected $casts = [
+        'royalty_enabled' => 'boolean',
+        'royalty_distribution_online' => 'boolean',
+        'royalty_distribution_ebook' => 'boolean',
+        'royalty_distribution_marketplace' => 'boolean',
+        'royalty_rate' => 'decimal:4',
+        'royalty_enabled_at' => 'datetime',
     ];
 
     public function files()
@@ -227,6 +256,11 @@ class Book extends Model
             User::class,
             'author_user_id'
         );
+    }
+
+    public function royaltyEnabledBy()
+    {
+        return $this->belongsTo(User::class, 'royalty_enabled_by_user_id');
     }
 
     public function publishingPackage()
@@ -550,6 +584,39 @@ class Book extends Model
     public function canGenerateIsbnPackage(): bool
     {
         return in_array($this->workflow_status, ['ready_for_isbn', 'isbn_submitted', 'isbn_approved', 'selesai'], true);
+    }
+
+    public function isRoyaltyEligible(): bool
+    {
+        return (bool) $this->royalty_enabled;
+    }
+
+    public function royaltyRate(): float
+    {
+        $rate = (float) ($this->royalty_rate ?? 0);
+
+        if ($rate <= 0) {
+            return 0.20;
+        }
+
+        return min($rate, 1.00);
+    }
+
+    public function canDistributeByChannel(string $channel, string $format): bool
+    {
+        if (!$this->isRoyaltyEligible()) {
+            return false;
+        }
+
+        if ($format === 'ebook' && !$this->royalty_distribution_ebook) {
+            return false;
+        }
+
+        if ($channel === 'marketplace') {
+            return (bool) $this->royalty_distribution_marketplace;
+        }
+
+        return (bool) $this->royalty_distribution_online;
     }
 
     public function reviews()

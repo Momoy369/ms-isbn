@@ -8,8 +8,6 @@ use App\Models\BookReview;
 
 class AuthorDashboardController
 {
-    private const ROYALTY_RATE = 0.20;
-
     public function index()
     {
         $userId = auth()->id();
@@ -51,39 +49,44 @@ class AuthorDashboardController
             'count_paid' => $invoices->where('status', 'paid')->count(),
         ];
 
-        $royaltyData = $books->map(function (Book $book): array {
-            $printQty = (int) ($book->jumlah_cetak ?? 0);
-            $bookPrice = $book->effectiveSellingPrice();
-            $actualQty = (int) $book->externalSales->sum('quantity');
+        $royaltyData = $books
+            ->filter(fn(Book $book) => $book->isRoyaltyEligible())
+            ->map(function (Book $book): array {
+                $printQty = (int) ($book->jumlah_cetak ?? 0);
+                $bookPrice = $book->effectiveSellingPrice();
+                $actualQty = (int) $book->externalSales->sum('quantity');
+                $rate = $book->royaltyRate();
 
-            if ($actualQty > 0) {
-                $grossFromActualSellingPrice = $actualQty * $bookPrice;
-                $estimated = $grossFromActualSellingPrice * self::ROYALTY_RATE;
+                if ($actualQty > 0) {
+                    $grossFromActualSellingPrice = $actualQty * $bookPrice;
+                    $estimated = $grossFromActualSellingPrice * $rate;
+
+                    return [
+                        'book_id' => $book->id,
+                        'judul' => $book->judul,
+                        'print_qty' => $actualQty,
+                        'book_price' => $bookPrice,
+                        'estimated_royalty' => $estimated,
+                        'royalty_rate' => $rate,
+                        'is_complete' => true,
+                        'royalty_status' => 'actual',
+                    ];
+                }
+
+                $estimated = $printQty * $bookPrice * $rate;
+                $isComplete = in_array($book->workflow_status, ['isbn_approved', 'selesai']);
 
                 return [
                     'book_id' => $book->id,
                     'judul' => $book->judul,
-                    'print_qty' => $actualQty,
+                    'print_qty' => $printQty,
                     'book_price' => $bookPrice,
                     'estimated_royalty' => $estimated,
-                    'is_complete' => true,
-                    'royalty_status' => 'actual',
+                    'royalty_rate' => $rate,
+                    'is_complete' => $isComplete,
+                    'royalty_status' => $isComplete && $printQty > 0 ? 'estimated' : 'pending',
                 ];
-            }
-
-            $estimated = $printQty * $bookPrice * self::ROYALTY_RATE;
-            $isComplete = in_array($book->workflow_status, ['isbn_approved', 'selesai']);
-
-            return [
-                'book_id' => $book->id,
-                'judul' => $book->judul,
-                'print_qty' => $printQty,
-                'book_price' => $bookPrice,
-                'estimated_royalty' => $estimated,
-                'is_complete' => $isComplete,
-                'royalty_status' => $isComplete && $printQty > 0 ? 'estimated' : 'pending',
-            ];
-        });
+            })->values();
 
         // ── Revisi per tahap per buku ────────────────────────────────────
         $revisionCounts = BookReview::where('status', 'revision')

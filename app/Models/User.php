@@ -21,6 +21,10 @@ use App\Models\BookAssignment;
     'phone',
     'address',
     'birth_date',
+    'bank_name',
+    'bank_account_number',
+    'bank_account_holder',
+    'bank_branch',
     'is_profile_complete'
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -123,6 +127,11 @@ class User extends Authenticatable
     public function authorOrders()
     {
         return $this->hasMany(AuthorBookOrder::class);
+    }
+
+    public function royaltyPayoutRequests()
+    {
+        return $this->hasMany(AuthorRoyaltyPayoutRequest::class, 'author_user_id');
     }
 
     public function isAuthorProfileComplete(): bool

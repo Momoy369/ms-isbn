@@ -430,6 +430,12 @@ return [
             'can' => 'menu-author',
         ],
         [
+            'text' => 'Royalti Penulis',
+            'route' => 'author.royalties.index',
+            'icon' => 'fas fa-coins',
+            'can' => 'menu-author',
+        ],
+        [
             'text' => 'Ruang File Role',
             'route' => 'role-files.index',
             'icon' => 'fas fa-folder-open',

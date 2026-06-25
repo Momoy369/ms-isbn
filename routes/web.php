@@ -32,6 +32,7 @@ use App\Http\Controllers\BookChapterController;
 use App\Http\Controllers\RoleFileController;
 use App\Http\Controllers\PrintingWorkspaceController;
 use App\Http\Controllers\AuthorFinalFileController;
+use App\Http\Controllers\AuthorRoyaltyController;
 use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
@@ -207,15 +208,6 @@ Route::middleware('auth')->group(function () {
                 'layout-generator.preview'
             );
 
-        Route::get(
-            '/layout-generator/{book}/generate-template',
-            [LayoutGeneratorController::class, 'generateTemplate']
-        )->name(
-                'layout-generator.generate-template'
-            );
-
-
-
         Route::post(
             '/books/{book}/message',
             [BookMessageController::class, 'store']
@@ -232,16 +224,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/{book}/edit', [BookController::class, 'edit'])->name('edit');
             Route::put('/{book}', [BookController::class, 'update'])->name('update');
             Route::delete('/{book}', [BookController::class, 'destroy'])->name('destroy');
-
-            // Custom routes
-            Route::patch('/{book}/lock-metadata', [BookController::class, 'lockMetadata'])->name('lockMetadata');
-            Route::patch('/{book}/next-workflow', [BookController::class, 'nextWorkflow'])->name('nextWorkflow');
-            Route::post('/{book}/sync-assignments', [BookController::class, 'syncAssignments'])->name('syncAssignments');
-            Route::post('/{book}/approve/{type}', [BookController::class, 'approve'])->name('approve');
-            Route::post('/{book}/submit-isbn', [BookController::class, 'submitISBN'])->name('submitISBN');
-            Route::patch('/{book}/approve-isbn', [BookController::class, 'approveISBN'])->name('approveISBN');
-            Route::post('/{book}/finish', [BookController::class, 'finishBook'])->name('finishBook');
-            Route::post('/{book}/author-approval', [BookController::class, 'authorApproval'])->name('authorApproval');
         });
 
         // FITUR PRODUKSI
@@ -417,6 +399,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/external-sales/update-book-price', [AdminExternalSalesController::class, 'updateBookPrice'])
                 ->name('external-sales.update-book-price');
 
+            Route::post('/external-sales/royalty-program', [AdminExternalSalesController::class, 'updateRoyaltyProgram'])
+                ->name('external-sales.royalty-program');
+
             Route::get('/additional-services', [AdditionalServiceController::class, 'index'])
                 ->name('additional-services.index');
 
@@ -551,6 +536,22 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/author/orders/cities', [AuthorOrderController::class, 'cities'])
                 ->name('author.orders.cities');
+
+            Route::get('/author/royalties', [AuthorRoyaltyController::class, 'index'])
+                ->name('author.royalties.index');
+
+            Route::get('/author/royalties/export', [AuthorRoyaltyController::class, 'export'])
+                ->name('author.royalties.export');
+
+            Route::post('/author/royalties/bank', [AuthorRoyaltyController::class, 'updateBank'])
+                ->name('author.royalties.bank.update');
+
+            Route::post('/author/royalties/payout', [AuthorRoyaltyController::class, 'requestPayout'])
+                ->name('author.royalties.payout.request');
+
+            Route::get('/author/royalties/{book}/documents/{type}', [AuthorRoyaltyController::class, 'downloadDocument'])
+                ->name('author.royalties.document')
+                ->where('type', 'agreement|contract');
 
             Route::get('/author/claims', [AuthorBookClaimController::class, 'index'])
                 ->name('author.claims.index');

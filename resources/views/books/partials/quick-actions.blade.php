@@ -125,6 +125,17 @@
             </small>
         @endif
 
+        @if (auth()->user() && in_array(auth()->user()->role, ['admin', 'owner', 'finance', 'superadmin'], true))
+            <a href="{{ route('external-sales.index', ['book_id' => $book->id]) }}#royalty-program"
+                class="btn btn-outline-info btn-block mt-2">
+                <i class="fas fa-coins mr-1"></i> Kurasi Royalti Buku Ini
+            </a>
+            <small class="text-muted d-block mt-1">
+                Menu ini membuka panel admin untuk menyalakan distribusi, mengatur rate, dan mengunggah surat
+                perjanjian.
+            </small>
+        @endif
+
         <hr>
 
         {{-- DOKUMEN ISBN --}}

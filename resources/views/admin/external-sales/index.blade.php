@@ -28,9 +28,146 @@
             <div class="small-box bg-success mb-0">
                 <div class="inner">
                     <h3>Rp {{ number_format($totals['royalty'], 0, ',', '.') }}</h3>
-                    <p>Total Royalti Author (20%)</p>
+                    <p>Total Royalti Author (Rate per Buku)</p>
                 </div>
                 <div class="icon"><i class="fas fa-coins"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3" id="royalty-program">
+        <div class="card-header"><strong>Kurasi Buku Program Distribusi & Royalti</strong></div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('external-sales.royalty-program') }}" enctype="multipart/form-data"
+                class="row">
+                @csrf
+                <div class="col-md-4 form-group">
+                    <label>Buku Selesai</label>
+                    <select name="book_id" class="form-control" required>
+                        <option value="">- Pilih Buku -</option>
+                        @foreach ($books as $book)
+                            <option value="{{ $book->id }}">
+                                {{ $book->judul }} ({{ $book->nomor_naskah }})
+                                @if ($book->royalty_enabled)
+                                    - Aktif
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Hanya buku status selesai/ISBN approved yang ditampilkan.</small>
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <label>Aktifkan Program</label>
+                    <select name="royalty_enabled" class="form-control" required>
+                        <option value="1">Ya</option>
+                        <option value="0">Tidak</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <label>Rate Royalti</label>
+                    <input type="number" step="0.0001" min="0" max="1" name="royalty_rate"
+                        class="form-control" placeholder="0.2000">
+                    <small class="text-muted">Kosongkan untuk default 20%.</small>
+                </div>
+
+                <div class="col-md-4 form-group">
+                    <label>Catatan Kurasi</label>
+                    <input type="text" name="royalty_notes" class="form-control"
+                        placeholder="Contoh: layak untuk distribusi marketplace + ebook">
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <label class="d-block">Distribusi Online</label>
+                    <input type="hidden" name="royalty_distribution_online" value="0">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="dist-online"
+                            name="royalty_distribution_online" value="1">
+                        <label class="custom-control-label" for="dist-online">Aktif</label>
+                    </div>
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <label class="d-block">Distribusi Ebook</label>
+                    <input type="hidden" name="royalty_distribution_ebook" value="0">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="dist-ebook"
+                            name="royalty_distribution_ebook" value="1">
+                        <label class="custom-control-label" for="dist-ebook">Aktif</label>
+                    </div>
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <label class="d-block">Marketplace</label>
+                    <input type="hidden" name="royalty_distribution_marketplace" value="0">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="dist-marketplace"
+                            name="royalty_distribution_marketplace" value="1">
+                        <label class="custom-control-label" for="dist-marketplace">Aktif</label>
+                    </div>
+                </div>
+
+                <div class="col-md-3 form-group">
+                    <label>Upload Surat Perjanjian</label>
+                    <input type="file" name="royalty_agreement_file" class="form-control" accept=".pdf,.doc,.docx">
+                </div>
+
+                <div class="col-md-3 form-group">
+                    <label>Upload Kontrak</label>
+                    <input type="file" name="royalty_contract_file" class="form-control" accept=".pdf,.doc,.docx">
+                </div>
+
+                <div class="col-md-2 form-group d-flex align-items-end">
+                    <button class="btn btn-primary btn-block" type="submit">Simpan Program</button>
+                </div>
+            </form>
+
+            @if ($selectedBook)
+                <div class="alert alert-info border mt-3 mb-0">
+                    <strong>Buku terpilih:</strong> {{ $selectedBook->judul }} ({{ $selectedBook->nomor_naskah }})
+                    <div class="small mb-0">Gunakan panel ini untuk menyalakan royalti, mengatur rate, dan mengunggah surat
+                        perjanjian/kontrak.</div>
+                </div>
+            @endif
+
+            <div class="table-responsive mt-2">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Buku</th>
+                            <th>Rate</th>
+                            <th>Online</th>
+                            <th>Ebook</th>
+                            <th>Marketplace</th>
+                            <th>Dokumen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($eligibleBooks as $book)
+                            <tr>
+                                <td>{{ $book->judul }}</td>
+                                <td>{{ number_format($book->royaltyRate() * 100, 2) }}%</td>
+                                <td>{{ $book->royalty_distribution_online ? 'Ya' : 'Tidak' }}</td>
+                                <td>{{ $book->royalty_distribution_ebook ? 'Ya' : 'Tidak' }}</td>
+                                <td>{{ $book->royalty_distribution_marketplace ? 'Ya' : 'Tidak' }}</td>
+                                <td>
+                                    @if ($book->royalty_agreement_file_path)
+                                        <span class="badge badge-info">Perjanjian</span>
+                                    @endif
+                                    @if ($book->royalty_contract_file_path)
+                                        <span class="badge badge-success">Kontrak</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Belum ada buku yang diaktifkan untuk
+                                    program royalti.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -75,7 +212,8 @@
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Harga Jual Aktual</label>
-                    <input type="number" step="0.01" name="selling_price" class="form-control" min="0" required>
+                    <input type="number" step="0.01" name="selling_price" class="form-control" min="0"
+                        required>
                 </div>
                 <div class="col-md-2 form-group d-flex align-items-end">
                     <button class="btn btn-warning btn-block" type="submit">Update Harga</button>
@@ -92,11 +230,14 @@
                 <div class="col-md-4 form-group">
                     <label>Buku</label>
                     <select name="book_id" class="form-control" required>
-                        <option value="">- Pilih Buku -</option>
-                        @foreach ($books as $book)
+                        <option value="">- Pilih Buku Program Royalti -</option>
+                        @foreach ($eligibleBooks as $book)
                             <option value="{{ $book->id }}">{{ $book->judul }} ({{ $book->nomor_naskah }})</option>
                         @endforeach
                     </select>
+                    @if ($eligibleBooks->isEmpty())
+                        <small class="text-danger">Belum ada buku eligible. Aktifkan di panel kurasi di atas.</small>
+                    @endif
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Channel</label>
@@ -137,7 +278,7 @@
                     <input type="text" name="notes" class="form-control">
                 </div>
                 <div class="col-md-2 form-group d-flex align-items-end">
-                    <button class="btn btn-primary btn-block" type="submit">Simpan</button>
+                    <button class="btn btn-primary btn-block" type="submit" @disabled($eligibleBooks->isEmpty())>Simpan</button>
                 </div>
             </form>
         </div>
@@ -156,7 +297,7 @@
                         <th>Qty</th>
                         <th>Harga</th>
                         <th>Gross</th>
-                        <th>Royalti 20%</th>
+                        <th>Royalti</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,7 +307,10 @@
                                 (float) (($row->book->selling_price ?? 0) > 0
                                     ? $row->book->selling_price
                                     : $row->unit_price);
-                            $rowRoyalty = ((int) $row->quantity) * $royaltyUnitPrice * 0.2;
+                            $rowRoyalty =
+                                ((int) $row->quantity) *
+                                $royaltyUnitPrice *
+                                (optional($row->book)->royaltyRate() ?? 0.2);
                         @endphp
                         <tr>
                             <td>{{ $row->sold_at->format('d M Y') }}</td>

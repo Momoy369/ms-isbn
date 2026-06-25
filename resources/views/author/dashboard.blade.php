@@ -145,6 +145,10 @@
                                 <span class="badge badge-danger ml-1">{{ $invoiceStats['count_pending'] }}</span>
                             @endif
                         </a>
+                        <a href="{{ route('author.royalties.index') }}"
+                            class="btn btn-outline-light btn-sm font-weight-bold shadow-sm">
+                            <i class="fas fa-coins mr-1"></i> Royalti & Kontrak
+                        </a>
                     </div>
                 </div>
             </div>
@@ -286,7 +290,7 @@
         @endif
 
         {{-- ROYALTI ESTIMASI --}}
-        @if ($royaltyData->where('print_qty', '>', 0)->isNotEmpty())
+        @if ($royaltyData->isNotEmpty())
             <div class="card shadow-sm" style="border-radius:14px;">
                 <div class="card-header bg-white border-0 pb-0">
                     <div class="section-heading"><i class="fas fa-coins"></i> Estimasi Royalti</div>
@@ -294,8 +298,8 @@
                 <div class="card-body pt-0">
                     <div class="alert alert-light border mb-3 py-2 small">
                         <i class="fas fa-info-circle text-info mr-1"></i>
-                        Royalti dihitung <strong>20%</strong> dari omzet penjualan tercatat (sumber eksternal).
-                        Jika belum ada data penjualan, sistem menampilkan estimasi sementara.
+                        Royalti hanya untuk buku yang diaktifkan admin pada program distribusi.
+                        Persentase royalti mengikuti perjanjian buku masing-masing.
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
@@ -305,32 +309,32 @@
                                     <th class="text-right">Jumlah Cetak</th>
                                     <th class="text-right">Harga Buku</th>
                                     <th class="text-right">Est. Royalti</th>
+                                    <th class="text-right">Rate</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($royaltyData as $row)
-                                    @if ($row['print_qty'] > 0)
-                                        <tr>
-                                            <td>{{ Str::limit($row['judul'], 35) }}</td>
-                                            <td class="text-right">{{ number_format($row['print_qty']) }} eks</td>
-                                            <td class="text-right">Rp {{ number_format($row['book_price'], 0, ',', '.') }}
-                                            </td>
-                                            <td class="text-right font-weight-bold text-success">
-                                                Rp {{ number_format($row['estimated_royalty'], 0, ',', '.') }}
-                                            </td>
-                                            <td>
-                                                @if (($row['royalty_status'] ?? '') === 'actual')
-                                                    <span class="badge badge-success">Aktual Penjualan</span>
-                                                @else
-                                                    <span
-                                                        class="badge badge-{{ $row['is_complete'] ? 'info' : 'secondary' }}">
-                                                        {{ $row['is_complete'] ? 'Estimasi Produksi' : 'Estimasi' }}
-                                                    </span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endif
+                                    <tr>
+                                        <td>{{ Str::limit($row['judul'], 35) }}</td>
+                                        <td class="text-right">{{ number_format($row['print_qty']) }} eks</td>
+                                        <td class="text-right">Rp {{ number_format($row['book_price'], 0, ',', '.') }}
+                                        </td>
+                                        <td class="text-right font-weight-bold text-success">
+                                            Rp {{ number_format($row['estimated_royalty'], 0, ',', '.') }}
+                                        </td>
+                                        <td class="text-right">
+                                            {{ number_format(($row['royalty_rate'] ?? 0.2) * 100, 2) }}%</td>
+                                        <td>
+                                            @if (($row['royalty_status'] ?? '') === 'actual')
+                                                <span class="badge badge-success">Aktual Penjualan</span>
+                                            @else
+                                                <span class="badge badge-{{ $row['is_complete'] ? 'info' : 'secondary' }}">
+                                                    {{ $row['is_complete'] ? 'Estimasi Produksi' : 'Estimasi' }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
                                 @endforeach
                             </tbody>
                         </table>
