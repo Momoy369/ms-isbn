@@ -37,7 +37,7 @@ return [
 
     'rajaongkir' => [
         'key' => env('RAJAONGKIR_API_KEY'),
-        'origin_city_id' => env('RAJAONGKIR_ORIGIN_CITY_ID', '501'),
+        'origin_city_id' => env('RAJAONGKIR_ORIGIN_CITY_ID', '1585'),
         'verify_ssl' => env('RAJAONGKIR_VERIFY_SSL', true),
     ],
 
@@ -48,6 +48,14 @@ return [
         'verify_ssl' => env('IPAYMU_VERIFY_SSL', true),
         'callback_secret' => env('IPAYMU_CALLBACK_SECRET'),
         'verify_callback_signature' => env('IPAYMU_VERIFY_SIGNATURE', true),
+    ],
+
+    'perpusnas' => [
+        'base_url' => env('PERPUSNAS_API_BASE_URL', 'https://api-penerbitsakedap.perpusnas.go.id'),
+        'token' => env('PERPUSNAS_API_TOKEN'),
+        'username' => env('PERPUSNAS_API_USERNAME'),
+        'password' => env('PERPUSNAS_API_PASSWORD'),
+        'verify_ssl' => env('PERPUSNAS_VERIFY_SSL', true),
     ],
 
     'reminder' => [

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\PublishingPackage;
 use App\Services\AssignmentRecommendationService;
 use App\Services\BookCompletionOrchestratorService;
+use App\Services\PerpusnasIsbnService;
 
 class BookController extends Controller
 {
@@ -650,40 +651,56 @@ class BookController extends Controller
 
     public function approveISBN(
         Request $request,
-        Book $book
+        Book $book,
+        PerpusnasIsbnService $perpusnas,
+        BookActivityService $activity
     ) {
         $request->validate([
-
-            'isbn' =>
-                'required',
-
-            'tanggal' =>
-                'required|date'
-
+            'isbn' => 'required',
+            'tanggal' => 'required|date'
         ]);
 
+        $verification = $perpusnas->verify(
+            (string) $request->isbn,
+            (string) $book->judul,
+            $book->tahun_terbit ? (string) $book->tahun_terbit : null
+        );
+
+        if (!$verification['verified']) {
+            return back()->with(
+                'warning',
+                'Validasi ISBN API gagal: ' . ($verification['message'] ?? 'ISBN tidak ditemukan.')
+            );
+        }
+
         $book->update([
+            'isbn' => $request->isbn,
+            'tanggal_isbn_terbit' => $request->tanggal,
+            'workflow_status' => 'isbn_approved'
+        ]);
 
-            'isbn' =>
-                $request->isbn,
+        $activity->log(
+            $book,
+            'ISBN API Verified',
+            (string) ($verification['message'] ?? 'ISBN terverifikasi di API Perpusnas')
+        );
 
-            'tanggal_isbn_terbit' =>
-                $request->tanggal,
-
-            'workflow_status' =>
-                'isbn_approved'
-
+        $book->update([
+            'workflow_status' => 'selesai',
         ]);
 
         $completion = app(BookCompletionOrchestratorService::class);
-        $completion->handle($book, 'isbn_approved');
+        $completion->handle($book, 'isbn_api_verified');
+
+        $activity->log(
+            $book,
+            'Produksi Selesai Otomatis',
+            'Workflow diubah ke selesai setelah ISBN tervalidasi API Perpusnas.'
+        );
 
         return back()->with(
-
             'success',
-
-            'ISBN berhasil diterbitkan'
-
+            'ISBN berhasil diverifikasi API dan buku otomatis ditandai selesai.'
         );
     }
 
@@ -692,29 +709,20 @@ class BookController extends Controller
         BookActivityService $activity
     ) {
         $book->update([
-
-            'workflow_status' =>
-                'selesai'
-
+            'workflow_status' => 'selesai'
         ]);
 
         $completion = app(BookCompletionOrchestratorService::class);
         $completion->handle($book, 'production_finished');
 
         $activity->log(
-
             $book,
-
             'Produksi Selesai'
-
         );
 
         return back()->with(
-
             'success',
-
             'Produksi buku selesai'
-
         );
     }
 

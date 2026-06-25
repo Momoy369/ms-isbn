@@ -2,562 +2,251 @@
 
 @section('title', 'Dashboard')
 
+@section('content_header')
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="m-0">Dashboard Produksi</h1>
+        <a href="{{ route('assignments.index') }}" class="btn btn-dark btn-sm">
+            <i class="fas fa-tasks mr-1"></i> Kelola Assignment
+        </a>
+    </div>
+@endsection
+
 @section('content')
+    <style>
+        .dash-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #334155 100%);
+            color: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 16px 34px rgba(2, 6, 23, .25);
+        }
+
+        .dash-card {
+            border: 0;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+        }
+
+        .metric {
+            border-radius: 12px;
+            padding: 14px;
+            min-height: 110px;
+            color: #0f172a;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+        }
+
+        .metric h2 {
+            margin: 0;
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: .2px;
+        }
+
+        .metric p {
+            margin: 6px 0 0;
+            color: #475569;
+            font-size: .9rem;
+        }
+
+        .metric.metric-alert {
+            background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
+            border-color: #fda4af;
+        }
+
+        .metric.metric-good {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-color: #86efac;
+        }
+
+        .metric.metric-flow {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-color: #93c5fd;
+        }
+
+        .chip {
+            display: inline-block;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: .78rem;
+            font-weight: 700;
+        }
+
+        .chip-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .chip-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .chip-info {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .chip-success {
+            background: #dcfce7;
+            color: #14532d;
+        }
+
+        .list-min {
+            max-height: 380px;
+            overflow: auto;
+        }
+    </style>
+
+    <div class="dash-hero mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-9">
+                <h3 class="mb-2">Kontrol Penerbitan & Produksi</h3>
+                <div class="mb-1">Monitor jalur dari workflow ISBN sampai cetak selesai dalam satu panel.</div>
+                <div class="small text-white-50">Editing rata-rata: <strong>{{ $avgEditing }}</strong> hari | Layout
+                    rata-rata:
+                    <strong>{{ $avgLayout }}</strong> hari
+                </div>
+            </div>
+            <div class="col-md-3 text-md-right mt-3 mt-md-0">
+                <div class="h4 mb-0">{{ $summary['total_books'] }}</div>
+                <small>Total naskah aktif</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-flow">
+                <h2>{{ $summary['ready_for_isbn'] }}</h2>
+                <p>Ready for ISBN</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-flow">
+                <h2>{{ $summary['isbn_submitted'] ?? 0 }}</h2>
+                <p>ISBN Submitted</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-good">
+                <h2>{{ $summary['isbn_approved'] ?? 0 }}</h2>
+                <p>ISBN Approved</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-good">
+                <h2>{{ $summary['selesai'] ?? 0 }}</h2>
+                <p>Produksi Selesai</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric">
+                <h2>{{ $summary['active_assignments'] }}</h2>
+                <p>Assignment Aktif</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-alert">
+                <h2>{{ $summary['overdue_assignments'] }}</h2>
+                <p>Assignment Terlambat</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric metric-alert">
+                <h2>{{ $summary['revisi'] }}</h2>
+                <p>Perlu Revisi</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric">
+                <h2>{{ $summary['waiting_approval'] }}</h2>
+                <p>Menunggu Persetujuan</p>
+            </div>
+        </div>
+    </div>
 
     @if (
         $alerts['overdue_assignments'] > 0 ||
             $alerts['warning_assignments'] > 0 ||
             $alerts['ready_isbn'] > 0 ||
             $alerts['waiting_author'] > 0)
-
-        <div class="alert alert-warning">
-
-            <h5>
-
-                Production Alerts
-
-            </h5>
-
-            <ul class="mb-0">
-
+        <div class="card dash-card mb-3">
+            <div class="card-body">
+                <h5 class="mb-3">Production Alerts</h5>
                 @if ($alerts['overdue_assignments'])
-                    <li>
-
-                        {{ $alerts['overdue_assignments'] }}
-
-                        assignment terlambat
-
-                    </li>
+                    <span class="chip chip-danger">{{ $alerts['overdue_assignments'] }} overdue assignment</span>
                 @endif
-
                 @if ($alerts['warning_assignments'])
-                    <li>
-
-                        {{ $alerts['warning_assignments'] }}
-
-                        assignment deadline kurang dari 24 jam
-
-                    </li>
+                    <span class="chip chip-warning">{{ $alerts['warning_assignments'] }} deadline &lt; 24 jam</span>
                 @endif
-
                 @if ($alerts['ready_isbn'])
-                    <li>
-
-                        {{ $alerts['ready_isbn'] }}
-
-                        buku siap diajukan ISBN
-
-                    </li>
+                    <span class="chip chip-info">{{ $alerts['ready_isbn'] }} siap ISBN</span>
                 @endif
-
                 @if ($alerts['waiting_author'])
-                    <li>
-
-                        {{ $alerts['waiting_author'] }}
-
-                        buku menunggu ACC penulis lebih dari 7 hari
-
-                    </li>
+                    <span class="chip chip-warning">{{ $alerts['waiting_author'] }} menunggu ACC author &gt; 7 hari</span>
                 @endif
-
-            </ul>
-
+            </div>
         </div>
-
     @endif
 
     <div class="row">
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-info">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['total_books'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Total Buku
-
-                    </p>
-
+        <div class="col-lg-6 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-header bg-white border-0"><strong>Assignment Terlambat</strong></div>
+                <div class="card-body list-min">
+                    @forelse ($overdueAssignments as $assignment)
+                        <div class="border rounded p-2 mb-2">
+                            <div class="font-weight-bold">{{ optional($assignment->book)->judul ?? '-' }}</div>
+                            <div class="small text-muted">Role: {{ ucfirst($assignment->role) }} | PIC:
+                                {{ $assignment->person_name }}</div>
+                            <span class="badge badge-danger mt-1">Terlambat {{ $assignment->lateDays() }} hari</span>
+                        </div>
+                    @empty
+                        <div class="text-success">Tidak ada assignment terlambat.</div>
+                    @endforelse
                 </div>
-
             </div>
-
         </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-success">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['ready_for_isbn'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Ready ISBN
-
-                    </p>
-
+        <div class="col-lg-6 mb-3">
+            <div class="card dash-card h-100">
+                <div class="card-header bg-white border-0"><strong>Top Performer</strong></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-2">Top Editor</h6>
+                            <ul class="list-group list-group-flush">
+                                @forelse ($topEditors as $editor)
+                                    <li class="list-group-item d-flex justify-content-between px-0">
+                                        <span>{{ $editor->person_name }}</span>
+                                        <strong>{{ $editor->total }}</strong>
+                                    </li>
+                                @empty
+                                    <li class="list-group-item px-0 text-muted">Belum ada data</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <h6 class="mb-2">Top Layouter</h6>
+                            <ul class="list-group list-group-flush">
+                                @forelse ($topLayouters as $layouter)
+                                    <li class="list-group-item d-flex justify-content-between px-0">
+                                        <span>{{ $layouter->person_name }}</span>
+                                        <strong>{{ $layouter->total }}</strong>
+                                    </li>
+                                @empty
+                                    <li class="list-group-item px-0 text-muted">Belum ada data</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-
             </div>
-
         </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-danger">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['revisi'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Perlu Revisi
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-warning">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['overdue_assignments'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Terlambat
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-warning">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['waiting_approval'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Menunggu Persetujuan
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-primary">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['isbn_submitted'] ?? 0 }}
-
-                    </h3>
-
-                    <p>
-
-                        ISBN Submitted
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-success">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['isbn_approved'] ?? 0 }}
-
-                    </h3>
-
-                    <p>
-
-                        ISBN Approved
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-secondary">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['selesai'] ?? 0 }}
-
-                    </h3>
-
-                    <p>
-
-                        Produksi Selesai
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-info">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['active_assignments'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Assignment Aktif
-
-                    </p>
-
-                </div>
-
-                <div class="icon">
-
-                    <i class="fas fa-tasks"></i>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-3">
-
-            <div class="small-box bg-danger">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $summary['overdue_assignments'] }}
-
-                    </h3>
-
-                    <p>
-
-                        Assignment Terlambat
-
-                    </p>
-
-                </div>
-
-                <div class="icon">
-
-                    <i class="fas fa-exclamation-triangle"></i>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-
     </div>
-
-    <div class="card">
-
-        <div class="card-header">
-
-            Assignment Terlambat
-
-        </div>
-
-        <div class="card-body">
-
-            @forelse($overdueAssignments
-                                as $assignment)
-                <div class="mb-3">
-
-                    <strong>
-
-                        {{ $assignment->book->judul }}
-
-                    </strong>
-
-                    <br>
-
-                    Role:
-
-                    {{ ucfirst($assignment->role) }}
-
-                    <br>
-
-                    PIC:
-
-                    {{ $assignment->person_name }}
-
-                    <br>
-
-                    <span class="
-                        badge
-                        badge-danger
-                    ">
-
-                        Terlambat
-
-                        {{ $assignment->lateDays() }}
-
-                        hari
-
-                    </span>
-
-                </div>
-
-                <hr>
-
-            @empty
-
-                <div class="
-                    text-success
-                ">
-
-                    Tidak ada assignment terlambat
-
-                </div>
-            @endforelse
-
-        </div>
-
-    </div>
-
-    <div class="card-header">
-
-        Assignment Terlambat
-
-        <a href="{{ route('assignments.index') }}"
-            class="
-            btn
-            btn-sm
-            btn-primary
-            float-right
-        ">
-
-            Lihat Semua
-
-        </a>
-
-    </div>
-
-    <div class="row">
-
-        <div class="col-md-6">
-
-            <div class="small-box bg-primary">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $avgEditing }}
-
-                        hari
-
-                    </h3>
-
-                    <p>
-
-                        Rata-rata Editing
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-md-6">
-
-            <div class="small-box bg-success">
-
-                <div class="inner">
-
-                    <h3>
-
-                        {{ $avgLayout }}
-
-                        hari
-
-                    </h3>
-
-                    <p>
-
-                        Rata-rata Layout
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <div class="card-header">
-
-            Top Editor
-
-        </div>
-
-        <div class="card-body">
-
-            <table class="table">
-
-                <thead>
-
-                    <tr>
-
-                        <th>Nama</th>
-
-                        <th>Total Buku</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    @foreach ($topEditors as $editor)
-                        <tr>
-
-                            <td>
-                                {{ $editor->person_name }}
-                            </td>
-
-                            <td>
-                                {{ $editor->total }}
-                            </td>
-
-                        </tr>
-                    @endforeach
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-    <div class="card">
-
-        <div class="card-header">
-
-            Top Layouter
-
-        </div>
-
-        <div class="card-body">
-
-            <table class="table">
-
-                <thead>
-
-                    <tr>
-
-                        <th>Nama</th>
-
-                        <th>Total Buku</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    @foreach ($topLayouters as $layouter)
-                        <tr>
-
-                            <td>
-                                {{ $layouter->person_name }}
-                            </td>
-
-                            <td>
-                                {{ $layouter->total }}
-                            </td>
-
-                        </tr>
-                    @endforeach
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
 @endsection

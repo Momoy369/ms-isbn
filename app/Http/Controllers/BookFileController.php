@@ -140,12 +140,12 @@ class BookFileController extends Controller
         }
 
         if (
-            $request->type === 'edited_manuscript'
+            $request->type === 'layout_pdf'
         ) {
 
             $book->update([
                 'workflow_status' =>
-                    'editing_review'
+                    'layout_review'
             ]);
 
             if ($authorId) {
@@ -156,7 +156,7 @@ class BookFileController extends Controller
 
                     'Dokumen Baru',
 
-                    'Hasil editing buku "' .
+                    'Hasil layout buku "' .
                     $book->judul .
                     '" siap direview.',
 
