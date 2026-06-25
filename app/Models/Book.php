@@ -672,6 +672,11 @@ class Book extends Model
         return $this->hasMany(\App\Models\ExternalSalesRecord::class);
     }
 
+    public function storeCatalogItems()
+    {
+        return $this->hasMany(StoreCatalogItem::class);
+    }
+
     public function serviceOrders()
     {
         return $this->hasMany(\App\Models\AuthorServiceOrder::class);

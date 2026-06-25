@@ -24,6 +24,8 @@ use App\Http\Controllers\AdminPrintPriceController;
 use App\Http\Controllers\AdminExternalSalesController;
 use App\Http\Controllers\AdminLegacyBookController;
 use App\Http\Controllers\AdminRoyaltyPayoutController;
+use App\Http\Controllers\AdminStoreCatalogController;
+use App\Http\Controllers\AdminStoreOrderController;
 use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
@@ -38,6 +40,7 @@ use App\Http\Controllers\AuthorRoyaltyController;
 use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
+use App\Http\Controllers\StorefrontController;
 
 Route::get('/', function () {
 
@@ -65,6 +68,15 @@ Route::get('/', function () {
 });
 
 require __DIR__ . '/auth.php';
+
+Route::get('/store', [StorefrontController::class, 'index'])
+    ->name('store.index');
+
+Route::get('/store/{slug}', [StorefrontController::class, 'show'])
+    ->name('store.show');
+
+Route::post('/store/{item}/order', [StorefrontController::class, 'placeOrder'])
+    ->name('store.order');
 
 Route::middleware('auth')->group(function () {
 
@@ -415,6 +427,21 @@ Route::middleware('auth')->group(function () {
 
             Route::put('/legacy-books/{legacyBook}', [AdminLegacyBookController::class, 'update'])
                 ->name('legacy-books.update');
+
+            Route::get('/finance/store/catalog', [AdminStoreCatalogController::class, 'index'])
+                ->name('finance.store.catalog.index');
+
+            Route::post('/finance/store/catalog', [AdminStoreCatalogController::class, 'store'])
+                ->name('finance.store.catalog.store');
+
+            Route::put('/finance/store/catalog/{item}', [AdminStoreCatalogController::class, 'update'])
+                ->name('finance.store.catalog.update');
+
+            Route::get('/finance/store/orders', [AdminStoreOrderController::class, 'index'])
+                ->name('finance.store.orders.index');
+
+            Route::put('/finance/store/orders/{order}', [AdminStoreOrderController::class, 'update'])
+                ->name('finance.store.orders.update');
 
             Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
                 ->name('external-sales.store');

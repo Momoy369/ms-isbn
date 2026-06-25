@@ -121,6 +121,7 @@
                         <th>Royalti</th>
                         <th>Distribusi</th>
                         <th>Status</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -154,10 +155,55 @@
                                 </small>
                             </td>
                             <td><span class="badge badge-light border">{{ strtoupper($book->status) }}</span></td>
+                            <td style="min-width:260px;">
+                                <form method="POST" action="{{ route('legacy-books.update', $book) }}" class="row">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="col-md-7 mb-1">
+                                        <input type="text" name="title" class="form-control form-control-sm"
+                                            value="{{ $book->title }}" required>
+                                    </div>
+                                    <div class="col-md-5 mb-1">
+                                        <input type="number" name="list_price" min="0" step="0.01"
+                                            class="form-control form-control-sm" value="{{ $book->list_price }}">
+                                    </div>
+                                    <div class="col-md-6 mb-1">
+                                        <input type="text" name="author_name" class="form-control form-control-sm"
+                                            value="{{ $book->author_name }}" required>
+                                    </div>
+                                    <div class="col-md-3 mb-1">
+                                        <input type="number" name="royalty_rate" min="0" max="1"
+                                            step="0.0001" class="form-control form-control-sm"
+                                            value="{{ $book->royalty_rate }}" placeholder="rate">
+                                    </div>
+                                    <div class="col-md-3 mb-1 d-flex align-items-center">
+                                        <input type="hidden" name="royalty_enabled" value="0">
+                                        <input type="checkbox" name="royalty_enabled" value="1"
+                                            @checked($book->royalty_enabled)> aktif
+                                    </div>
+
+                                    <input type="hidden" name="subtitle" value="{{ $book->subtitle }}">
+                                    <input type="hidden" name="author_user_id" value="{{ $book->author_user_id }}">
+                                    <input type="hidden" name="isbn" value="{{ $book->isbn }}">
+                                    <input type="hidden" name="published_year" value="{{ $book->published_year }}">
+                                    <input type="hidden" name="status" value="{{ $book->status }}">
+                                    <input type="hidden" name="notes" value="{{ $book->notes }}">
+                                    <input type="hidden" name="distribution_online"
+                                        value="{{ $book->distribution_online ? 1 : 0 }}">
+                                    <input type="hidden" name="distribution_ebook"
+                                        value="{{ $book->distribution_ebook ? 1 : 0 }}">
+                                    <input type="hidden" name="distribution_marketplace"
+                                        value="{{ $book->distribution_marketplace ? 1 : 0 }}">
+
+                                    <div class="col-md-12">
+                                        <button class="btn btn-xs btn-primary" type="submit">Update</button>
+                                    </div>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-3">Belum ada katalog legacy.</td>
+                            <td colspan="8" class="text-center text-muted py-3">Belum ada katalog legacy.</td>
                         </tr>
                     @endforelse
                 </tbody>

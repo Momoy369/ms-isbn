@@ -43,6 +43,11 @@ class LegacyBook extends Model
         return $this->hasMany(ExternalSalesRecord::class, 'legacy_book_id');
     }
 
+    public function storeCatalogItems()
+    {
+        return $this->hasMany(StoreCatalogItem::class, 'legacy_book_id');
+    }
+
     public function royaltyRate(): float
     {
         $rate = (float) ($this->royalty_rate ?? 0);

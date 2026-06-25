@@ -7,12 +7,14 @@
 @endsection
 
 @section('content')
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible rounded">
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
-            {{ session('success') }}
-        </div>
-    @endif
+    @foreach (['success', 'warning', 'danger', 'info'] as $type)
+        @if (session($type))
+            <div class="alert alert-{{ $type }} alert-dismissible rounded">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                {{ session($type) }}
+            </div>
+        @endif
+    @endforeach
 
     <div class="row mb-3">
         <div class="col-md-4">
@@ -279,7 +281,8 @@
                         <option value="">- Pilih Buku Legacy -</option>
                         @foreach ($eligibleLegacyBooks as $legacyBook)
                             <option value="{{ $legacyBook->id }}">{{ $legacyBook->title }}
-                                ({{ $legacyBook->author_name }})</option>
+                                ({{ $legacyBook->author_name }})
+                            </option>
                         @endforeach
                     </select>
                     @if ($eligibleBooks->isEmpty() && $eligibleLegacyBooks->isEmpty())
