@@ -15,6 +15,23 @@ use App\Models\BookClaimRequest;
 
 class Book extends Model
 {
+    public const ISBN_AUDIT_REQUIRED_FILES = [
+        'cover',
+        'skk',
+        'halaman_judul',
+        'surat_permohonan',
+        'copyright',
+    ];
+
+    public const ISBN_PACKAGE_REQUIRED_FILES = [
+        'cover',
+        'naskah_final',
+        'halaman_judul',
+        'copyright',
+        'surat_permohonan',
+        'attachment_isbn',
+    ];
+
     protected $fillable = [
 
         'nomor_naskah',
@@ -482,6 +499,57 @@ class Book extends Model
             default
             => null
         };
+    }
+
+    public function missingIsbnAuditFiles(): array
+    {
+        $missing = [];
+
+        foreach (self::ISBN_AUDIT_REQUIRED_FILES as $type) {
+            if (!$this->files()->where('type', $type)->exists()) {
+                $missing[] = $type;
+            }
+        }
+
+        return $missing;
+    }
+
+    public function missingIsbnPackageFiles(): array
+    {
+        $missing = [];
+
+        foreach (self::ISBN_PACKAGE_REQUIRED_FILES as $type) {
+            if (!$this->files()->where('type', $type)->exists()) {
+                $missing[] = $type;
+            }
+        }
+
+        return $missing;
+    }
+
+    public function hasCompleteIsbnAuditFiles(): bool
+    {
+        return count($this->missingIsbnAuditFiles()) === 0;
+    }
+
+    public function hasCompleteIsbnPackageFiles(): bool
+    {
+        return count($this->missingIsbnPackageFiles()) === 0;
+    }
+
+    public function canSubmitIsbnToPerpusnas(): bool
+    {
+        return $this->workflow_status === 'ready_for_isbn';
+    }
+
+    public function canApproveIsbnIssued(): bool
+    {
+        return $this->workflow_status === 'isbn_submitted';
+    }
+
+    public function canGenerateIsbnPackage(): bool
+    {
+        return in_array($this->workflow_status, ['ready_for_isbn', 'isbn_submitted', 'isbn_approved', 'selesai'], true);
     }
 
     public function reviews()

@@ -636,6 +636,10 @@ class BookController extends Controller
         Book $book,
         BookActivityService $activity
     ) {
+        if (!$book->canSubmitIsbnToPerpusnas()) {
+            return back()->with('warning', 'Submit ISBN hanya bisa dilakukan saat status buku berada di READY FOR ISBN.');
+        }
+
         $book->update([
 
             'workflow_status' =>
@@ -671,6 +675,10 @@ class BookController extends Controller
         PerpusnasIsbnService $perpusnas,
         BookActivityService $activity
     ) {
+        if (!$book->canApproveIsbnIssued()) {
+            return back()->with('warning', 'Terbitkan ISBN hanya bisa dilakukan saat status buku berada di ISBN SUBMITTED.');
+        }
+
         $request->validate([
             'isbn' => 'required',
             'tanggal' => 'required|date'

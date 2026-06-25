@@ -13,6 +13,28 @@
 
     <div class="card-body">
 
+        @php
+            $user = auth()->user();
+            $canIsbnControl = in_array($user->role, ['admin', 'isbn', 'superadmin'], true);
+            $missingAuditFiles = $book->missingIsbnAuditFiles();
+            $missingPackageFiles = $book->missingIsbnPackageFiles();
+            $canSubmitIsbn = $book->canSubmitIsbnToPerpusnas() && $canIsbnControl;
+            $canApproveIsbn = $book->canApproveIsbnIssued() && $canIsbnControl;
+            $canDownloadPackage = $book->canGenerateIsbnPackage() && empty($missingPackageFiles);
+            $fileLabel = function ($type) {
+                return match ($type) {
+                    'cover' => 'Cover',
+                    'skk' => 'SKK',
+                    'halaman_judul' => 'Halaman Judul',
+                    'surat_permohonan' => 'Surat Permohonan',
+                    'copyright' => 'Copyright',
+                    'naskah_final' => 'Naskah Final',
+                    'attachment_isbn' => 'Attachment ISBN',
+                    default => strtoupper(str_replace('_', ' ', $type)),
+                };
+            };
+        @endphp
+
         <div class="alert alert-info">
 
             <strong>
@@ -94,6 +116,14 @@
             </button>
 
         </form>
+
+        @if (!empty($missingAuditFiles))
+            <small class="text-warning d-block mt-2">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Audit tetap bisa dijalankan, namun dokumen wajib masih kurang:
+                {{ collect($missingAuditFiles)->map($fileLabel)->implode(', ') }}
+            </small>
+        @endif
 
         <hr>
 
@@ -203,13 +233,26 @@
 
             @csrf
 
-            <button class="btn btn-outline-success btn-block">
+            <button class="btn btn-outline-success btn-block" @disabled(!$canDownloadPackage)>
 
                 Download Paket ISBN
 
             </button>
 
         </form>
+
+        @if (!$book->canGenerateIsbnPackage())
+            <small class="text-muted d-block mt-2">
+                Download paket aktif saat workflow mencapai READY FOR ISBN.
+            </small>
+        @endif
+
+        @if (!empty($missingPackageFiles))
+            <small class="text-warning d-block mt-1">
+                Dokumen paket ISBN belum lengkap:
+                {{ collect($missingPackageFiles)->map($fileLabel)->implode(', ') }}
+            </small>
+        @endif
 
         <hr>
 
@@ -226,13 +269,19 @@
 
                 @csrf
 
-                <button class="btn btn-danger btn-block">
+                <button class="btn btn-danger btn-block" @disabled(!$canSubmitIsbn)>
 
                     Submit ke Perpusnas
 
                 </button>
 
             </form>
+
+            @if (!$canIsbnControl)
+                <small class="text-muted d-block mt-2">
+                    Aksi submit hanya untuk role Admin/ISBN/Superadmin.
+                </small>
+            @endif
         @endif
 
         @if ($book->workflow_status === 'isbn_submitted')
@@ -274,7 +323,7 @@
 
                         </div>
 
-                        <button class="btn btn-success btn-block">
+                        <button class="btn btn-success btn-block" @disabled(!$canApproveIsbn)>
 
                             Terbitkan ISBN
 
@@ -282,27 +331,22 @@
 
                     </form>
 
+                    @if (!$canIsbnControl)
+                        <small class="text-muted d-block mt-2">
+                            Validasi/terbit ISBN hanya untuk role Admin/ISBN/Superadmin.
+                        </small>
+                    @endif
+
                 </div>
 
             </div>
         @endif
 
         @if ($book->workflow_status === 'acc_penulis')
-            <form method="POST" action="{{ route('books.author-approval', $book) }}">
-
-                @csrf
-
-                <button class="
-        btn
-        btn-success
-        btn-block
-    ">
-
-                    ACC Penulis
-
-                </button>
-
-            </form>
+            <div class="alert alert-light border mb-0">
+                <i class="fas fa-user-check mr-2 text-success"></i>
+                Tahap ACC Penulis dilakukan dari portal author oleh penulis pemilik naskah.
+            </div>
         @endif
 
     </div>

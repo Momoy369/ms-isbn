@@ -10,10 +10,7 @@ class ISBNPackageService
     public function generate(
         Book $book
     ) {
-        if (
-            $book->workflow_status
-            !== 'ready_for_isbn'
-        ) {
+        if (!$book->canGenerateIsbnPackage()) {
 
             throw new \Exception(
                 'Buku belum siap ISBN'
@@ -40,21 +37,7 @@ class ISBNPackageService
             ZipArchive::OVERWRITE
         );
 
-        $requiredFiles = [
-
-            'cover',
-
-            'naskah_final',
-
-            'halaman_judul',
-
-            'copyright',
-
-            'surat_permohonan',
-
-            'attachment_isbn'
-
-        ];
+        $requiredFiles = Book::ISBN_PACKAGE_REQUIRED_FILES;
 
         $missing = [];
 

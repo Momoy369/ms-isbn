@@ -15,6 +15,37 @@ use Illuminate\Support\Facades\Storage;
 
 class DocumentController extends Controller
 {
+    private function upsertGeneratedFile(Book $book, string $type, array $result): void
+    {
+        $book->files()
+            ->where('type', $type)
+            ->update(['is_active' => false]);
+
+        BookFile::create([
+            'book_id' => $book->id,
+            'type' => $type,
+            'original_name' => $result['file_name'],
+            'file_path' => $result['file_path'],
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'file_size' => filesize(storage_path('app/' . $result['file_path'])),
+            'is_active' => true,
+        ]);
+    }
+
+    private function fileTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'cover' => 'Cover',
+            'skk' => 'SKK',
+            'halaman_judul' => 'Halaman Judul',
+            'surat_permohonan' => 'Surat Permohonan',
+            'copyright' => 'Copyright',
+            'naskah_final' => 'Naskah Final',
+            'attachment_isbn' => 'Attachment ISBN',
+            default => $type,
+        };
+    }
+
     public function titlePage(
         Book $book,
         DocumentGeneratorService $generator,
@@ -24,30 +55,7 @@ class DocumentController extends Controller
             $generator
                 ->generateTitlePage($book);
 
-        BookFile::create([
-
-            'book_id' => $book->id,
-
-            'type' => 'halaman_judul',
-
-            'original_name' =>
-                $result['file_name'],
-
-            'file_path' =>
-                $result['file_path'],
-
-            'mime_type' =>
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-
-            'file_size' =>
-                filesize(
-                    $result['file_path']
-                ),
-
-            'is_active' =>
-                true
-
-        ]);
+        $this->upsertGeneratedFile($book, 'halaman_judul', $result);
 
         $activity->log(
 
@@ -121,32 +129,7 @@ class DocumentController extends Controller
                     $book
                 );
 
-        BookFile::create([
-
-            'book_id' =>
-                $book->id,
-
-            'type' =>
-                'surat_permohonan',
-
-            'original_name' =>
-                $result['file_name'],
-
-            'file_path' =>
-                $result['file_path'],
-
-            'mime_type' =>
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-
-            'file_size' =>
-                filesize(
-                    $result['file_path']
-                ),
-
-            'is_active' =>
-                true
-
-        ]);
+        $this->upsertGeneratedFile($book, 'surat_permohonan', $result);
 
         $activity->log(
 
@@ -174,32 +157,7 @@ class DocumentController extends Controller
             $generator
                 ->generateCopyright($book);
 
-        BookFile::create([
-
-            'book_id' =>
-                $book->id,
-
-            'type' =>
-                'copyright',
-
-            'original_name' =>
-                $result['file_name'],
-
-            'file_path' =>
-                $result['file_path'],
-
-            'mime_type' =>
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-
-            'file_size' =>
-                filesize(
-                    $result['file_path']
-                ),
-
-            'is_active' =>
-                true
-
-        ]);
+        $this->upsertGeneratedFile($book, 'copyright', $result);
 
         $activity->log(
 
@@ -228,32 +186,7 @@ class DocumentController extends Controller
                     $book
                 );
 
-        BookFile::create([
-
-            'book_id' =>
-                $book->id,
-
-            'type' =>
-                'attachment_isbn',
-
-            'original_name' =>
-                $result['file_name'],
-
-            'file_path' =>
-                $result['file_path'],
-
-            'mime_type' =>
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-
-            'file_size' =>
-                filesize(
-                    $result['file_path']
-                ),
-
-            'is_active' =>
-                true
-
-        ]);
+        $this->upsertGeneratedFile($book, 'attachment_isbn', $result);
 
         $activity->log(
 
@@ -291,6 +224,17 @@ class DocumentController extends Controller
 
         );
 
+        $missing = $book->missingIsbnAuditFiles();
+
+        if (!empty($missing)) {
+            $labels = array_map(fn(string $type) => $this->fileTypeLabel($type), $missing);
+
+            return back()->with(
+                'warning',
+                'Audit dijalankan, namun dokumen wajib belum lengkap: ' . implode(', ', $labels)
+            );
+        }
+
         return back()->with(
             'success',
             'Audit selesai'
@@ -302,6 +246,10 @@ class DocumentController extends Controller
         MetadataExtractorService $service,
         BookActivityService $activity
     ) {
+        if ($book->metadata_locked) {
+            return back()->with('warning', 'Metadata sudah dikunci dan tidak dapat dianalisis ulang.');
+        }
+
         $result =
             $service->analyze($book);
 
@@ -348,37 +296,32 @@ class DocumentController extends Controller
     }
 
     public function generateAll(
-        Book $book
+        Book $book,
+        BookActivityService $activity
     ) {
         $generator =
             app(
                 DocumentGeneratorService::class
             );
 
-        $generator
-            ->generateTitlePage(
-                $book
-            );
+        $titlePage = $generator->generateTitlePage($book);
+        $this->upsertGeneratedFile($book, 'halaman_judul', $titlePage);
 
-        $generator
-            ->generateCopyright(
-                $book
-            );
+        $copyright = $generator->generateCopyright($book);
+        $this->upsertGeneratedFile($book, 'copyright', $copyright);
 
-        $generator
-            ->generateRequestLetter(
-                $book
-            );
+        $requestLetter = $generator->generateRequestLetter($book);
+        $this->upsertGeneratedFile($book, 'surat_permohonan', $requestLetter);
 
-        $generator
-            ->generateAttachment(
-                $book
-            );
+        $attachment = $generator->generateAttachment($book);
+        $this->upsertGeneratedFile($book, 'attachment_isbn', $attachment);
+
+        $activity->log($book, 'Generate Paket ISBN', 'Dokumen ISBN otomatis dibuat dan disinkronkan ke file aktif.');
 
         return back()
             ->with(
                 'success',
-                'Paket ISBN berhasil dibuat'
+                'Paket ISBN berhasil dibuat dan file aktif telah diperbarui'
             );
     }
 

@@ -9,15 +9,7 @@ class WorkflowService
 {
     public function update(Book $book, ?BookActivityService $activity = null)
     {
-        $required = [
-
-            'cover',
-            'skk',
-            'halaman_judul',
-            'surat_permohonan',
-            'copyright'
-
-        ];
+        $required = Book::ISBN_AUDIT_REQUIRED_FILES;
 
         foreach ($required as $type) {
 
@@ -27,9 +19,17 @@ class WorkflowService
                     ->exists()
             ) {
 
-                $book->update([
-                    'workflow_status' => 'draft'
-                ]);
+                if ($activity) {
+                    $activity->log(
+
+                        $book,
+
+                        'Audit ISBN',
+
+                        'Dokumen wajib belum lengkap, status pipeline dipertahankan.'
+
+                    );
+                }
 
                 return;
             }
