@@ -32,6 +32,21 @@
             padding: 1.4rem 0 2.5rem;
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: .9rem;
+            gap: .75rem;
+            flex-wrap: wrap;
+        }
+
+        .brand img {
+            max-height: 48px;
+            width: auto;
+            object-fit: contain;
+        }
+
         .back {
             color: var(--brand);
             text-decoration: none;
@@ -149,6 +164,10 @@
 
 <body>
     <div class="container">
+        <div class="brand">
+            <img src="{{ asset('logowide2.png') }}" alt="MS ISBN">
+            <a class="back" href="{{ route('store.track.form') }}">Lacak Pesanan</a>
+        </div>
         <a class="back" href="{{ route('store.index') }}">&larr; Kembali ke katalog</a>
 
         <div class="layout">
@@ -159,9 +178,11 @@
                     <div>{{ $item->subtitle }}</div>
                 @endif
                 <div style="margin-top:.35rem; color:#6f6759;">Penulis: {{ $item->author_name ?: '-' }}</div>
+                <div style="margin-top:.35rem; color:#6f6759;">Tipe: {{ strtoupper($item->product_type ?? 'print') }}
+                </div>
                 <div class="price">Rp {{ number_format($item->finalPrice(), 0, ',', '.') }}</div>
                 <div style="white-space: pre-line;">{{ $item->description ?: 'Deskripsi buku belum tersedia.' }}</div>
-                @if ($item->stock !== null)
+                @if (($item->product_type ?? 'print') === 'print' && $item->stock !== null)
                     <div style="margin-top:.8rem; font-size:.9rem;">Stok: <strong>{{ $item->stock }}</strong></div>
                 @endif
             </section>
@@ -173,6 +194,10 @@
                 @endif
                 @if (session('warning'))
                     <div class="alert warn">{{ session('warning') }}</div>
+                @endif
+                @if (session('danger'))
+                    <div class="alert warn" style="background:#ffe1e1;border-color:#ffb0b0;">{{ session('danger') }}
+                    </div>
                 @endif
 
                 <form method="POST" action="{{ route('store.order', $item) }}">
@@ -198,21 +223,50 @@
                                 required>
                         </div>
                         <div>
+                            @if (($item->product_type ?? 'print') === 'print')
+                                <div class="grid2" style="margin-top:.65rem;">
+                                    <div>
+                                        <label>ID Kota Tujuan (RajaOngkir)</label>
+                                        <input type="text" name="shipping_destination_city_id"
+                                            value="{{ old('shipping_destination_city_id') }}" required>
+                                    </div>
+                                    <div>
+                                        <label>Kurir</label>
+                                        <select name="shipping_courier"
+                                            style="width:100%; border:1px solid #cfc6b6; border-radius:10px; padding:.64rem .7rem;"
+                                            required>
+                                            @foreach (['jne' => 'JNE', 'pos' => 'POS', 'tiki' => 'TIKI'] as $key => $label)
+                                                <option value="{{ $key }}" @selected(old('shipping_courier', 'jne') === $key)>
+                                                    {{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @endif
                             <label>Total estimasi</label>
                             <input type="text"
                                 value="Rp {{ number_format($item->finalPrice(), 0, ',', '.') }} x qty" disabled>
                         </div>
                     </div>
                     <div style="margin-top:.65rem;">
-                        <label>Alamat Kirim</label>
-                        <textarea name="shipping_address" rows="3">{{ old('shipping_address') }}</textarea>
+                        <label>Alamat Kirim
+                            {{ ($item->product_type ?? 'print') === 'ebook' ? '(opsional untuk ebook)' : '' }}</label>
+                        <textarea name="shipping_address" rows="3" {{ ($item->product_type ?? 'print') === 'print' ? 'required' : '' }}>{{ old('shipping_address') }}</textarea>
                     </div>
+                    @if (($item->product_type ?? 'print') === 'ebook')
+                        <div style="margin-top:.65rem;">
+                            <label>Password Baca Ebook</label>
+                            <input type="password" name="reader_password" minlength="6" required>
+                            <div style="font-size:.8rem; color:#6f6759; margin-top:.25rem;">Password ini dipakai untuk
+                                membuka halaman baca ebook setelah pembayaran lunas.</div>
+                        </div>
+                    @endif
                     <div style="margin-top:.65rem;">
                         <label>Catatan</label>
                         <textarea name="notes" rows="2">{{ old('notes') }}</textarea>
                     </div>
                     <div style="margin-top:.75rem;">
-                        <button class="btn" type="submit">Kirim Pesanan</button>
+                        <button class="btn" type="submit">Checkout via iPaymu</button>
                     </div>
                 </form>
             </section>

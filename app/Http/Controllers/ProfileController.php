@@ -26,7 +26,20 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $data = $request->validated();
+
+        $upgradeToAuthor = (bool) ($data['upgrade_to_author'] ?? false);
+        unset($data['upgrade_to_author']);
+
+        $request->user()->fill($data);
+
+        if ($upgradeToAuthor && in_array((string) $request->user()->role, ['customer', 'reader'], true)) {
+            if (empty($request->user()->phone) || empty($request->user()->address)) {
+                return Redirect::route('profile.edit')->with('warning', 'Lengkapi nomor telepon dan alamat untuk upgrade ke author.');
+            }
+
+            $request->user()->role = 'author';
+        }
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorInvoice;
 use App\Models\AuthorServiceOrder;
+use App\Models\StoreOrder;
 use App\Services\IpaymuService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -68,7 +69,15 @@ class PaymentGatewayController extends Controller
             ->first();
 
         if (!$invoice) {
-            return response()->json(['message' => 'invoice not found'], 404);
+            $storeOrder = StoreOrder::where('order_number', $reference)
+                ->orWhere('gateway_reference', $reference)
+                ->first();
+
+            if (!$storeOrder) {
+                return response()->json(['message' => 'payment target not found'], 404);
+            }
+
+            return $this->handleStoreOrderCallback($storeOrder, $reference, $status);
         }
 
         if (in_array($status, ['success', 'berhasil', 'paid', 'settlement'], true)) {
@@ -131,6 +140,58 @@ class PaymentGatewayController extends Controller
                 'reference' => $reference,
                 'status' => $status,
             ]);
+        }
+
+        return response()->json(['message' => 'ok']);
+    }
+
+    private function handleStoreOrderCallback(StoreOrder $order, string $reference, string $status)
+    {
+        if (in_array($status, ['success', 'berhasil', 'paid', 'settlement'], true)) {
+            if ($order->status !== 'paid' && $order->status !== 'completed') {
+                $payload = [
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'payment_method' => 'ipaymu',
+                    'payment_gateway' => 'ipaymu',
+                    'payment_reference' => $reference,
+                    'gateway_reference' => $order->gateway_reference ?: $reference,
+                ];
+
+                if ($order->item && $order->item->isEbook() && !$order->reader_password_hash) {
+                    $payload['reader_password_hash'] = bcrypt(substr((string) preg_replace('/[^0-9]/', '', $order->customer_phone), -6) ?: '123456');
+                    $payload['reader_access_granted_at'] = now();
+                }
+
+                $order->update($payload);
+
+                if ($order->user_id) {
+                    app(NotificationService::class)->send(
+                        $order->user_id,
+                        'Pembayaran Pesanan Berhasil',
+                        'Pembayaran pesanan ' . $order->order_number . ' berhasil diproses.',
+                        optional($order->item)->book_id
+                    );
+                }
+            }
+
+            return response()->json(['message' => 'ok']);
+        }
+
+        if (in_array($status, ['failed', 'expired', 'cancelled', 'canceled', 'deny'], true)) {
+            if ($order->status !== 'cancelled') {
+                $order->update([
+                    'status' => 'cancelled',
+                    'payment_method' => $order->payment_method ?: 'ipaymu',
+                    'payment_gateway' => 'ipaymu',
+                    'payment_reference' => $reference,
+                    'gateway_reference' => $order->gateway_reference ?: $reference,
+                ]);
+
+                if ($order->item && $order->item->stock !== null) {
+                    $order->item->increment('stock', (int) $order->quantity);
+                }
+            }
         }
 
         return response()->json(['message' => 'ok']);

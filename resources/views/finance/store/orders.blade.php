@@ -86,6 +86,8 @@
                             <td>
                                 <strong>{{ $order->order_number }}</strong>
                                 <div class="small text-muted">{{ $order->created_at->format('d M Y H:i') }}</div>
+                                <div class="small"><a href="{{ route('store.track.show', $order->order_number) }}"
+                                        target="_blank">Lacak Publik</a></div>
                             </td>
                             <td>
                                 {{ $order->item->title ?? '-' }}
@@ -113,6 +115,14 @@
                                     <div class="col-md-5 mb-1">
                                         <input type="text" name="admin_notes" class="form-control form-control-sm"
                                             value="{{ $order->admin_notes }}" placeholder="Catatan admin">
+                                    </div>
+                                    <div class="col-md-4 mb-1">
+                                        <input type="text" name="shipping_courier" class="form-control form-control-sm"
+                                            value="{{ $order->shipping_courier }}" placeholder="Kurir (JNE/Sicepat)">
+                                    </div>
+                                    <div class="col-md-4 mb-1">
+                                        <input type="text" name="tracking_number" class="form-control form-control-sm"
+                                            value="{{ $order->tracking_number }}" placeholder="No Resi">
                                     </div>
                                     <div class="col-md-2 mb-1">
                                         <button class="btn btn-xs btn-primary" type="submit">Simpan</button>

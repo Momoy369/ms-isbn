@@ -52,6 +52,13 @@
                     <input type="text" name="author_name" class="form-control">
                 </div>
                 <div class="col-md-3 form-group">
+                    <label>Tipe Produk</label>
+                    <select name="product_type" class="form-control" required>
+                        <option value="print">Print</option>
+                        <option value="ebook">Ebook</option>
+                    </select>
+                </div>
+                <div class="col-md-3 form-group">
                     <label>Harga List</label>
                     <input type="number" step="0.01" min="0" name="list_price" class="form-control" required>
                 </div>
@@ -70,6 +77,10 @@
                 <div class="col-md-4 form-group">
                     <label>Cover URL/Path (opsional)</label>
                     <input type="text" name="cover_image_path" class="form-control">
+                </div>
+                <div class="col-md-4 form-group">
+                    <label>Link Baca Ebook (opsional)</label>
+                    <input type="url" name="ebook_read_link" class="form-control" placeholder="https://...">
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Sort Order</label>
@@ -128,6 +139,7 @@
                             <td>{{ $item->book->judul ?? ($item->legacyBook->title ?? 'Manual') }}</td>
                             <td>
                                 Rp {{ number_format($item->list_price, 0, ',', '.') }}
+                                <div class="small text-muted">{{ strtoupper($item->product_type ?? 'print') }}</div>
                                 @if ($item->promo_price)
                                     <div class="small text-success">Promo: Rp
                                         {{ number_format($item->promo_price, 0, ',', '.') }}</div>
@@ -160,6 +172,12 @@
                                             class="form-control form-control-sm" value="{{ $item->promo_price }}"
                                             placeholder="promo">
                                     </div>
+                                    <div class="col-md-4 mb-1">
+                                        <select name="product_type" class="form-control form-control-sm" required>
+                                            <option value="print" @selected(($item->product_type ?? 'print') === 'print')>PRINT</option>
+                                            <option value="ebook" @selected(($item->product_type ?? 'print') === 'ebook')>EBOOK</option>
+                                        </select>
+                                    </div>
                                     <div class="col-md-3 mb-1">
                                         <input type="number" name="stock" min="0"
                                             class="form-control form-control-sm" value="{{ $item->stock }}"
@@ -183,6 +201,7 @@
                                     <input type="hidden" name="author_name" value="{{ $item->author_name }}">
                                     <input type="hidden" name="description" value="{{ $item->description }}">
                                     <input type="hidden" name="cover_image_path" value="{{ $item->cover_image_path }}">
+                                    <input type="hidden" name="ebook_read_link" value="{{ $item->ebook_read_link }}">
                                     <input type="hidden" name="admin_notes" value="{{ $item->admin_notes }}">
                                     <div class="col-md-12">
                                         <button class="btn btn-xs btn-primary" type="submit">Simpan</button>

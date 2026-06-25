@@ -100,6 +100,16 @@ class User extends Authenticatable
         return $this->role === 'author';
     }
 
+    public function isCustomer()
+    {
+        return $this->role === 'customer';
+    }
+
+    public function isReader()
+    {
+        return $this->role === 'reader';
+    }
+
     public function books()
     {
         return $this->hasMany(

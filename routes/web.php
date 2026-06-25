@@ -62,6 +62,10 @@ Route::get('/', function () {
         return redirect()->route('assignments.my');
     }
 
+    if (in_array($user->role, ['customer', 'reader'], true)) {
+        return redirect()->route('store.index');
+    }
+
     return redirect()
         ->route('dashboard');
 
@@ -77,6 +81,21 @@ Route::get('/store/{slug}', [StorefrontController::class, 'show'])
 
 Route::post('/store/{item}/order', [StorefrontController::class, 'placeOrder'])
     ->name('store.order');
+
+Route::get('/store/track', [StorefrontController::class, 'trackForm'])
+    ->name('store.track.form');
+
+Route::post('/store/track', [StorefrontController::class, 'trackLookup'])
+    ->name('store.track.lookup');
+
+Route::get('/store/track/{orderNumber}', [StorefrontController::class, 'trackShow'])
+    ->name('store.track.show');
+
+Route::post('/store/track/{orderNumber}/reader', [StorefrontController::class, 'reader'])
+    ->name('store.reader');
+
+Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'callback'])
+    ->name('payments.ipaymu.callback');
 
 Route::middleware('auth')->group(function () {
 
@@ -106,9 +125,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/files/{file}/download', [DocumentController::class, 'download'])
         ->name('files.download');
-
-    Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'callback'])
-        ->name('payments.ipaymu.callback');
 
     Route::get(
         '/notifications',

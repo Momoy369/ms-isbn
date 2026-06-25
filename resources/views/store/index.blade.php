@@ -44,6 +44,20 @@
             padding: 2.5rem 0 1.5rem;
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .brand img {
+            max-height: 58px;
+            width: auto;
+            object-fit: contain;
+        }
+
         .hero h1 {
             font-family: 'Fraunces', serif;
             font-size: clamp(2rem, 4vw, 3rem);
@@ -167,10 +181,17 @@
 <body>
     <div class="container">
         <section class="hero">
-            <a href="{{ route('login') }}" class="top-link">Masuk Admin</a>
+            <div class="brand">
+                <img src="{{ asset('logowide.png') }}" alt="MS ISBN">
+                <div>
+                    <a href="{{ route('store.track.form') }}" class="top-link" style="margin-right:.75rem;">Lacak
+                        Pesanan</a>
+                    <a href="{{ route('login') }}" class="top-link">Masuk Admin</a>
+                </div>
+            </div>
             <h1>Toko Buku Pilihan</h1>
-            <p>Katalog buku yang dipublikasikan admin. Pesan langsung dari sini, lalu tim kami akan menghubungi untuk
-                konfirmasi pembayaran dan pengiriman.</p>
+            <p>Katalog buku cetak dan ebook yang dipublikasikan admin. Checkout langsung memakai iPaymu dan lacak
+                pesanan secara mandiri.</p>
             <form method="GET" class="toolbar">
                 <input type="text" name="q" value="{{ $search }}"
                     placeholder="Cari judul atau nama penulis">
@@ -193,6 +214,7 @@
                         <div class="body">
                             <div style="font-weight:800;">{{ $item->title }}</div>
                             <div class="meta">{{ $item->author_name ?: 'Penulis belum diisi' }}</div>
+                            <div class="meta">{{ strtoupper($item->product_type ?? 'print') }}</div>
                             <div class="price">Rp {{ number_format($item->finalPrice(), 0, ',', '.') }}</div>
                             <a href="{{ route('store.show', $item->slug) }}" class="btn"
                                 style="text-align:center;">Lihat Detail</a>

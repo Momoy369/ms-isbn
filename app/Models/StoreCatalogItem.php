@@ -13,6 +13,7 @@ class StoreCatalogItem extends Model
         'title',
         'subtitle',
         'author_name',
+        'product_type',
         'description',
         'list_price',
         'promo_price',
@@ -21,6 +22,7 @@ class StoreCatalogItem extends Model
         'is_featured',
         'sort_order',
         'cover_image_path',
+        'ebook_read_link',
         'admin_notes',
     ];
 
@@ -32,6 +34,11 @@ class StoreCatalogItem extends Model
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    public function isEbook(): bool
+    {
+        return $this->product_type === 'ebook';
+    }
 
     public function book()
     {

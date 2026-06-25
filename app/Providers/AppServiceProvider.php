@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $abilityRoles = [
-            'menu-authenticated' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance', 'superadmin'],
+            'menu-authenticated' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance', 'superadmin', 'customer', 'reader'],
             'menu-role-files' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-backoffice-dashboard' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-author' => ['author'],

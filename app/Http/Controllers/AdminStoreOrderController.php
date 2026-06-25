@@ -33,11 +33,15 @@ class AdminStoreOrderController extends Controller
         $data = $request->validate([
             'status' => ['required', 'in:pending,confirmed,paid,packed,shipped,completed,cancelled'],
             'admin_notes' => ['nullable', 'string', 'max:2000'],
+            'tracking_number' => ['nullable', 'string', 'max:120'],
+            'shipping_courier' => ['nullable', 'string', 'max:64'],
         ]);
 
         $payload = [
             'status' => $data['status'],
             'admin_notes' => $data['admin_notes'] ?? $order->admin_notes,
+            'tracking_number' => $data['tracking_number'] ?? $order->tracking_number,
+            'shipping_courier' => $data['shipping_courier'] ?? $order->shipping_courier,
         ];
 
         if ($data['status'] === 'confirmed' && !$order->confirmed_at) {
@@ -46,6 +50,14 @@ class AdminStoreOrderController extends Controller
 
         if ($data['status'] === 'completed' && !$order->completed_at) {
             $payload['completed_at'] = now();
+        }
+
+        if ($data['status'] === 'shipped' && !$order->shipped_at) {
+            $payload['shipped_at'] = now();
+        }
+
+        if ($data['status'] === 'paid' && !$order->paid_at) {
+            $payload['paid_at'] = now();
         }
 
         $order->update($payload);

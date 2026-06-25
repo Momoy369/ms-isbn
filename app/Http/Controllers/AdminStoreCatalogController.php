@@ -37,6 +37,7 @@ class AdminStoreCatalogController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'author_name' => ['nullable', 'string', 'max:255'],
+            'product_type' => ['required', 'in:print,ebook'],
             'description' => ['nullable', 'string'],
             'list_price' => ['required', 'numeric', 'min:0'],
             'promo_price' => ['nullable', 'numeric', 'min:0'],
@@ -45,6 +46,7 @@ class AdminStoreCatalogController extends Controller
             'is_featured' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'cover_image_path' => ['nullable', 'string', 'max:255'],
+            'ebook_read_link' => ['nullable', 'url', 'max:255'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -68,6 +70,7 @@ class AdminStoreCatalogController extends Controller
             'title' => $data['title'],
             'subtitle' => $data['subtitle'] ?? null,
             'author_name' => $data['author_name'] ?? null,
+            'product_type' => $data['product_type'],
             'description' => $data['description'] ?? null,
             'list_price' => $data['list_price'],
             'promo_price' => $data['promo_price'] ?? null,
@@ -76,6 +79,7 @@ class AdminStoreCatalogController extends Controller
             'is_featured' => (bool) ($data['is_featured'] ?? false),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'cover_image_path' => $data['cover_image_path'] ?? null,
+            'ebook_read_link' => $data['ebook_read_link'] ?? null,
             'admin_notes' => $data['admin_notes'] ?? null,
         ]);
 
@@ -88,6 +92,7 @@ class AdminStoreCatalogController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'author_name' => ['nullable', 'string', 'max:255'],
+            'product_type' => ['required', 'in:print,ebook'],
             'description' => ['nullable', 'string'],
             'list_price' => ['required', 'numeric', 'min:0'],
             'promo_price' => ['nullable', 'numeric', 'min:0'],
@@ -96,6 +101,7 @@ class AdminStoreCatalogController extends Controller
             'is_featured' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'cover_image_path' => ['nullable', 'string', 'max:255'],
+            'ebook_read_link' => ['nullable', 'url', 'max:255'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -103,6 +109,7 @@ class AdminStoreCatalogController extends Controller
             'title' => $data['title'],
             'subtitle' => $data['subtitle'] ?? null,
             'author_name' => $data['author_name'] ?? null,
+            'product_type' => $data['product_type'],
             'description' => $data['description'] ?? null,
             'list_price' => $data['list_price'],
             'promo_price' => $data['promo_price'] ?? null,
@@ -111,6 +118,7 @@ class AdminStoreCatalogController extends Controller
             'is_featured' => (bool) ($data['is_featured'] ?? false),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'cover_image_path' => $data['cover_image_path'] ?? null,
+            'ebook_read_link' => $data['ebook_read_link'] ?? null,
             'admin_notes' => $data['admin_notes'] ?? null,
         ]);
 
