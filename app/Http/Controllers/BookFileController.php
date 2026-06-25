@@ -15,11 +15,10 @@ class BookFileController extends Controller
         \App\Services\NotificationService $notification
     ) {
         $request->validate([
-            'type' => 'required',
-            'file' => 'required|file|max:20480'
+            'type' => 'required|string',
+            'file' => 'required|file|max:20480',
+            'note' => 'nullable|string|max:1000',
         ]);
-
-        // $file = $request->file('file');
 
         $book->files()
             ->where(
@@ -31,11 +30,6 @@ class BookFileController extends Controller
                 'is_active' => false
 
             ]);
-
-        $request->validate([
-            'type' => 'required',
-            'file' => 'required|file|max:20480'
-        ]);
 
         if ($request->type === 'naskah_final') {
 
@@ -53,6 +47,24 @@ class BookFileController extends Controller
 
         if ($request->type === 'skk') {
 
+            $request->validate([
+                'file' => 'required|mimes:jpg,jpeg,png,pdf'
+            ]);
+        }
+
+        if (in_array($request->type, ['edited_manuscript', 'halaman_judul', 'surat_permohonan', 'copyright'], true)) {
+            $request->validate([
+                'file' => 'required|mimes:doc,docx,pdf'
+            ]);
+        }
+
+        if ($request->type === 'layout_pdf') {
+            $request->validate([
+                'file' => 'required|mimes:pdf'
+            ]);
+        }
+
+        if ($request->type === 'cover_final') {
             $request->validate([
                 'file' => 'required|mimes:jpg,jpeg,png,pdf'
             ]);

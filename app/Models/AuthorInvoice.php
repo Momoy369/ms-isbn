@@ -242,14 +242,11 @@ class AuthorInvoice extends Model
 
     /**
      * Auto-create a revision invoice if this is not the first revision on this stage.
-     * First revision per stage is free; subsequent revisions are charged.
-     *
-     * @param  float  $revisionFeeRate  Fraction of package price (default 15%)
+     * First revision per stage is free; subsequent revisions use the admin-defined nominal fee.
      */
     public static function createRevisionInvoiceIfNeeded(
         Book $book,
-        string $stage,
-        float $revisionFeeRate = 0.15
+        string $stage
     ): ?self {
         $authorUserId = $book->author_user_id;
 
@@ -263,13 +260,13 @@ class AuthorInvoice extends Model
             ->where('status', 'revision')
             ->count();
 
-        // First revision (count becomes 1 after this call) is free
-        if ($revisionCount < 1) {
+        // First revision is free. Because the review record is already created before this method runs,
+        // a first revision produces count=1 and must not create an invoice.
+        if ($revisionCount <= 1) {
             return null;
         }
 
-        $feeBase = optional($book->publishingPackage)->price ?? 0;
-        $fee = round($feeBase * $revisionFeeRate, 2);
+        $fee = round((float) ($book->revision_fee_amount ?? 0), 2);
 
         if ($fee <= 0) {
             return null;
@@ -287,16 +284,16 @@ class AuthorInvoice extends Model
             'user_id' => $authorUserId,
             'type' => 'revision',
             'revision_stage' => $stage,
-            'revision_count' => $revisionCount + 1,
+            'revision_count' => $revisionCount,
             'description' => sprintf(
                 'Biaya Revisi Ke-%d – Tahap %s (%s)',
-                $revisionCount + 1,
+                $revisionCount,
                 $stageLabel,
                 $book->judul
             ),
             'amount' => $fee,
             'status' => 'pending',
-            'notes' => 'Revisi pertama tiap tahap gratis. Revisi selanjutnya dikenakan biaya ' . ($revisionFeeRate * 100) . '% dari harga paket.',
+            'notes' => 'Revisi pertama tiap tahap gratis. Revisi berikutnya menggunakan nominal biaya revisi yang diinput admin.',
         ]);
     }
 }

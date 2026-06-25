@@ -315,6 +315,14 @@ class BookController extends Controller
 
                 'nullable|max:30',
 
+            'selling_price' =>
+
+                'nullable|numeric|min:0',
+
+            'revision_fee_amount' =>
+
+                'nullable|numeric|min:0',
+
             'publishing_package_id' =>
 
                 'nullable|exists:publishing_packages,id',
@@ -358,6 +366,10 @@ class BookController extends Controller
             'tahun_terbit' => $request->tahun_terbit,
 
             'isbn' => $request->isbn,
+
+            'selling_price' => $request->selling_price,
+
+            'revision_fee_amount' => $request->revision_fee_amount,
 
             'editor' => $request->editor,
 
@@ -457,6 +469,10 @@ class BookController extends Controller
         Book $book
     ) {
         $book->load('publishingPackage');
+
+        if (!$book->hasPaidInitialPackageInvoice()) {
+            return back()->with('warning', $book->dpPaymentWarningMessage());
+        }
 
         $workflows = $book->workflowSteps();
 
@@ -778,6 +794,10 @@ class BookController extends Controller
         Book $book,
         BookActivityService $activity
     ) {
+
+        if (!$book->hasPaidInitialPackageInvoice()) {
+            return back()->with('warning', $book->dpPaymentWarningMessage());
+        }
 
         if (
             $book->penulis_1

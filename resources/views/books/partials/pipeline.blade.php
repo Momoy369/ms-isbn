@@ -6,6 +6,8 @@
     <div class="card-body">
         @php
             $current = $book->workflowIndex();
+            $dpPaid = $book->hasPaidInitialPackageInvoice();
+            $dpWarning = $book->dpPaymentWarningMessage();
         @endphp
 
         {{-- STEPPER --}}
@@ -61,11 +63,17 @@
                         {{ strtoupper(str_replace('_', ' ', $book->workflow_status)) }}
                     </h5>
                 </div>
+                @unless ($dpPaid)
+                    <div class="alert alert-warning border-0 shadow-sm mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>{{ $dpWarning }}
+                    </div>
+                @endunless
             </div>
             <div class="col-md-4 mt-3 mt-md-0">
                 <form method="POST" action="{{ route('books.next-workflow', $book) }}">
                     @csrf
-                    <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm">
+                    <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm"
+                        @disabled(!$dpPaid)>
                         <i class="fas fa-forward mr-2"></i> Lanjutkan Tahap
                     </button>
                 </form>

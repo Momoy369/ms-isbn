@@ -7,6 +7,11 @@
 @stop
 
 @section('content')
+    @php
+        $selectedPackageId = old('publishing_package_id', $book->publishing_package_id);
+        $selectedPackage = $packages->firstWhere('id', (int) $selectedPackageId);
+        $editingIncluded = $selectedPackage ? (bool) $selectedPackage->includes_editing : true;
+    @endphp
     <div class="row">
         <div class="col-12">
 
@@ -189,13 +194,43 @@
                                     @enderror
                                 </div>
 
+                                <div class="row">
+                                    <div class="col-md-6 form-group">
+                                        <label for="selling_price">Harga Jual Manual</label>
+                                        <input type="number" step="0.01" id="selling_price" name="selling_price"
+                                            class="form-control @error('selling_price') is-invalid @enderror"
+                                            value="{{ old('selling_price', $book->selling_price) }}">
+                                        @error('selling_price')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Kosongkan untuk memakai default: jumlah halaman x Rp320 + 150%.
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label for="revision_fee_amount">Biaya Revisi Tambahan</label>
+                                        <input type="number" step="0.01" id="revision_fee_amount"
+                                            name="revision_fee_amount"
+                                            class="form-control @error('revision_fee_amount') is-invalid @enderror"
+                                            value="{{ old('revision_fee_amount', $book->revision_fee_amount) }}">
+                                        @error('revision_fee_amount')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Diinput admin. Dipakai mulai revisi ke-2 pada tahap yang sama.
+                                        </small>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label for="publishing_package_id">Paket Penerbitan</label>
                                     <select id="publishing_package_id" name="publishing_package_id"
                                         class="form-control @error('publishing_package_id') is-invalid @enderror">
                                         <option value="">-- Pilih Paket --</option>
                                         @foreach ($packages as $package)
-                                            <option value="{{ $package->id }}" @selected(old('publishing_package_id', $book->publishing_package_id) == $package->id)>
+                                            <option value="{{ $package->id }}"
+                                                data-includes-editing="{{ $package->includes_editing ? '1' : '0' }}"
+                                                @selected(old('publishing_package_id', $book->publishing_package_id) == $package->id)>
                                                 {{ $package->name }}
                                                 @if ($package->includes_editing)
                                                     <span class="text-success">(Editing)</span>
@@ -232,7 +267,8 @@
                                 <div class="form-group mb-2">
                                     <label for="editor">Editor</label>
                                     <select id="editor" name="editor"
-                                        class="form-control @error('editor') is-invalid @enderror">
+                                        class="form-control @error('editor') is-invalid @enderror"
+                                        @disabled(!$editingIncluded)>
                                         <option value="">-- Pilih Editor --</option>
                                         @foreach ($editors as $editor)
                                             <option value="{{ $editor->name }}" @selected(old('editor', $book->editor) == $editor->name)>
@@ -243,6 +279,10 @@
                                     @error('editor')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <small id="editorHelp"
+                                        class="form-text {{ $editingIncluded ? 'text-muted' : 'text-warning' }}">
+                                        {{ $editingIncluded ? 'Pilih editor jika paket menyertakan layanan editing.' : 'Field editor dinonaktifkan karena paket ini tidak menyertakan layanan editing.' }}
+                                    </small>
                                 </div>
                                 @if ($recommendedEditor)
                                     <div class="alert alert-info py-1 px-2 mb-3" style="font-size: 0.9rem;">
@@ -290,4 +330,38 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const packageSelect = document.getElementById('publishing_package_id');
+            const editorSelect = document.getElementById('editor');
+            const editorHelp = document.getElementById('editorHelp');
+
+            if (!packageSelect || !editorSelect || !editorHelp) {
+                return;
+            }
+
+            const syncEditorState = function() {
+                const selectedOption = packageSelect.options[packageSelect.selectedIndex];
+                const includesEditing = !selectedOption || selectedOption.value === '' ?
+                    true :
+                    selectedOption.dataset.includesEditing === '1';
+
+                editorSelect.disabled = !includesEditing;
+
+                if (!includesEditing) {
+                    editorSelect.value = '';
+                    editorHelp.className = 'form-text text-warning';
+                    editorHelp.textContent =
+                        'Field editor dinonaktifkan karena paket ini tidak menyertakan layanan editing.';
+                } else {
+                    editorHelp.className = 'form-text text-muted';
+                    editorHelp.textContent = 'Pilih editor jika paket menyertakan layanan editing.';
+                }
+            };
+
+            packageSelect.addEventListener('change', syncEditorState);
+            syncEditorState();
+        });
+    </script>
 @endsection

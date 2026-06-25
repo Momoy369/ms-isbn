@@ -96,14 +96,18 @@ class DocumentController extends Controller
             abort(404);
         }
 
-        return Storage::disk('public')
-            ->download(
-
-                $file->file_path,
-
-                $file->original_name
-
+        $absolutePath = Storage::disk('public')
+            ->path(
+                $file->file_path
             );
+
+        return response()->download(
+
+            $absolutePath,
+
+            $file->original_name
+
+        );
     }
 
     public function requestLetter(
@@ -275,7 +279,7 @@ class DocumentController extends Controller
     ) {
         $audit->run($book);
 
-        $workflow->update($book);
+        $workflow->update($book, $activity);
 
         $activity->log(
 

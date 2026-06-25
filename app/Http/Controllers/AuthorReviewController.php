@@ -18,6 +18,10 @@ class AuthorReviewController extends Controller
         NotificationService $notification
     ) {
 
+        if (!$book->hasPaidInitialPackageInvoice()) {
+            return back()->with('warning', $book->dpPaymentWarningMessage());
+        }
+
         $stage =
             $request->stage;
 
@@ -278,10 +282,17 @@ class AuthorReviewController extends Controller
         // Buat invoice revisi berbayar jika ini bukan revisi pertama pada stage ini
         $revisionInvoice = AuthorInvoice::createRevisionInvoiceIfNeeded($book, $request->stage);
 
+        $revisionCount = BookReview::where('book_id', $book->id)
+            ->where('stage', $request->stage)
+            ->where('status', 'revision')
+            ->count();
+
         $successMessage = 'Revisi berhasil dikirim.';
         if ($revisionInvoice) {
             $successMessage .= ' Invoice revisi berbayar #' . $revisionInvoice->invoice_number
-                . ' (Rp ' . number_format($revisionInvoice->amount, 0, ',', '.') . ') telah diterbitkan.';
+                . ' (Rp ' . number_format((float) $revisionInvoice->amount, 0, ',', '.') . ') telah diterbitkan.';
+        } elseif ($revisionCount > 1 && (float) ($book->revision_fee_amount ?? 0) <= 0) {
+            $successMessage .= ' Biaya revisi tambahan belum diinput admin, sehingga invoice revisi belum diterbitkan.';
         }
 
         return back()->with('success', $successMessage);

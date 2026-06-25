@@ -7,7 +7,7 @@ use App\Services\BookActivityService;
 
 class WorkflowService
 {
-    public function update(Book $book, BookActivityService $activity)
+    public function update(Book $book, ?BookActivityService $activity = null)
     {
         $required = [
 
@@ -63,15 +63,17 @@ class WorkflowService
 
             ]);
 
-            $activity->log(
+            if ($activity) {
+                $activity->log(
 
-                $book,
+                    $book,
 
-                'Audit ISBN',
+                    'Audit ISBN',
 
-                'Semua audit berhasil'
+                    'Semua audit berhasil'
 
-            );
+                );
+            }
 
         }
     }

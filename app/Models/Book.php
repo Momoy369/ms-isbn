@@ -57,6 +57,8 @@ class Book extends Model
 
         'selling_price',
 
+        'revision_fee_amount',
+
         'ukuran_buku',
 
         'cetakan',
@@ -525,9 +527,47 @@ class Book extends Model
             return (float) $this->selling_price;
         }
 
+        $pages = (int) ($this->jumlah_halaman ?: 0);
+
+        if ($pages > 0) {
+            $baseCost = $pages * 192;
+
+            return round($baseCost * 2.5, 2);
+        }
+
         $pkgPrice = (float) optional($this->publishingPackage)->price;
 
         return $pkgPrice > 0 ? $pkgPrice : 80000;
+    }
+
+    public function initialPackageInvoice(): ?AuthorInvoice
+    {
+        return $this->authorInvoices()
+            ->where('is_package_billing', true)
+            ->where('installment_number', 1)
+            ->first();
+    }
+
+    public function hasPaidInitialPackageInvoice(): bool
+    {
+        $invoice = $this->initialPackageInvoice();
+
+        if (!$invoice) {
+            return true;
+        }
+
+        return $invoice->isPaid();
+    }
+
+    public function dpPaymentWarningMessage(): string
+    {
+        $invoice = $this->initialPackageInvoice();
+
+        if (!$invoice) {
+            return 'Invoice DP 50% belum tersedia untuk buku ini.';
+        }
+
+        return 'Tahap tidak dapat dilanjutkan sebelum invoice DP 50% #' . $invoice->invoice_number . ' dibayar.';
     }
 
     public function canAuthorAccessDeliveryLinks(): bool
@@ -536,11 +576,23 @@ class Book extends Model
             return true;
         }
 
+        if ($this->workflow_status !== 'selesai') {
+            return false;
+        }
+
         $packageInvoices = $this->authorInvoices()
             ->where('is_package_billing', true)
             ->get();
 
         if ($packageInvoices->isEmpty()) {
+            return false;
+        }
+
+        $hasFinalInstallment = $packageInvoices->contains(
+            fn($invoice) => (int) ($invoice->installment_number ?? 0) === 2
+        );
+
+        if (!$hasFinalInstallment) {
             return false;
         }
 

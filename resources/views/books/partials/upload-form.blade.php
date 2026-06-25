@@ -24,8 +24,24 @@
                 Cover Final (untuk Review Author)
             </option>
 
+            <option value="layout_pdf">
+                PDF Layout (untuk Review Author)
+            </option>
+
             <option value="skk">
                 SKK
+            </option>
+
+            <option value="halaman_judul">
+                Halaman Judul
+            </option>
+
+            <option value="surat_permohonan">
+                Surat Permohonan
+            </option>
+
+            <option value="copyright">
+                Copyright
             </option>
 
         </select>
