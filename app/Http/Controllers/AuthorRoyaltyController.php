@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuthorRoyaltyPayoutRequest;
 use App\Models\Book;
+use App\Services\AuthorRoyaltyLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AuthorRoyaltyController extends Controller
 {
-    public function index()
+    public function index(AuthorRoyaltyLedgerService $ledgerService)
     {
         $books = Book::with(['externalSales'])
             ->where('author_user_id', auth()->id())
@@ -17,19 +18,18 @@ class AuthorRoyaltyController extends Controller
             ->orderBy('judul')
             ->get();
 
-        $rows = $books->map(function (Book $book): array {
-            $salesQty = (int) $book->externalSales->sum('quantity');
-            $unitPrice = $book->effectiveSellingPrice();
-            $gross = $salesQty * $unitPrice;
-            $rate = $book->royaltyRate();
+        $ledgers = $ledgerService->syncForAuthor(auth()->user());
+
+        $rows = $books->map(function (Book $book) use ($ledgers): array {
+            $bookLedgers = $ledgers->where('book_id', $book->id);
 
             return [
                 'book' => $book,
-                'sales_qty' => $salesQty,
-                'unit_price' => $unitPrice,
-                'gross' => $gross,
-                'rate' => $rate,
-                'royalty' => $gross * $rate,
+                'sales_qty' => (int) $book->externalSales->sum('quantity'),
+                'unit_price' => $book->effectiveSellingPrice(),
+                'gross' => (float) $bookLedgers->sum('gross_amount'),
+                'rate' => $book->royaltyRate(),
+                'royalty' => (float) $bookLedgers->sum('royalty_amount'),
             ];
         });
 
@@ -45,13 +45,13 @@ class AuthorRoyaltyController extends Controller
             ->latest('id')
             ->get();
 
-        $pendingPayouts = (float) $payoutHistory->where('status', 'pending')->sum('amount');
-        $availablePayout = max(0, (float) $summary['royalty'] - $pendingPayouts);
+        $pendingPayouts = (float) $payoutHistory->whereIn('status', ['pending', 'approved'])->sum('amount');
+        $availablePayout = max(0, (float) $ledgers->where('status', 'accrued')->sum('royalty_amount') - $pendingPayouts);
 
-        return view('author.royalties.index', compact('rows', 'summary', 'payoutHistory', 'availablePayout'));
+        return view('author.royalties.index', compact('rows', 'summary', 'payoutHistory', 'availablePayout', 'ledgers'));
     }
 
-    public function export(Request $request)
+    public function export(Request $request, AuthorRoyaltyLedgerService $ledgerService)
     {
         $request->validate([
             'start_date' => ['nullable', 'date'],
@@ -64,46 +64,42 @@ class AuthorRoyaltyController extends Controller
             ->orderBy('judul')
             ->get();
 
+        $ledgers = $ledgerService->syncForAuthor(auth()->user());
+
         $startDate = $request->date('start_date');
         $endDate = $request->date('end_date');
 
         $fileName = 'royalty-report-' . now()->format('Ymd-His') . '.csv';
 
-        return response()->streamDownload(function () use ($books, $startDate, $endDate) {
+        return response()->streamDownload(function () use ($books, $ledgers, $startDate, $endDate) {
             $handle = fopen('php://output', 'w');
 
-            fputcsv($handle, ['Judul', 'Nomor Naskah', 'Qty', 'Harga Acuan', 'Omzet', 'Rate', 'Royalti', 'Tanggal Sales']);
+            fputcsv($handle, ['Judul', 'Nomor Naskah', 'Periode', 'Qty', 'Harga Acuan', 'Omzet', 'Rate', 'Royalti']);
 
             foreach ($books as $book) {
                 /** @var Book $book */
-                $sales = $book->externalSales;
+                $bookLedgers = $ledgers->where('book_id', $book->id);
 
-                if ($startDate) {
-                    $sales = $sales->where('sold_at', '>=', $startDate);
+                foreach ($bookLedgers as $ledger) {
+                    if ($startDate && $ledger->period_end->lt($startDate)) {
+                        continue;
+                    }
+
+                    if ($endDate && $ledger->period_start->gt($endDate)) {
+                        continue;
+                    }
+
+                    fputcsv($handle, [
+                        $book->judul,
+                        $book->nomor_naskah,
+                        $ledger->period_start->format('Y-m') . ' s/d ' . $ledger->period_end->format('Y-m'),
+                        '-',
+                        $book->effectiveSellingPrice(),
+                        $ledger->gross_amount,
+                        $ledger->royalty_rate,
+                        $ledger->royalty_amount,
+                    ]);
                 }
-
-                if ($endDate) {
-                    $sales = $sales->where('sold_at', '<=', $endDate);
-                }
-
-                $qty = (int) $sales->sum('quantity');
-                $gross = (float) $sales->sum('gross_amount');
-                $rate = $book->royaltyRate();
-                $royalty = $gross * $rate;
-                $lastSoldAt = $sales->isNotEmpty()
-                    ? optional($sales->sortByDesc('sold_at')->first()->sold_at)->format('Y-m-d')
-                    : '-';
-
-                fputcsv($handle, [
-                    $book->judul,
-                    $book->nomor_naskah,
-                    $qty,
-                    $book->effectiveSellingPrice(),
-                    $gross,
-                    $rate,
-                    $royalty,
-                    $lastSoldAt,
-                ]);
             }
 
             fclose($handle);
@@ -127,7 +123,7 @@ class AuthorRoyaltyController extends Controller
         return back()->with('success', 'Data rekening penulis berhasil diperbarui.');
     }
 
-    public function requestPayout(Request $request)
+    public function requestPayout(Request $request, AuthorRoyaltyLedgerService $ledgerService)
     {
         $data = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:50000'],
@@ -140,18 +136,10 @@ class AuthorRoyaltyController extends Controller
             return back()->with('warning', 'Lengkapi data rekening terlebih dahulu sebelum meminta pencairan.');
         }
 
-        $books = Book::with(['externalSales'])
-            ->where('author_user_id', $user->id)
-            ->where('royalty_enabled', true)
-            ->get();
+        $ledgerService->syncForAuthor($user);
 
-        $availableRoyalty = (float) $books->sum(function (Book $book): float {
-            $sales = (float) $book->externalSales->sum('gross_amount');
-
-            return $sales * $book->royaltyRate();
-        });
-
-        $pending = (float) $user->royaltyPayoutRequests()->where('status', 'pending')->sum('amount');
+        $availableRoyalty = (float) $user->royaltyLedgers()->where('status', 'accrued')->sum('royalty_amount');
+        $pending = (float) $user->royaltyPayoutRequests()->whereIn('status', ['pending', 'approved'])->sum('amount');
         $available = max(0, $availableRoyalty - $pending);
 
         $amount = (float) ($data['amount'] ?? $available);
@@ -168,7 +156,7 @@ class AuthorRoyaltyController extends Controller
             return back()->with('warning', 'Nominal pencairan melebihi saldo royalti yang tersedia.');
         }
 
-        AuthorRoyaltyPayoutRequest::create([
+        $payoutRequest = AuthorRoyaltyPayoutRequest::create([
             'author_user_id' => $user->id,
             'amount' => $amount,
             'status' => 'pending',
@@ -179,6 +167,8 @@ class AuthorRoyaltyController extends Controller
             'requested_at' => now(),
             'notes' => $data['notes'] ?? null,
         ]);
+
+        $ledgerService->allocateToPayoutRequest($payoutRequest);
 
         return back()->with('success', 'Permintaan pencairan royalti berhasil dikirim ke admin.');
     }

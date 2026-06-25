@@ -656,6 +656,11 @@ class Book extends Model
         return $this->hasMany(\App\Models\AuthorServiceOrder::class);
     }
 
+    public function royaltyLedgers()
+    {
+        return $this->hasMany(AuthorRoyaltyLedger::class);
+    }
+
     public function effectiveSellingPrice(): float
     {
         if (!empty($this->selling_price) && $this->selling_price > 0) {

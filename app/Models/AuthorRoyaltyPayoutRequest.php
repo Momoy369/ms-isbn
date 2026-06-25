@@ -30,8 +30,18 @@ class AuthorRoyaltyPayoutRequest extends Model
         return $this->belongsTo(User::class, 'author_user_id');
     }
 
+    public function ledgers()
+    {
+        return $this->hasMany(AuthorRoyaltyLedger::class, 'payout_request_id');
+    }
+
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->status === 'paid';
     }
 }

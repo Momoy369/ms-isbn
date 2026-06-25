@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\AuthorInvoice;
 use App\Models\Book;
 use App\Models\BookReview;
+use App\Services\AuthorRoyaltyLedgerService;
 
 class AuthorDashboardController
 {
-    public function index()
+    public function index(AuthorRoyaltyLedgerService $ledgerService)
     {
         $userId = auth()->id();
 
@@ -48,6 +49,11 @@ class AuthorDashboardController
             'count_pending' => $invoices->where('status', 'pending')->count(),
             'count_paid' => $invoices->where('status', 'paid')->count(),
         ];
+
+        $royaltyAvailablePayout = $ledgerService->availableAmount(auth()->user());
+        $royaltyBankComplete = auth()->user()->bank_name
+            && auth()->user()->bank_account_number
+            && auth()->user()->bank_account_holder;
 
         $royaltyData = $books
             ->filter(fn(Book $book) => $book->isRoyaltyEligible())
@@ -102,7 +108,9 @@ class AuthorDashboardController
             'invoices',
             'invoiceStats',
             'royaltyData',
-            'revisionCounts'
+            'revisionCounts',
+            'royaltyAvailablePayout',
+            'royaltyBankComplete'
         ));
     }
 }

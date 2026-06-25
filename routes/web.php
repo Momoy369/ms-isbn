@@ -22,6 +22,7 @@ use App\Http\Controllers\AdminFinanceReportController;
 use App\Http\Controllers\AdditionalServiceController;
 use App\Http\Controllers\AdminPrintPriceController;
 use App\Http\Controllers\AdminExternalSalesController;
+use App\Http\Controllers\AdminRoyaltyPayoutController;
 use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
@@ -392,6 +393,15 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/external-sales', [AdminExternalSalesController::class, 'index'])
                 ->name('external-sales.index');
+
+            Route::get('/finance/royalties', [AdminRoyaltyPayoutController::class, 'index'])
+                ->name('finance.royalties.index');
+
+            Route::post('/finance/royalties/{request}/approve', [AdminRoyaltyPayoutController::class, 'approve'])
+                ->name('finance.royalties.approve');
+
+            Route::post('/finance/royalties/{request}/reject', [AdminRoyaltyPayoutController::class, 'reject'])
+                ->name('finance.royalties.reject');
 
             Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
                 ->name('external-sales.store');

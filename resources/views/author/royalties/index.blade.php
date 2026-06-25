@@ -83,7 +83,7 @@
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="card h-100" id="payout-request">
                 <div class="card-header"><strong>Ajukan Pencairan Royalti</strong></div>
                 <div class="card-body">
                     <div class="alert alert-light border small">
@@ -211,6 +211,44 @@
                             <td colspan="8" class="text-center text-muted py-4">
                                 Belum ada buku Anda yang diaktifkan admin untuk distribusi dan program royalti.
                             </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><strong>Ledger Royalti per Periode</strong></div>
+        <div class="card-body table-responsive p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Periode</th>
+                        <th>Buku</th>
+                        <th class="text-right">Omzet</th>
+                        <th class="text-right">Rate</th>
+                        <th class="text-right">Royalti</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($ledgers as $ledger)
+                        <tr>
+                            <td>{{ $ledger->period_start->format('M Y') }}</td>
+                            <td>{{ $ledger->book->judul ?? '-' }}</td>
+                            <td class="text-right">Rp {{ number_format($ledger->gross_amount, 0, ',', '.') }}</td>
+                            <td class="text-right">{{ number_format($ledger->royalty_rate * 100, 2) }}%</td>
+                            <td class="text-right font-weight-bold text-success">Rp
+                                {{ number_format($ledger->royalty_amount, 0, ',', '.') }}</td>
+                            <td>
+                                <span
+                                    class="badge badge-{{ $ledger->status === 'accrued' ? 'warning' : ($ledger->status === 'requested' ? 'info' : 'success') }}">{{ strtoupper($ledger->status) }}</span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">Ledger royalti belum tersedia.</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -400,6 +400,12 @@ return [
             'can' => 'menu-finance',
         ],
         [
+            'text' => 'Royalti & Pencairan',
+            'route' => 'finance.royalties.index',
+            'icon' => 'fas fa-hand-holding-usd',
+            'can' => 'menu-finance',
+        ],
+        [
             'text' => 'Layanan Tambahan',
             'route' => 'additional-services.index',
             'icon' => 'fas fa-concierge-bell',

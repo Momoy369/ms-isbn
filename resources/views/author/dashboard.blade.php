@@ -154,6 +154,27 @@
             </div>
         </div>
 
+        <div class="card shadow-sm" style="border-radius:14px;">
+            <div class="card-body d-flex justify-content-between align-items-center flex-wrap" style="gap:.75rem;">
+                <div>
+                    <div class="text-muted small text-uppercase font-weight-bold">Pencairan Royalti</div>
+                    <div class="h4 mb-1 font-weight-bold">Rp {{ number_format($royaltyAvailablePayout ?? 0, 0, ',', '.') }}
+                    </div>
+                    <div class="small {{ $royaltyBankComplete ? 'text-success' : 'text-warning' }}">
+                        {{ $royaltyBankComplete ? 'Rekening sudah lengkap' : 'Lengkapi rekening untuk pencairan' }}
+                    </div>
+                </div>
+                <div class="d-flex" style="gap:.5rem;">
+                    <a href="{{ route('author.royalties.index') }}" class="btn btn-primary">
+                        <i class="fas fa-coins mr-1"></i> Buka Royalti
+                    </a>
+                    <a href="{{ route('author.royalties.index') }}#payout-request" class="btn btn-outline-secondary">
+                        Ajukan Pencairan
+                    </a>
+                </div>
+            </div>
+        </div>
+
         {{-- STATISTIK GLOBAL --}}
         <div class="row" style="row-gap:.75rem;">
             @php
@@ -329,7 +350,8 @@
                                             @if (($row['royalty_status'] ?? '') === 'actual')
                                                 <span class="badge badge-success">Aktual Penjualan</span>
                                             @else
-                                                <span class="badge badge-{{ $row['is_complete'] ? 'info' : 'secondary' }}">
+                                                <span
+                                                    class="badge badge-{{ $row['is_complete'] ? 'info' : 'secondary' }}">
                                                     {{ $row['is_complete'] ? 'Estimasi Produksi' : 'Estimasi' }}
                                                 </span>
                                             @endif

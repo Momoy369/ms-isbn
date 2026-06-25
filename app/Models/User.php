@@ -134,6 +134,11 @@ class User extends Authenticatable
         return $this->hasMany(AuthorRoyaltyPayoutRequest::class, 'author_user_id');
     }
 
+    public function royaltyLedgers()
+    {
+        return $this->hasMany(AuthorRoyaltyLedger::class, 'author_user_id');
+    }
+
     public function isAuthorProfileComplete(): bool
     {
         return !empty($this->ktp_number)
