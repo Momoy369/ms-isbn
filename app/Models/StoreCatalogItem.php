@@ -23,12 +23,16 @@ class StoreCatalogItem extends Model
         'sort_order',
         'cover_image_path',
         'ebook_read_link',
+        'ebook_price',
+        'ebook_promo_price',
         'admin_notes',
     ];
 
     protected $casts = [
         'list_price' => 'decimal:2',
         'promo_price' => 'decimal:2',
+        'ebook_price' => 'decimal:2',
+        'ebook_promo_price' => 'decimal:2',
         'stock' => 'integer',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
@@ -37,7 +41,21 @@ class StoreCatalogItem extends Model
 
     public function isEbook(): bool
     {
-        return $this->product_type === 'ebook';
+        return in_array((string) $this->product_type, ['ebook', 'print_ebook'], true);
+    }
+
+    public function isPrint(): bool
+    {
+        return in_array((string) $this->product_type, ['print', 'print_ebook'], true);
+    }
+
+    public function productTypeLabel(): string
+    {
+        return match ((string) $this->product_type) {
+            'ebook' => 'EBOOK',
+            'print_ebook' => 'PRINT + EBOOK',
+            default => 'PRINT',
+        };
     }
 
     public function book()
@@ -55,6 +73,9 @@ class StoreCatalogItem extends Model
         return $this->hasMany(StoreOrder::class);
     }
 
+    /**
+     * Harga final untuk format print (atau harga default jika bukan print_ebook).
+     */
     public function finalPrice(): float
     {
         $promo = (float) ($this->promo_price ?? 0);
@@ -63,6 +84,44 @@ class StoreCatalogItem extends Model
         }
 
         return (float) $this->list_price;
+    }
+
+    /**
+     * Harga final untuk format ebook. Fallback ke harga print jika belum diset.
+     */
+    public function finalEbookPrice(): float
+    {
+        $base = (float) ($this->ebook_price ?? 0);
+        if ($base <= 0) {
+            return $this->finalPrice();
+        }
+
+        $promo = (float) ($this->ebook_promo_price ?? 0);
+        if ($promo > 0 && $promo < $base) {
+            return $promo;
+        }
+
+        return $base;
+    }
+
+    /**
+     * Harga final berdasarkan format yang dipilih customer.
+     */
+    public function finalPriceForFormat(string $format): float
+    {
+        if ($format === 'ebook' && $this->product_type === 'print_ebook') {
+            return $this->finalEbookPrice();
+        }
+
+        return $this->finalPrice();
+    }
+
+    /**
+     * Apakah item ini memiliki format yang bisa dipilih secara terpisah.
+     */
+    public function hasSeparateFormats(): bool
+    {
+        return $this->product_type === 'print_ebook';
     }
 
     public function hasStock(): bool

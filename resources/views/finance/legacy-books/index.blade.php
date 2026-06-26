@@ -7,6 +7,17 @@
 @endsection
 
 @section('content')
+    @if ($errors->any())
+        <div class="alert alert-danger rounded shadow-sm">
+            <div class="font-weight-bold mb-1">Gagal menyimpan data. Periksa input berikut:</div>
+            <ul class="mb-0 pl-3">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @foreach (['success', 'warning', 'danger', 'info'] as $type)
         @if (session($type))
             <div class="alert alert-{{ $type }} alert-dismissible rounded shadow-sm">
@@ -23,60 +34,62 @@
                 @csrf
                 <div class="col-md-4 form-group">
                     <label>Judul</label>
-                    <input type="text" name="title" class="form-control" required>
+                    <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Subjudul</label>
-                    <input type="text" name="subtitle" class="form-control">
+                    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle') }}">
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Nama Penulis</label>
-                    <input type="text" name="author_name" class="form-control" required>
+                    <input type="text" name="author_name" class="form-control" value="{{ old('author_name') }}" required>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Author Sistem</label>
                     <select name="author_user_id" class="form-control">
                         <option value="">- Opsional -</option>
                         @foreach ($authors as $author)
-                            <option value="{{ $author->id }}">{{ $author->name }}</option>
+                            <option value="{{ $author->id }}" @selected((string) old('author_user_id') === (string) $author->id)>{{ $author->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>ISBN</label>
-                    <input type="text" name="isbn" class="form-control">
+                    <input type="text" name="isbn" class="form-control" value="{{ old('isbn') }}">
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Tahun</label>
-                    <input type="number" name="published_year" class="form-control" min="1900" max="2100">
+                    <input type="number" name="published_year" class="form-control" min="1900" max="2100"
+                        value="{{ old('published_year') }}">
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Harga</label>
-                    <input type="number" name="list_price" step="0.01" min="0" class="form-control">
+                    <input type="number" name="list_price" step="0.01" min="0" class="form-control"
+                        value="{{ old('list_price') }}">
                 </div>
                 <div class="col-md-2 form-group">
-                    <label>Rate Royalti</label>
-                    <input type="number" name="royalty_rate" step="0.0001" min="0" max="1"
-                        class="form-control" placeholder="0.2000">
+                    <label>Rate Royalti (0-1 atau 0-100)</label>
+                    <input type="number" name="royalty_rate" step="0.0001" min="0" max="100"
+                        class="form-control" value="{{ old('royalty_rate') }}" placeholder="0.2 atau 20">
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status</label>
                     <select name="status" class="form-control">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="archived">Archived</option>
+                        <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+                        <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
+                        <option value="archived" @selected(old('status') === 'archived')>Archived</option>
                     </select>
                 </div>
                 <div class="col-md-6 form-group">
                     <label>Catatan</label>
-                    <input type="text" name="notes" class="form-control">
+                    <input type="text" name="notes" class="form-control" value="{{ old('notes') }}">
                 </div>
                 <div class="col-md-2 form-group d-flex align-items-end">
                     <div class="w-100">
                         <input type="hidden" name="royalty_enabled" value="0">
                         <div class="custom-control custom-switch mb-2">
                             <input type="checkbox" class="custom-control-input" id="legacy-royalty-enabled"
-                                name="royalty_enabled" value="1">
+                                name="royalty_enabled" value="1" @checked(old('royalty_enabled'))>
                             <label class="custom-control-label" for="legacy-royalty-enabled">Aktif Royalti</label>
                         </div>
                         <button class="btn btn-primary btn-block" type="submit">Simpan</button>
@@ -89,17 +102,17 @@
                         <input type="hidden" name="distribution_marketplace" value="0">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="legacy-online"
-                                name="distribution_online" value="1">
+                                name="distribution_online" value="1" @checked(old('distribution_online'))>
                             <label class="custom-control-label" for="legacy-online">Online</label>
                         </div>
                         <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="legacy-ebook" name="distribution_ebook"
-                                value="1">
+                            <input type="checkbox" class="custom-control-input" id="legacy-ebook"
+                                name="distribution_ebook" value="1" @checked(old('distribution_ebook'))>
                             <label class="custom-control-label" for="legacy-ebook">Ebook</label>
                         </div>
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="legacy-marketplace"
-                                name="distribution_marketplace" value="1">
+                                name="distribution_marketplace" value="1" @checked(old('distribution_marketplace'))>
                             <label class="custom-control-label" for="legacy-marketplace">Marketplace</label>
                         </div>
                     </div>

@@ -140,12 +140,23 @@
             font-size: 1.1rem;
             text-align: center;
             padding: 1rem;
+            overflow: hidden;
+            border-bottom: 1px solid #ded7cc;
+        }
+
+        .cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #f6f2e9;
         }
 
         .body {
             padding: .9rem;
             display: grid;
             gap: .5rem;
+            background: #fffdf8;
         }
 
         .meta {
@@ -210,11 +221,30 @@
             <section class="grid">
                 @foreach ($items as $item)
                     <article class="card">
-                        <div class="cover">{{ $item->title }}</div>
+                        @php
+                            $coverPath = (string) ($item->cover_image_path ?? '');
+                            $coverUrl = null;
+
+                            if ($coverPath !== '') {
+                                $coverUrl =
+                                    str_starts_with($coverPath, 'http://') ||
+                                    str_starts_with($coverPath, 'https://') ||
+                                    str_starts_with($coverPath, '/')
+                                        ? $coverPath
+                                        : asset('storage/' . ltrim($coverPath, '/'));
+                            }
+                        @endphp
+                        <div class="cover">
+                            @if ($coverUrl)
+                                <img src="{{ $coverUrl }}" alt="Sampul {{ $item->title }}">
+                            @else
+                                {{ $item->title }}
+                            @endif
+                        </div>
                         <div class="body">
                             <div style="font-weight:800;">{{ $item->title }}</div>
                             <div class="meta">{{ $item->author_name ?: 'Penulis belum diisi' }}</div>
-                            <div class="meta">{{ strtoupper($item->product_type ?? 'print') }}</div>
+                            <div class="meta">{{ $item->productTypeLabel() }}</div>
                             <div class="price">Rp {{ number_format($item->finalPrice(), 0, ',', '.') }}</div>
                             <a href="{{ route('store.show', $item->slug) }}" class="btn"
                                 style="text-align:center;">Lihat Detail</a>

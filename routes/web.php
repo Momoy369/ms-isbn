@@ -76,12 +76,6 @@ require __DIR__ . '/auth.php';
 Route::get('/store', [StorefrontController::class, 'index'])
     ->name('store.index');
 
-Route::get('/store/{slug}', [StorefrontController::class, 'show'])
-    ->name('store.show');
-
-Route::post('/store/{item}/order', [StorefrontController::class, 'placeOrder'])
-    ->name('store.order');
-
 Route::get('/store/track', [StorefrontController::class, 'trackForm'])
     ->name('store.track.form');
 
@@ -93,6 +87,18 @@ Route::get('/store/track/{orderNumber}', [StorefrontController::class, 'trackSho
 
 Route::post('/store/track/{orderNumber}/reader', [StorefrontController::class, 'reader'])
     ->name('store.reader');
+
+Route::get('/store/track/{orderNumber}/reader', [StorefrontController::class, 'readerView'])
+    ->name('store.reader.view');
+
+Route::get('/store/shipping/cities', [StorefrontController::class, 'shippingCities'])
+    ->name('store.shipping.cities');
+
+Route::get('/store/{slug}', [StorefrontController::class, 'show'])
+    ->name('store.show');
+
+Route::post('/store/{item}/order', [StorefrontController::class, 'placeOrder'])
+    ->name('store.order');
 
 Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'callback'])
     ->name('payments.ipaymu.callback');

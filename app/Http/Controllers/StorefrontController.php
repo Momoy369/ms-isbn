@@ -10,6 +10,7 @@ use App\Services\NotificationService;
 use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class StorefrontController extends Controller
 {
@@ -34,7 +35,7 @@ class StorefrontController extends Controller
         return view('store.index', compact('items', 'search'));
     }
 
-    public function show(string $slug)
+    public function show(string $slug, RajaOngkirService $rajaOngkir)
     {
         $item = StoreCatalogItem::where('slug', $slug)
             ->where('is_active', true)
@@ -47,7 +48,29 @@ class StorefrontController extends Controller
             ->limit(4)
             ->get();
 
-        return view('store.show', compact('item', 'related'));
+        $provinceMeta = $rajaOngkir->provincesWithMeta();
+        $shippingProvinces = $provinceMeta['data'] ?? [];
+        $shippingMeta = [
+            'is_fallback' => (bool) ($provinceMeta['is_fallback'] ?? false),
+            'message' => $provinceMeta['message'] ?? null,
+        ];
+
+        return view('store.show', compact('item', 'related', 'shippingProvinces', 'shippingMeta'));
+    }
+
+    public function shippingCities(Request $request, RajaOngkirService $rajaOngkir)
+    {
+        $data = $request->validate([
+            'province_id' => ['required', 'string', 'max:32'],
+        ]);
+
+        $cityMeta = $rajaOngkir->citiesWithMeta((string) $data['province_id']);
+
+        return response()->json([
+            'data' => $cityMeta['data'] ?? [],
+            'is_fallback' => (bool) ($cityMeta['is_fallback'] ?? false),
+            'message' => $cityMeta['message'] ?? null,
+        ]);
     }
 
     public function placeOrder(Request $request, StoreCatalogItem $item, NotificationService $notifications, IpaymuService $ipaymu, RajaOngkirService $rajaOngkir)
@@ -56,16 +79,34 @@ class StorefrontController extends Controller
             abort(404);
         }
 
+        $needsShipping = $item->isPrint();
+        $hasEbookAccess = $item->isEbook();
+
+        // Untuk produk print+ebook, customer wajib memilih salah satu format.
+        $selectedFormat = null;
+        if ($item->hasSeparateFormats()) {
+            $selectedFormat = $request->input('selected_format');
+            if (!in_array($selectedFormat, ['print', 'ebook'], true)) {
+                return back()->with('warning', 'Pilih format pembelian: Print atau Ebook.')->withInput();
+            }
+            $needsShipping = $selectedFormat === 'print';
+            $hasEbookAccess = $selectedFormat === 'ebook';
+        }
+
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:32'],
             'customer_email' => ['nullable', 'email', 'max:120'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
-            'shipping_address' => [$item->isEbook() ? 'nullable' : 'required', 'string', 'max:3000'],
-            'shipping_destination_city_id' => [$item->isEbook() ? 'nullable' : 'required', 'string', 'max:32'],
-            'shipping_courier' => [$item->isEbook() ? 'nullable' : 'required', 'in:jne,pos,tiki'],
+            'selected_format' => [$item->hasSeparateFormats() ? 'required' : 'nullable', 'in:print,ebook'],
+            'shipping_destination_province_id' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:32'],
+            'shipping_destination_province_name' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:120'],
+            'shipping_address' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:3000'],
+            'shipping_destination_city_id' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:32'],
+            'shipping_destination_city_name' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:120'],
+            'shipping_courier' => [$needsShipping ? 'required' : 'nullable', 'in:jne,pos,tiki'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'reader_password' => [$item->isEbook() ? 'required' : 'nullable', 'string', 'min:6', 'max:64'],
+            'reader_password' => [$hasEbookAccess ? 'required' : 'nullable', 'string', 'min:6', 'max:64'],
         ]);
 
         $quantity = (int) $data['quantity'];
@@ -74,14 +115,16 @@ class StorefrontController extends Controller
             return back()->with('warning', 'Jumlah pesanan melebihi stok yang tersedia.')->withInput();
         }
 
-        $unitPrice = $item->finalPrice();
+        $unitPrice = $item->hasSeparateFormats() && $selectedFormat
+            ? $item->finalPriceForFormat($selectedFormat)
+            : $item->finalPrice();
         $productSubtotal = $unitPrice * $quantity;
 
         $shippingCost = 0;
         $shippingService = null;
         $shippingEtd = null;
 
-        if (!$item->isEbook()) {
+        if ($needsShipping) {
             $estimate = $rajaOngkir->estimateCost(
                 (string) $data['shipping_destination_city_id'],
                 max(250, $quantity * 400),
@@ -98,6 +141,7 @@ class StorefrontController extends Controller
         $order = StoreOrder::create([
             'user_id' => auth()->id(),
             'store_catalog_item_id' => $item->id,
+            'selected_format' => $selectedFormat ?? ($item->product_type === 'ebook' ? 'ebook' : 'print'),
             'order_number' => 'SO-' . now()->format('YmdHis') . '-' . random_int(100, 999),
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
@@ -106,14 +150,17 @@ class StorefrontController extends Controller
             'unit_price' => $unitPrice,
             'subtotal' => $subtotal,
             'shipping_address' => $data['shipping_address'] ?? null,
+            'shipping_destination_province_id' => $data['shipping_destination_province_id'] ?? null,
+            'shipping_destination_province_name' => $data['shipping_destination_province_name'] ?? null,
             'shipping_destination_city_id' => $data['shipping_destination_city_id'] ?? null,
+            'shipping_destination_city_name' => $data['shipping_destination_city_name'] ?? null,
             'shipping_courier' => $data['shipping_courier'] ?? null,
             'shipping_service' => $shippingService,
             'shipping_cost' => $shippingCost,
             'shipping_etd' => $shippingEtd,
             'notes' => $data['notes'] ?? null,
             'status' => 'pending',
-            'reader_password_hash' => $item->isEbook() ? Hash::make((string) $data['reader_password']) : null,
+            'reader_password_hash' => $hasEbookAccess ? Hash::make((string) $data['reader_password']) : null,
         ]);
 
         if ($item->stock !== null) {
@@ -191,6 +238,17 @@ class StorefrontController extends Controller
             return back()->with('warning', 'Akses ebook tersedia setelah pembayaran terkonfirmasi.');
         }
 
+        $currentSessionId = (string) $request->session()->getId();
+        $currentDeviceHash = hash('sha256', (string) ($request->userAgent() . '|' . $request->ip()));
+
+        if (!empty($order->reader_last_device_hash) && !hash_equals((string) $order->reader_last_device_hash, $currentDeviceHash)) {
+            return back()->with('danger', 'Akses ebook dibatasi untuk satu perangkat terdaftar. Hubungi admin jika perlu reset akses.');
+        }
+
+        if (!empty($order->reader_last_session_id) && (string) $order->reader_last_session_id !== $currentSessionId) {
+            return back()->with('warning', 'Sesi ebook sudah aktif di perangkat/sesi lain. Tutup sesi lama atau hubungi admin untuk reset.');
+        }
+
         $data = $request->validate([
             'password' => ['required', 'string'],
         ]);
@@ -204,6 +262,93 @@ class StorefrontController extends Controller
             return back()->with('warning', 'Ebook belum dipublikasikan. Hubungi admin.');
         }
 
-        return view('store.reader', compact('order', 'ebookUrl'));
+        $plainToken = Str::random(72);
+        $tokenHash = hash('sha256', $plainToken);
+
+        $order->update([
+            'reader_access_token_hash' => $tokenHash,
+            'reader_access_token_expires_at' => now()->addMinutes(10),
+            'reader_last_device_hash' => $currentDeviceHash,
+            'reader_last_session_id' => $currentSessionId,
+            'reader_active_sessions' => 1,
+            'reader_last_used_at' => now(),
+        ]);
+
+        return redirect()->route('store.reader.view', [
+            'orderNumber' => $order->order_number,
+            'token' => $plainToken,
+        ]);
+    }
+
+    public function readerView(Request $request, string $orderNumber)
+    {
+        $order = StoreOrder::with('item')
+            ->where('order_number', $orderNumber)
+            ->firstOrFail();
+
+        if (!$order->item || !$order->item->isEbook()) {
+            abort(404);
+        }
+
+        if ($order->status !== 'paid' && $order->status !== 'completed') {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('warning', 'Akses ebook tersedia setelah pembayaran terkonfirmasi.');
+        }
+
+        $token = (string) $request->query('token', '');
+        if ($token === '') {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('danger', 'Token akses ebook tidak ditemukan.');
+        }
+
+        $tokenHash = hash('sha256', $token);
+
+        if (empty($order->reader_access_token_hash) || !hash_equals((string) $order->reader_access_token_hash, $tokenHash)) {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('danger', 'Token akses ebook tidak valid atau sudah digunakan.');
+        }
+
+        if (!$order->reader_access_token_expires_at || now()->greaterThan($order->reader_access_token_expires_at)) {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('warning', 'Token akses ebook sudah kedaluwarsa. Silakan login ulang dengan password baca.');
+        }
+
+        $currentSessionId = (string) $request->session()->getId();
+        $currentDeviceHash = hash('sha256', (string) ($request->userAgent() . '|' . $request->ip()));
+
+        if (!empty($order->reader_last_device_hash) && !hash_equals((string) $order->reader_last_device_hash, $currentDeviceHash)) {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('danger', 'Perangkat ini tidak terdaftar untuk akses ebook order ini.');
+        }
+
+        if (!empty($order->reader_last_session_id) && (string) $order->reader_last_session_id !== $currentSessionId) {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('warning', 'Sesi ebook aktif di sesi lain.');
+        }
+
+        $ebookUrl = $order->item->ebook_read_link;
+        if (!$ebookUrl) {
+            return redirect()
+                ->route('store.track.show', $order->order_number)
+                ->with('warning', 'Ebook belum dipublikasikan. Hubungi admin.');
+        }
+
+        $order->update([
+            'reader_access_token_hash' => null,
+            'reader_access_token_expires_at' => null,
+            'reader_access_granted_at' => now(),
+            'reader_last_used_at' => now(),
+            'reader_active_sessions' => 1,
+        ]);
+
+        $watermarkText = 'MS Publishing • ' . $order->order_number;
+
+        return view('store.reader', compact('order', 'ebookUrl', 'watermarkText'));
     }
 }

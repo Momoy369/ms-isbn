@@ -43,6 +43,29 @@
             border: 0;
             background: #fff;
         }
+
+        .reader-wrap {
+            position: relative;
+            height: calc(100vh - 68px);
+        }
+
+        .watermark-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .watermark {
+            position: absolute;
+            color: rgba(15, 23, 42, 0.16);
+            font-size: 1rem;
+            font-weight: 800;
+            transform: rotate(-24deg);
+            letter-spacing: .03em;
+            user-select: none;
+        }
     </style>
 </head>
 
@@ -56,7 +79,16 @@
         <a href="{{ route('store.track.show', $order->order_number) }}">Kembali ke status order</a>
     </header>
 
-    <iframe src="{{ $ebookUrl }}" title="Ebook Reader"></iframe>
+    <div class="reader-wrap">
+        <iframe src="{{ $ebookUrl }}" title="Ebook Reader"></iframe>
+        <div class="watermark-layer" aria-hidden="true">
+            @for ($i = 0; $i < 15; $i++)
+                <div class="watermark" style="top: {{ 6 + ($i % 5) * 18 }}%; left: {{ 4 + intdiv($i, 5) * 31 }}%;">
+                    {{ $watermarkText ?? 'MS Publishing' }}
+                </div>
+            @endfor
+        </div>
+    </div>
 </body>
 
 </html>

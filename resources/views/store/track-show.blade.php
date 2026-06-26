@@ -119,17 +119,20 @@
             <div>Total: <strong>Rp {{ number_format($order->subtotal, 0, ',', '.') }}</strong></div>
             <div>Pembeli: {{ $order->customer_name }} ({{ $order->customer_phone }})</div>
 
-            @if (($order->item->product_type ?? 'print') === 'print')
+            @if ($order->item && $order->item->isPrint())
                 <hr style="border:none;border-top:1px solid #e5e7eb; margin:.8rem 0;">
                 <div>Ongkir: Rp {{ number_format((float) ($order->shipping_cost ?? 0), 0, ',', '.') }}</div>
                 <div>Layanan: {{ $order->shipping_service ?: '-' }}
                     {{ $order->shipping_etd ? '(ETD ' . $order->shipping_etd . ' hari)' : '' }}</div>
                 <div>Kurir: {{ $order->shipping_courier ?: '-' }}</div>
+                <div>Provinsi: {{ $order->shipping_destination_province_name ?: '-' }}</div>
+                <div>Kota:
+                    {{ $order->shipping_destination_city_name ?: ($order->shipping_destination_city_id ?: '-') }}</div>
                 <div>No Resi: {{ $order->tracking_number ?: '-' }}</div>
                 <div>Alamat: {{ $order->shipping_address ?: '-' }}</div>
             @endif
 
-            @if (($order->item->product_type ?? 'print') === 'ebook')
+            @if ($order->item && $order->item->isEbook())
                 <hr style="border:none;border-top:1px solid #e5e7eb; margin:.8rem 0;">
                 <h4 style="margin:.2rem 0 .5rem;">Baca Ebook</h4>
 

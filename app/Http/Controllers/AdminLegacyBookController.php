@@ -8,6 +8,21 @@ use Illuminate\Http\Request;
 
 class AdminLegacyBookController extends Controller
 {
+    private function normalizeRoyaltyRate(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $rate = (float) $value;
+
+        if ($rate > 1) {
+            $rate = $rate / 100;
+        }
+
+        return max(0, min($rate, 1));
+    }
+
     public function index()
     {
         $books = LegacyBook::with('author')
@@ -30,7 +45,7 @@ class AdminLegacyBookController extends Controller
             'published_year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'list_price' => ['nullable', 'numeric', 'min:0'],
             'royalty_enabled' => ['nullable', 'boolean'],
-            'royalty_rate' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'royalty_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'distribution_online' => ['nullable', 'boolean'],
             'distribution_ebook' => ['nullable', 'boolean'],
             'distribution_marketplace' => ['nullable', 'boolean'],
@@ -47,7 +62,7 @@ class AdminLegacyBookController extends Controller
             'published_year' => $data['published_year'] ?? null,
             'list_price' => $data['list_price'] ?? 0,
             'royalty_enabled' => (bool) ($data['royalty_enabled'] ?? false),
-            'royalty_rate' => $data['royalty_rate'] ?? null,
+            'royalty_rate' => $this->normalizeRoyaltyRate($data['royalty_rate'] ?? null),
             'distribution_online' => (bool) ($data['distribution_online'] ?? false),
             'distribution_ebook' => (bool) ($data['distribution_ebook'] ?? false),
             'distribution_marketplace' => (bool) ($data['distribution_marketplace'] ?? false),
@@ -69,7 +84,7 @@ class AdminLegacyBookController extends Controller
             'published_year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'list_price' => ['nullable', 'numeric', 'min:0'],
             'royalty_enabled' => ['nullable', 'boolean'],
-            'royalty_rate' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'royalty_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'distribution_online' => ['nullable', 'boolean'],
             'distribution_ebook' => ['nullable', 'boolean'],
             'distribution_marketplace' => ['nullable', 'boolean'],
@@ -86,7 +101,7 @@ class AdminLegacyBookController extends Controller
             'published_year' => $data['published_year'] ?? null,
             'list_price' => $data['list_price'] ?? 0,
             'royalty_enabled' => (bool) ($data['royalty_enabled'] ?? false),
-            'royalty_rate' => $data['royalty_rate'] ?? null,
+            'royalty_rate' => $this->normalizeRoyaltyRate($data['royalty_rate'] ?? null),
             'distribution_online' => (bool) ($data['distribution_online'] ?? false),
             'distribution_ebook' => (bool) ($data['distribution_ebook'] ?? false),
             'distribution_marketplace' => (bool) ($data['distribution_marketplace'] ?? false),

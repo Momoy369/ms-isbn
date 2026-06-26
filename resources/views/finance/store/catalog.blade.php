@@ -7,6 +7,17 @@
 @endsection
 
 @section('content')
+    @if ($errors->any())
+        <div class="alert alert-danger rounded shadow-sm">
+            <div class="font-weight-bold mb-1">Gagal menyimpan item store. Periksa input berikut:</div>
+            <ul class="mb-0 pl-3">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @foreach (['success', 'warning', 'danger', 'info'] as $type)
         @if (session($type))
             <div class="alert alert-{{ $type }} alert-dismissible rounded shadow-sm">
@@ -19,14 +30,17 @@
     <div class="card mb-3">
         <div class="card-header"><strong>Tambah Item Store</strong></div>
         <div class="card-body">
-            <form method="POST" action="{{ route('finance.store.catalog.store') }}" class="row">
+            <form method="POST" action="{{ route('finance.store.catalog.store') }}" class="row"
+                enctype="multipart/form-data">
                 @csrf
                 <div class="col-md-3 form-group">
                     <label>Buku Naskah (opsional)</label>
                     <select name="book_id" class="form-control">
                         <option value="">- pilih buku -</option>
                         @foreach ($books as $book)
-                            <option value="{{ $book->id }}">{{ $book->judul }} ({{ $book->penulis_1 }})</option>
+                            <option value="{{ $book->id }}" @selected((string) old('book_id') === (string) $book->id)>{{ $book->judul }}
+                                ({{ $book->penulis_1 }})
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -35,67 +49,88 @@
                     <select name="legacy_book_id" class="form-control">
                         <option value="">- pilih legacy -</option>
                         @foreach ($legacyBooks as $book)
-                            <option value="{{ $book->id }}">{{ $book->title }} ({{ $book->author_name }})</option>
+                            <option value="{{ $book->id }}" @selected((string) old('legacy_book_id') === (string) $book->id)>{{ $book->title }}
+                                ({{ $book->author_name }})
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Judul</label>
-                    <input type="text" name="title" class="form-control" required>
+                    <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Subjudul</label>
-                    <input type="text" name="subtitle" class="form-control">
+                    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle') }}">
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Penulis</label>
-                    <input type="text" name="author_name" class="form-control">
+                    <input type="text" name="author_name" class="form-control" value="{{ old('author_name') }}">
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Tipe Produk</label>
-                    <select name="product_type" class="form-control" required>
-                        <option value="print">Print</option>
-                        <option value="ebook">Ebook</option>
+                    <select name="product_type" class="form-control" required id="add-product-type">
+                        <option value="print" @selected(old('product_type', 'print') === 'print')>Print</option>
+                        <option value="ebook" @selected(old('product_type') === 'ebook')>Ebook</option>
+                        <option value="print_ebook" @selected(old('product_type') === 'print_ebook')>Print + Ebook</option>
                     </select>
                 </div>
                 <div class="col-md-3 form-group">
-                    <label>Harga List</label>
-                    <input type="number" step="0.01" min="0" name="list_price" class="form-control" required>
+                    <label>Harga Print</label>
+                    <input type="number" step="0.01" min="0" name="list_price" class="form-control"
+                        value="{{ old('list_price') }}" required>
                 </div>
                 <div class="col-md-3 form-group">
-                    <label>Harga Promo</label>
-                    <input type="number" step="0.01" min="0" name="promo_price" class="form-control">
+                    <label>Harga Promo Print</label>
+                    <input type="number" step="0.01" min="0" name="promo_price" class="form-control"
+                        value="{{ old('promo_price') }}">
+                </div>
+                <div class="col-md-3 form-group" id="add-ebook-price-wrap"
+                    style="{{ old('product_type') === 'print_ebook' ? '' : 'display:none' }}">
+                    <label>Harga Ebook <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="0" name="ebook_price" class="form-control"
+                        value="{{ old('ebook_price') }}">
+                    <small class="text-muted">Wajib jika tipe Print + Ebook.</small>
+                </div>
+                <div class="col-md-3 form-group" id="add-ebook-promo-wrap"
+                    style="{{ old('product_type') === 'print_ebook' ? '' : 'display:none' }}">
+                    <label>Harga Promo Ebook</label>
+                    <input type="number" step="0.01" min="0" name="ebook_promo_price" class="form-control"
+                        value="{{ old('ebook_promo_price') }}">
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Stok (opsional)</label>
-                    <input type="number" min="0" name="stock" class="form-control">
+                    <input type="number" min="0" name="stock" class="form-control" value="{{ old('stock') }}">
                 </div>
                 <div class="col-md-8 form-group">
                     <label>Deskripsi</label>
-                    <textarea name="description" rows="2" class="form-control"></textarea>
+                    <textarea name="description" rows="2" class="form-control">{{ old('description') }}</textarea>
                 </div>
                 <div class="col-md-4 form-group">
-                    <label>Cover URL/Path (opsional)</label>
-                    <input type="text" name="cover_image_path" class="form-control">
+                    <label>Upload Cover (opsional)</label>
+                    <input type="file" name="cover_image_file" class="form-control"
+                        accept="image/png,image/jpeg,image/webp">
                 </div>
                 <div class="col-md-4 form-group">
-                    <label>Link Baca Ebook (opsional)</label>
-                    <input type="url" name="ebook_read_link" class="form-control" placeholder="https://...">
+                    <label>Upload Naskah PDF Ebook</label>
+                    <input type="file" name="ebook_pdf" class="form-control" accept="application/pdf">
+                    <small class="text-muted">Wajib diisi jika Tipe Produk = Ebook atau Print + Ebook.</small>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Sort Order</label>
-                    <input type="number" min="0" name="sort_order" class="form-control" value="0">
+                    <input type="number" min="0" name="sort_order" class="form-control"
+                        value="{{ old('sort_order', 0) }}">
                 </div>
                 <div class="col-md-5 form-group">
                     <label>Catatan Admin</label>
-                    <input type="text" name="admin_notes" class="form-control">
+                    <input type="text" name="admin_notes" class="form-control" value="{{ old('admin_notes') }}">
                 </div>
                 <div class="col-md-2 form-group d-flex align-items-end">
                     <div class="w-100">
                         <input type="hidden" name="is_active" value="0">
                         <div class="custom-control custom-switch mb-1">
                             <input type="checkbox" class="custom-control-input" id="is-active" name="is_active"
-                                value="1" checked>
+                                value="1" @checked(old('is_active', 1))>
                             <label class="custom-control-label" for="is-active">Aktif</label>
                         </div>
                     </div>
@@ -105,7 +140,7 @@
                         <input type="hidden" name="is_featured" value="0">
                         <div class="custom-control custom-switch mb-1">
                             <input type="checkbox" class="custom-control-input" id="is-featured" name="is_featured"
-                                value="1">
+                                value="1" @checked(old('is_featured'))>
                             <label class="custom-control-label" for="is-featured">Featured</label>
                         </div>
                         <button class="btn btn-primary btn-block" type="submit">Tambah</button>
@@ -139,10 +174,19 @@
                             <td>{{ $item->book->judul ?? ($item->legacyBook->title ?? 'Manual') }}</td>
                             <td>
                                 Rp {{ number_format($item->list_price, 0, ',', '.') }}
-                                <div class="small text-muted">{{ strtoupper($item->product_type ?? 'print') }}</div>
+                                <div class="small text-muted">{{ $item->productTypeLabel() }}</div>
                                 @if ($item->promo_price)
-                                    <div class="small text-success">Promo: Rp
+                                    <div class="small text-success">Promo Print: Rp
                                         {{ number_format($item->promo_price, 0, ',', '.') }}</div>
+                                @endif
+                                @if ($item->product_type === 'print_ebook')
+                                    <div class="small text-info mt-1">Ebook: Rp
+                                        {{ number_format($item->ebook_price ?: $item->list_price, 0, ',', '.') }}
+                                    </div>
+                                    @if ($item->ebook_promo_price)
+                                        <div class="small text-success">Promo Ebook: Rp
+                                            {{ number_format($item->ebook_promo_price, 0, ',', '.') }}</div>
+                                    @endif
                                 @endif
                             </td>
                             <td>{{ $item->stock === null ? 'Tidak dibatasi' : number_format($item->stock) }}</td>
@@ -176,6 +220,7 @@
                                         <select name="product_type" class="form-control form-control-sm" required>
                                             <option value="print" @selected(($item->product_type ?? 'print') === 'print')>PRINT</option>
                                             <option value="ebook" @selected(($item->product_type ?? 'print') === 'ebook')>EBOOK</option>
+                                            <option value="print_ebook" @selected(($item->product_type ?? 'print') === 'print_ebook')>PRINT + EBOOK</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-1">
@@ -202,6 +247,9 @@
                                     <input type="hidden" name="description" value="{{ $item->description }}">
                                     <input type="hidden" name="cover_image_path" value="{{ $item->cover_image_path }}">
                                     <input type="hidden" name="ebook_read_link" value="{{ $item->ebook_read_link }}">
+                                    <input type="hidden" name="ebook_price" value="{{ $item->ebook_price }}">
+                                    <input type="hidden" name="ebook_promo_price"
+                                        value="{{ $item->ebook_promo_price }}">
                                     <input type="hidden" name="admin_notes" value="{{ $item->admin_notes }}">
                                     <div class="col-md-12">
                                         <button class="btn btn-xs btn-primary" type="submit">Simpan</button>
@@ -224,3 +272,24 @@
         @endif
     </div>
 @endsection
+
+@push('js')
+    <script>
+        (function() {
+            const typeSelect = document.getElementById('add-product-type');
+            const priceWrap = document.getElementById('add-ebook-price-wrap');
+            const promoWrap = document.getElementById('add-ebook-promo-wrap');
+
+            function toggleEbookFields() {
+                const show = typeSelect && typeSelect.value === 'print_ebook';
+                if (priceWrap) priceWrap.style.display = show ? '' : 'none';
+                if (promoWrap) promoWrap.style.display = show ? '' : 'none';
+            }
+
+            if (typeSelect) {
+                typeSelect.addEventListener('change', toggleEbookFields);
+                toggleEbookFields();
+            }
+        })();
+    </script>
+@endpush
