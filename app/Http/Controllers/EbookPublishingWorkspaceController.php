@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuthorBookOrder;
+use App\Services\AuthorBookOrderStatusHistoryService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -63,7 +64,7 @@ class EbookPublishingWorkspaceController extends Controller
             return back()->with('warning', 'Order ini bukan order ebook publishing.');
         }
 
-        $order->load(['book.messages.user', 'book.assignments.user', 'user', 'invoice']);
+        $order->load(['book.messages.user', 'book.assignments.user', 'user', 'invoice', 'statusHistories.changedBy']);
         $book = $order->book;
 
         if (!$book) {
@@ -73,7 +74,7 @@ class EbookPublishingWorkspaceController extends Controller
         return view('ebook.workspace.show', compact('order', 'book'));
     }
 
-    public function updateStatus(Request $request, AuthorBookOrder $order, NotificationService $notifications)
+    public function updateStatus(Request $request, AuthorBookOrder $order, NotificationService $notifications, AuthorBookOrderStatusHistoryService $history)
     {
         if ($order->order_type !== 'ebook_publication') {
             return back()->with('warning', 'Order ini bukan order ebook publishing.');
@@ -86,6 +87,7 @@ class EbookPublishingWorkspaceController extends Controller
             'ebook_publication_link' => ['nullable', 'url', 'max:2000'],
         ]);
 
+        $this->assertUserCanChangeStatus((string) $request->user()->role, (string) $data['status']);
         $this->ensureStatusTransitionAllowed((string) $order->status, (string) $data['status']);
 
         $updates = [
@@ -103,14 +105,24 @@ class EbookPublishingWorkspaceController extends Controller
             $updates['ebook_published_at'] = now();
         }
 
+        $fromStatus = (string) $order->status;
         $order->update($updates);
+
+        $history->record(
+            $order,
+            $fromStatus,
+            (string) $data['status'],
+            $data['notes'] ?? null,
+            (int) $request->user()->id,
+            'ebook'
+        );
 
         $this->notifyAuthor($order, $notifications, $data['status']);
 
         return back()->with('success', 'Status ebook publishing berhasil diperbarui.');
     }
 
-    public function requestRevision(Request $request, AuthorBookOrder $order, NotificationService $notifications)
+    public function requestRevision(Request $request, AuthorBookOrder $order, NotificationService $notifications, AuthorBookOrderStatusHistoryService $history)
     {
         if ($order->order_type !== 'ebook_publication') {
             return back()->with('warning', 'Order ini bukan order ebook publishing.');
@@ -126,6 +138,7 @@ class EbookPublishingWorkspaceController extends Controller
             'attachment' => ['nullable', 'file', 'max:10240'],
         ]);
 
+        $this->assertUserCanRequestRevision((string) $request->user()->role);
         $this->ensureStatusTransitionAllowed((string) $order->status, 'ebook_revision_requested');
 
         $path = null;
@@ -141,10 +154,21 @@ class EbookPublishingWorkspaceController extends Controller
             'attachment' => $path,
         ]);
 
+        $fromStatus = (string) $order->status;
+
         $order->update([
             'status' => 'ebook_revision_requested',
             'notes' => $data['message'],
         ]);
+
+        $history->record(
+            $order,
+            $fromStatus,
+            'ebook_revision_requested',
+            $data['message'],
+            (int) $request->user()->id,
+            'ebook'
+        );
 
         $notifications->sendToBookRoles(
             $book,
@@ -198,6 +222,33 @@ class EbookPublishingWorkspaceController extends Controller
         $allowed = self::ALLOWED_TRANSITIONS[$current] ?? [];
         if (!in_array($next, $allowed, true)) {
             abort(422, 'Transisi status tidak valid dari ' . strtoupper($current) . ' ke ' . strtoupper($next) . '.');
+        }
+    }
+
+    private function assertUserCanChangeStatus(string $role, string $status): void
+    {
+        $basicRoles = ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'];
+        $finalizeRoles = ['admin', 'owner', 'finance', 'superadmin'];
+
+        $requiresFinalizeRights = in_array($status, ['ebook_published', 'cancelled'], true);
+
+        if ($requiresFinalizeRights) {
+            if (!in_array($role, $finalizeRoles, true)) {
+                abort(403, 'Anda tidak memiliki izin untuk mengubah status akhir ebook publishing.');
+            }
+
+            return;
+        }
+
+        if (!in_array($role, $basicRoles, true)) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah status ebook publishing.');
+        }
+    }
+
+    private function assertUserCanRequestRevision(string $role): void
+    {
+        if (!in_array($role, ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'], true)) {
+            abort(403, 'Anda tidak memiliki izin untuk meminta revisi ebook.');
         }
     }
 }

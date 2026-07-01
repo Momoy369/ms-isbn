@@ -56,10 +56,19 @@ class BookCompletionOrchestratorService
                     'notes' => 'AUTO_PRINT_QUEUE:' . $trigger,
                 ]
             );
+
+            app(AuthorBookOrderStatusHistoryService::class)->record(
+                $order,
+                null,
+                (string) $order->status,
+                'Order cetak otomatis dibuat dari workflow buku.',
+                null,
+                'orchestrator'
+            );
         }
 
         if ($supportsEbook) {
-            AuthorBookOrder::firstOrCreate(
+            $ebookOrder = AuthorBookOrder::firstOrCreate(
                 [
                     'book_id' => $book->id,
                     'user_id' => $book->author_user_id,
@@ -78,6 +87,15 @@ class BookCompletionOrchestratorService
                     'notes' => 'AUTO_EBOOK_QUEUE:' . $trigger,
                 ]
             );
+
+            app(AuthorBookOrderStatusHistoryService::class)->record(
+                $ebookOrder,
+                null,
+                (string) $ebookOrder->status,
+                'Order ebook otomatis dibuat dari workflow buku.',
+                null,
+                'orchestrator'
+            );
         }
 
         if ($invoice && $invoice->status === 'paid') {
@@ -87,6 +105,20 @@ class BookCompletionOrchestratorService
                     'status' => 'paid',
                     'paid_at' => now(),
                 ]);
+
+            AuthorBookOrder::where('author_invoice_id', $invoice->id)
+                ->whereIn('order_type', ['reprint', 'ebook_publication'])
+                ->get()
+                ->each(function (AuthorBookOrder $createdOrder) {
+                    app(AuthorBookOrderStatusHistoryService::class)->record(
+                        $createdOrder,
+                        'invoiced',
+                        'paid',
+                        'Invoice dibayar dan order diteruskan ke workspace terkait.',
+                        null,
+                        'orchestrator'
+                    );
+                });
         }
 
         if ($invoice) {

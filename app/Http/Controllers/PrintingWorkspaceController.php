@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuthorBookOrder;
 use App\Models\User;
 use App\Services\FinalBookPackageService;
+use App\Services\AuthorBookOrderStatusHistoryService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -74,7 +75,7 @@ class PrintingWorkspaceController extends Controller
         return view('printing.workspace.index', compact('orders', 'stats'));
     }
 
-    public function updateStatus(Request $request, AuthorBookOrder $order, NotificationService $notifications)
+    public function updateStatus(Request $request, AuthorBookOrder $order, NotificationService $notifications, AuthorBookOrderStatusHistoryService $history)
     {
         if ($order->order_type !== 'reprint') {
             return back()->with('warning', 'Order ini bukan order cetak ulang.');
@@ -87,6 +88,7 @@ class PrintingWorkspaceController extends Controller
             'shipping_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $this->assertUserCanChangeStatus((string) $request->user()->role, (string) $data['status']);
         $this->ensureStatusTransitionAllowed((string) $order->status, (string) $data['status']);
 
         $updates = [
@@ -120,7 +122,17 @@ class PrintingWorkspaceController extends Controller
             $updates['delivered_at'] = now();
         }
 
+        $fromStatus = (string) $order->status;
         $order->update($updates);
+
+        $history->record(
+            $order,
+            $fromStatus,
+            (string) $data['status'],
+            $data['notes'] ?? null,
+            (int) $request->user()->id,
+            'printing'
+        );
 
         if (in_array($data['status'], ['print_completed', 'completed'], true)) {
             $this->notifyPrintCompleted($order, $notifications);
@@ -140,7 +152,7 @@ class PrintingWorkspaceController extends Controller
             return back()->with('warning', 'Order ini bukan order cetak ulang.');
         }
 
-        $order->load(['book.files', 'book.messages.user', 'book.assignments.user', 'user', 'invoice']);
+        $order->load(['book.files', 'book.messages.user', 'book.assignments.user', 'user', 'invoice', 'statusHistories.changedBy']);
         $book = $order->book;
 
         if (!$book) {
@@ -152,7 +164,7 @@ class PrintingWorkspaceController extends Controller
         return view('printing.workspace.show', compact('order', 'book', 'checklist'));
     }
 
-    public function requestRevision(Request $request, AuthorBookOrder $order, NotificationService $notifications)
+    public function requestRevision(Request $request, AuthorBookOrder $order, NotificationService $notifications, AuthorBookOrderStatusHistoryService $history)
     {
         if ($order->order_type !== 'reprint') {
             return back()->with('warning', 'Order ini bukan order cetak ulang.');
@@ -168,6 +180,7 @@ class PrintingWorkspaceController extends Controller
             'attachment' => ['nullable', 'file', 'max:10240'],
         ]);
 
+        $this->assertUserCanRequestRevision((string) $request->user()->role);
         $this->ensureStatusTransitionAllowed((string) $order->status, 'revision_requested');
 
         $path = null;
@@ -183,11 +196,22 @@ class PrintingWorkspaceController extends Controller
             'attachment' => $path,
         ]);
 
+        $fromStatus = (string) $order->status;
+
         $order->update([
             'status' => 'revision_requested',
             'revision_requested_at' => now(),
             'notes' => $data['message'],
         ]);
+
+        $history->record(
+            $order,
+            $fromStatus,
+            'revision_requested',
+            $data['message'],
+            (int) $request->user()->id,
+            'printing'
+        );
 
         $notifications->sendToBookRoles(
             $book,
@@ -293,6 +317,33 @@ class PrintingWorkspaceController extends Controller
         $allowed = self::ALLOWED_TRANSITIONS[$current] ?? [];
         if (!in_array($next, $allowed, true)) {
             abort(422, 'Transisi status tidak valid dari ' . strtoupper($current) . ' ke ' . strtoupper($next) . '.');
+        }
+    }
+
+    private function assertUserCanChangeStatus(string $role, string $status): void
+    {
+        $basicRoles = ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'];
+        $finalizeRoles = ['admin', 'owner', 'finance', 'superadmin'];
+
+        $requiresFinalizeRights = in_array($status, ['print_completed', 'shipping', 'shipped', 'delivered', 'completed', 'cancelled'], true);
+
+        if ($requiresFinalizeRights) {
+            if (!in_array($role, $finalizeRoles, true)) {
+                abort(403, 'Anda tidak memiliki izin untuk mengubah status akhir pengiriman/cetak.');
+            }
+
+            return;
+        }
+
+        if (!in_array($role, $basicRoles, true)) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah status workspace percetakan.');
+        }
+    }
+
+    private function assertUserCanRequestRevision(string $role): void
+    {
+        if (!in_array($role, ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'], true)) {
+            abort(403, 'Anda tidak memiliki izin untuk meminta revisi.');
         }
     }
 }

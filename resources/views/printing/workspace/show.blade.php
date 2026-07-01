@@ -108,6 +108,35 @@
                 </div>
             </div>
 
+            <div class="card mb-3">
+                <div class="card-header"><strong>Riwayat Status</strong></div>
+                <div class="card-body" style="max-height: 320px; overflow-y: auto;">
+                    @forelse ($order->statusHistories as $history)
+                        <div class="border rounded p-2 mb-2">
+                            <div class="small text-muted">
+                                {{ optional($history->created_at)->format('d M Y H:i') }}
+                                @if ($history->changedBy)
+                                    • {{ $history->changedBy->name }}
+                                @endif
+                                @if ($history->context)
+                                    • {{ strtoupper($history->context) }}
+                                @endif
+                            </div>
+                            <div>
+                                <strong>{{ strtoupper($history->from_status ?? 'BARU') }}</strong>
+                                <i class="fas fa-arrow-right mx-1"></i>
+                                <strong>{{ strtoupper($history->to_status) }}</strong>
+                            </div>
+                            @if ($history->note)
+                                <div class="small mt-1">{{ $history->note }}</div>
+                            @endif
+                        </div>
+                    @empty
+                        <div class="text-muted">Belum ada riwayat status.</div>
+                    @endforelse
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header"><strong>File Final Aktif</strong></div>
                 <div class="card-body table-responsive p-0">

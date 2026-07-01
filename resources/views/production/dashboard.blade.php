@@ -13,6 +13,190 @@
 
 @section('content')
 
+    <div class="row mb-3">
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-primary shadow-sm">
+                <div class="inner">
+                    <h3>{{ $operationsSummary['print_queue'] }}</h3>
+                    <p>Antrian Print</p>
+                </div>
+                <div class="icon"><i class="fas fa-print"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-success shadow-sm">
+                <div class="inner">
+                    <h3>{{ $operationsSummary['ebook_queue'] }}</h3>
+                    <p>Antrian Ebook</p>
+                </div>
+                <div class="icon"><i class="fas fa-tablet-alt"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-warning shadow-sm">
+                <div class="inner">
+                    <h3>{{ $operationsSummary['revision_queue'] }}</h3>
+                    <p>Butuh Revisi</p>
+                </div>
+                <div class="icon"><i class="fas fa-comment-dots"></i></div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-danger shadow-sm">
+                <div class="inner">
+                    <h3>{{ $operationsSummary['adaptation_queue'] }}</h3>
+                    <p>Adaptasi Cetak</p>
+                </div>
+                <div class="icon"><i class="fas fa-ruler-combined"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card card-outline card-primary shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title font-weight-bold mb-0">
+                        <i class="fas fa-print mr-2 text-primary"></i>Queue Cetak Ulang
+                    </h3>
+                    <a href="{{ route('printing.workspace.index') }}" class="btn btn-sm btn-outline-primary">Buka
+                        Workspace</a>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover table-striped text-nowrap m-0">
+                        <thead>
+                            <tr>
+                                <th>Buku</th>
+                                <th>Author</th>
+                                <th>Status</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($printQueue as $item)
+                                <tr>
+                                    <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
+                                    <td>{{ optional($item->user)->name ?? '-' }}</td>
+                                    <td><span class="badge badge-primary">{{ strtoupper($item->status) }}</span></td>
+                                    <td>
+                                        @if (str_contains((string) $item->notes, 'AUTO_PRINT_ADAPTATION_REQUIRED'))
+                                            <span class="badge badge-warning">Needs Print Adaptation</span>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Tidak ada antrean print</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 mt-3">
+            <div class="card card-outline card-success shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title font-weight-bold mb-0">
+                        <i class="fas fa-tablet-alt mr-2 text-success"></i>Queue Ebook Publishing
+                    </h3>
+                    <a href="{{ route('ebook.workspace.index') }}" class="btn btn-sm btn-outline-success">Buka Workspace</a>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover table-striped text-nowrap m-0">
+                        <thead>
+                            <tr>
+                                <th>Buku</th>
+                                <th>Author</th>
+                                <th>Status</th>
+                                <th>Platform</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($ebookQueue as $item)
+                                <tr>
+                                    <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
+                                    <td>{{ optional($item->user)->name ?? '-' }}</td>
+                                    <td><span class="badge badge-success">{{ strtoupper($item->status) }}</span></td>
+                                    <td>{{ $item->ebook_platform ?? '-' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Tidak ada antrean ebook</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mt-3">
+            <div class="card card-outline card-warning shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-comment-dots mr-2 text-warning"></i>Queue
+                        Revisi</h3>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Buku</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($revisionQueue as $item)
+                                <tr>
+                                    <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
+                                    <td>{{ strtoupper($item->status) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">Tidak ada revisi</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mt-3">
+            <div class="card card-outline card-danger shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-ruler-combined mr-2 text-danger"></i>Adaptasi
+                        Cetak</h3>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Buku</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($adaptationQueue as $item)
+                                <tr>
+                                    <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
+                                    <td><span class="badge badge-warning">Needs Print Adaptation</span></td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">Tidak ada adaptasi cetak</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- SUMMARY WIDGETS --}}
     <div class="row">
         <div class="col-lg-3 col-6">
@@ -82,7 +266,8 @@
         <div class="col-md-12">
             <div class="card card-outline card-warning shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-edit mr-2 text-warning"></i>Queue Editing</h3>
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-edit mr-2 text-warning"></i>Queue Editing
+                    </h3>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-hover table-striped text-nowrap m-0">
@@ -125,7 +310,8 @@
         <div class="col-md-12">
             <div class="card card-outline card-primary shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-layer-group mr-2 text-primary"></i>Queue Layout
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-layer-group mr-2 text-primary"></i>Queue
+                        Layout
                     </h3>
                 </div>
                 <div class="card-body p-0 table-responsive">
@@ -266,7 +452,8 @@
                             @foreach ($editorWorkloads as $item)
                                 <tr>
                                     <td>{{ $item->person_name }}</td>
-                                    <td class="text-center"><span class="badge badge-secondary">{{ $item->total }}</span>
+                                    <td class="text-center"><span
+                                            class="badge badge-secondary">{{ $item->total }}</span>
                                     </td>
                                 </tr>
                             @endforeach

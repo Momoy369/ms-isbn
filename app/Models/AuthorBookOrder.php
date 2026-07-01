@@ -87,4 +87,9 @@ class AuthorBookOrder extends Model
     {
         return $this->belongsTo(AuthorInvoice::class, 'author_invoice_id');
     }
+
+    public function statusHistories()
+    {
+        return $this->hasMany(AuthorBookOrderStatusHistory::class)->latest();
+    }
 }
