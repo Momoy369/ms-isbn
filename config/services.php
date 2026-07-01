@@ -66,4 +66,18 @@ return [
         'sms_webhook_url' => env('REMINDER_SMS_WEBHOOK_URL'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'verify_ssl' => env('OPENAI_VERIFY_SSL', true),
+    ],
+
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'verify_ssl' => env('OPENROUTER_VERIFY_SSL', true),
+    ],
+
 ];

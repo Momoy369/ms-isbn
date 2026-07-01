@@ -622,6 +622,21 @@ return [
                 ],
             ],
         ],
+        'AssistantFabWidget' => [
+            'active' => true,
+            'files' => [
+                [
+                    'type' => 'css',
+                    'asset' => true,
+                    'location' => 'css/assistant-fab.css',
+                ],
+                [
+                    'type' => 'js',
+                    'asset' => true,
+                    'location' => 'js/assistant-fab.js',
+                ],
+            ],
+        ],
     ],
 
     /*

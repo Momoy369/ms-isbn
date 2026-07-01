@@ -18,6 +18,8 @@ Dokumen ini tetap mempertahankan ringkasan fitur per modul agar mudah dipakai se
 
 ### Fitur Ditambahkan
 
+- AI Asisten Dashboard untuk tanya-jawab fitur dan navigasi per role.
+- AI Asisten kini mendukung formatting jawaban ringan: heading, bold, list, inline code, dan URL clickable.
 - Tool lintas role: **Hitung Halaman Naskah Otomatis** dengan upload DOCX.
 - Opsi ukuran kertas pada tool: A4, A5, B5, UNESCO (margin tetap 2 cm).
 - Mode komparasi dua ukuran dalam satu submit.
@@ -722,6 +724,85 @@ Whitelist tambahan per file:
     - huruf kecil
     - angka
     - simbol
+
+### 4.23 AI Asisten Dashboard
+
+#### Kegunaan
+
+- Membantu user memahami fitur dashboard sesuai role masing-masing.
+- Menjawab pertanyaan cara pakai fitur, menu yang relevan, dan langkah operasional harian.
+
+#### Akses
+
+- Akses utama: ikon chat AI mengambang di kanan bawah.
+- Akses opsional: halaman penuh `/assistant`.
+- Role: semua user login.
+
+#### Cara Pakai
+
+1. Buka menu AI Asisten.
+2. Ketik pertanyaan di kotak chat (atau klik pertanyaan cepat).
+3. Kirim pertanyaan.
+4. Baca jawaban asisten dan lanjutkan pertanyaan lanjutan jika perlu.
+5. Untuk melihat chat lama, scroll ke atas (riwayat dimuat bertahap otomatis).
+6. Jika perlu arsip, gunakan export CSV riwayat chat.
+
+Catatan akses terbaru:
+
+- Pada antarmuka harian, user tidak perlu masuk menu khusus; cukup klik ikon robot mengambang.
+- Widget akan memuat riwayat percakapan user saat dibuka.
+- Enter mengirim pesan otomatis, Shift+Enter untuk baris baru.
+- Riwayat chat panjang dimuat bertahap saat user scroll ke atas.
+- Format jawaban mendukung heading/list/link agar instruksi lebih mudah dibaca.
+
+Contoh pertanyaan:
+
+- "Fitur apa saja di dashboard saya?"
+- "Cara cek invoice dan status pembayaran"
+- "Cara pakai hitung halaman naskah"
+- "Cara upload file di Ruang File Role"
+
+#### Sumber Jawaban
+
+- Prioritas 1: OpenRouter (model free) jika `OPENROUTER_API_KEY` tersedia.
+- Prioritas 2: OpenAI (opsional fallback) jika `OPENAI_API_KEY` tersedia.
+- Prioritas 3: knowledge lokal dari dokumentasi internal.
+
+#### Logging dan Konteks
+
+- Setiap tanya-jawab disimpan per user untuk audit ringan.
+- Pertanyaan dikirim bersama konteks halaman aktif (path/title) agar jawaban lebih relevan dengan dashboard yang sedang dibuka.
+- Tersedia endpoint export CSV riwayat untuk kebutuhan audit/handover.
+- Source jawaban menyertakan alasan fallback provider saat AI eksternal gagal.
+
+#### Guard Akses dan Keamanan Jawaban
+
+- Asisten menerapkan guard modul sensitif berbasis role.
+- Jika user bertanya modul di luar otoritas role, asisten menolak detail operasional modul tersebut.
+- Guard ini berlaku sebelum proses jawaban AI/fallback.
+
+#### Konfigurasi AI (Env)
+
+- OpenRouter:
+    - `OPENROUTER_API_KEY`
+    - `OPENROUTER_MODEL`
+    - `OPENROUTER_BASE_URL`
+    - `OPENROUTER_VERIFY_SSL` (default `true`)
+- OpenAI fallback (opsional):
+    - `OPENAI_API_KEY`
+    - `OPENAI_MODEL`
+    - `OPENAI_BASE_URL`
+    - `OPENAI_VERIFY_SSL` (default `true`)
+
+Troubleshooting lokal (Windows/Laragon):
+
+- Jika source menampilkan fallback `openrouter:ca_cert_invalid` (umumnya cURL error 77/certificate file), gunakan sementara `OPENROUTER_VERIFY_SSL=false` untuk dev lokal.
+- Setelah perubahan env, jalankan `php artisan config:clear` agar konfigurasi terbaca ulang.
+
+#### Catatan
+
+- Asisten membantu panduan operasional, bukan eksekutor aksi.
+- Untuk aksi data (approve, upload, update status), user tetap perlu melakukan langkah di modul terkait.
 
 ## 5. Cara Menggunakan Storefront Berdasarkan Role
 

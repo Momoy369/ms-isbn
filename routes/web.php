@@ -50,6 +50,7 @@ use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\AdminAuthorUpgradeRequestController;
 use App\Http\Controllers\PersonalBoardController;
 use App\Http\Controllers\ManuscriptPageCounterController;
+use App\Http\Controllers\DashboardAssistantController;
 
 Route::get('/', function () {
 
@@ -122,6 +123,18 @@ Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'call
     ->name('payments.ipaymu.callback');
 
 Route::middleware('auth')->group(function () {
+
+    Route::get('/assistant', [DashboardAssistantController::class, 'index'])
+        ->name('assistant.index');
+
+    Route::get('/assistant/history', [DashboardAssistantController::class, 'history'])
+        ->name('assistant.history');
+
+    Route::get('/assistant/export', [DashboardAssistantController::class, 'export'])
+        ->name('assistant.export');
+
+    Route::post('/assistant/ask', [DashboardAssistantController::class, 'ask'])
+        ->name('assistant.ask');
 
     Route::get('/tools/manuscript-page-counter', [ManuscriptPageCounterController::class, 'index'])
         ->name('manuscript-page-counter.index');

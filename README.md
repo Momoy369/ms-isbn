@@ -23,6 +23,18 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 
 ### Update Terbaru (Juli 2026)
 
+- Fitur baru: **AI Asisten Dashboard** untuk semua role login.
+    - Akses utama sekarang via icon chat mengambang modern di kanan bawah (floating AI widget), bukan menu sidebar.
+    - Menjawab pertanyaan user tentang fitur, menu, dan cara penggunaan dashboard sesuai role.
+    - Menyimpan riwayat chat per user untuk audit dan analytics ringan.
+    - Riwayat chat mendukung load bertahap saat scroll ke atas (infinite history pagination).
+    - Mendukung export riwayat chat ke CSV (`/assistant/export`) untuk user aktif, serta export by `user_id` untuk role internal berwenang.
+    - Mendukung context-aware prompt (path/title halaman aktif ikut dikirim).
+    - Mendukung guard akses modul sensitif berbasis role (contoh finance internal, ISBN internal, manajemen user, review upgrade author).
+    - Prioritas model AI: OpenRouter (free model) jika API key tersedia.
+    - Fallback ke OpenAI (opsional) lalu fallback knowledge lokal bila provider AI belum siap.
+    - Label source jawaban menampilkan alasan fallback provider untuk troubleshooting (misal `local(fallback:openrouter:http_401|openai:no_key)`).
+    - Chat UI mendukung formatting ringan: heading (`#`, `##`, `###`), bold, list, inline code, dan URL otomatis clickable.
 - Tool global baru: **Hitung Halaman Naskah Otomatis** (`/tools/manuscript-page-counter`) untuk semua role login.
     - Mendukung ukuran kertas A4, A5, B5, UNESCO.
     - Margin default 2 cm.
@@ -178,6 +190,39 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Hitung halaman naskah otomatis lintas role dari upload DOCX.
 - Mendukung estimasi multi ukuran (A4/A5/B5/UNESCO) dengan basis margin konsisten 2 cm.
 - Cocok untuk validasi cepat pra-order paket, pra-produksi, dan cross-check data naskah admin.
+
+### 14. AI Asisten Dashboard
+
+- Widget chat mengambang untuk seluruh user login (ikon robot di kanan bawah).
+- Halaman `/assistant` tetap tersedia sebagai halaman penuh (opsional).
+- Endpoint:
+    - `GET /assistant` (halaman chat)
+    - `GET /assistant/history` (riwayat chat user aktif, mendukung `before_id` dan `limit`)
+    - `GET /assistant/export` (export CSV riwayat chat)
+    - `POST /assistant/ask` (proses pertanyaan)
+- Tujuan utama:
+    - Menjawab pertanyaan fitur dashboard sesuai role user.
+    - Memberi langkah penggunaan fitur secara praktis.
+
+Konfigurasi environment (disarankan OpenRouter free):
+
+- `OPENROUTER_API_KEY=...`
+- `OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free`
+- `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`
+- `OPENROUTER_VERIFY_SSL=true`
+
+Catatan lokal Windows/Laragon:
+
+- Jika muncul fallback `openrouter:ca_cert_invalid` / cURL error 77 (certificate file), gunakan sementara `OPENROUTER_VERIFY_SSL=false` di lokal dev.
+- Setelah ubah env/config, jalankan `php artisan config:clear`.
+
+Fallback opsional (jika OpenRouter tidak dipakai):
+
+- `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-4o-mini`
+- `OPENAI_BASE_URL=https://api.openai.com/v1`
+
+Jika API key provider kosong, asisten tetap berjalan dengan fallback knowledge lokal.
 
 ## Manual Book
 
