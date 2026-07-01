@@ -11,6 +11,7 @@ use App\Models\StoreVoucher;
 use App\Models\User;
 use App\Services\IpaymuService;
 use App\Services\NotificationService;
+use App\Services\OrderTrackingVerificationService;
 use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -483,16 +484,30 @@ class StorefrontController extends Controller
         return redirect()->away($checkoutUrl);
     }
 
-    public function trackForm()
+    public function trackForm(Request $request, OrderTrackingVerificationService $trackingVerification)
     {
-        return view('store.track-form');
+        return view('store.track-form', [
+            'trackingVerificationEnabled' => $trackingVerification->isEnabled(),
+            'allowedChannels' => $trackingVerification->allowedChannels(),
+            'challengeOrderNumber' => (string) $request->query('order_number', ''),
+            'challengeId' => (string) $request->query('challenge_id', ''),
+        ]);
     }
 
-    public function trackLookup(Request $request)
+    public function trackLookup(Request $request, OrderTrackingVerificationService $trackingVerification)
     {
-        $data = $request->validate([
+        $enabled = $trackingVerification->isEnabled();
+
+        $rules = [
             'order_number' => ['required', 'string', 'max:64'],
-        ]);
+        ];
+
+        if ($enabled) {
+            $rules['verification_channel'] = ['required', 'in:phone,email,whatsapp'];
+            $rules['verification_contact'] = ['required', 'string', 'max:190'];
+        }
+
+        $data = $request->validate($rules);
 
         $order = StoreOrder::where('order_number', strtoupper(trim((string) $data['order_number'])))->first();
 
@@ -500,16 +515,78 @@ class StorefrontController extends Controller
             return back()->with('danger', 'Nomor order tidak ditemukan.');
         }
 
+        if ($enabled) {
+            $started = $trackingVerification->startChallenge(
+                $order,
+                (string) $data['verification_channel'],
+                (string) $data['verification_contact']
+            );
+
+            if (!$started['ok']) {
+                return back()->with('danger', $started['message'])->withInput();
+            }
+
+            return redirect()->route('store.track.form', [
+                'order_number' => $order->order_number,
+                'challenge_id' => $started['challenge_id'],
+            ])->with('success', $started['message']);
+        }
+
         return redirect()->route('store.track.show', ['orderNumber' => $order->order_number]);
     }
 
-    public function trackShow(string $orderNumber)
+    public function trackVerify(Request $request, OrderTrackingVerificationService $trackingVerification)
     {
+        $data = $request->validate([
+            'order_number' => ['required', 'string', 'max:64'],
+            'challenge_id' => ['required', 'string', 'max:190'],
+            'otp' => ['required', 'string', 'max:12'],
+        ]);
+
+        $result = $trackingVerification->verifyChallenge((string) $data['challenge_id'], (string) $data['otp']);
+
+        if (!$result['ok']) {
+            return back()->with('danger', $result['message'])->withInput();
+        }
+
+        $orderNumber = strtoupper(trim((string) $data['order_number']));
+
+        if (($result['order_number'] ?? '') !== $orderNumber) {
+            return back()->with('danger', 'Challenge OTP tidak cocok dengan nomor order.')->withInput();
+        }
+
+        $verified = (array) $request->session()->get('store_track_verified_orders', []);
+        $verified[$orderNumber] = now()->timestamp;
+        $request->session()->put('store_track_verified_orders', $verified);
+
+        return redirect()->route('store.track.show', ['orderNumber' => $orderNumber])
+            ->with('success', 'Verifikasi OTP berhasil.');
+    }
+
+    public function trackShow(Request $request, string $orderNumber, OrderTrackingVerificationService $trackingVerification)
+    {
+        if ($trackingVerification->isEnabled() && !$this->isTrackingVerified($request, $orderNumber)) {
+            return redirect()->route('store.track.form')
+                ->with('danger', 'Silakan verifikasi OTP terlebih dahulu untuk melihat detail order.');
+        }
+
         $order = StoreOrder::with('item')
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
         return view('store.track-show', compact('order'));
+    }
+
+    private function isTrackingVerified(Request $request, string $orderNumber): bool
+    {
+        $verified = (array) $request->session()->get('store_track_verified_orders', []);
+        $timestamp = (int) ($verified[$orderNumber] ?? 0);
+
+        if ($timestamp <= 0) {
+            return false;
+        }
+
+        return (now()->timestamp - $timestamp) <= 1800;
     }
 
     public function reader(Request $request, string $orderNumber)

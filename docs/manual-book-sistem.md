@@ -20,6 +20,9 @@ Dokumen ini tetap mempertahankan ringkasan fitur per modul agar mudah dipakai se
 
 - AI Asisten Dashboard untuk tanya-jawab fitur dan navigasi per role.
 - AI Asisten kini mendukung formatting jawaban ringan: heading, bold, list, inline code, dan URL clickable.
+- Tracking order publik kini mendukung verifikasi OTP berbasis channel (phone/email/WhatsApp).
+- Menu System Settings khusus superadmin untuk konfigurasi dinamis lintas integrasi.
+- Menu License Management di System Settings untuk aktivasi/generate/revoke lisensi runtime.
 - Tool lintas role: **Hitung Halaman Naskah Otomatis** dengan upload DOCX.
 - Opsi ukuran kertas pada tool: A4, A5, B5, UNESCO (margin tetap 2 cm).
 - Mode komparasi dua ukuran dalam satu submit.
@@ -803,6 +806,91 @@ Troubleshooting lokal (Windows/Laragon):
 
 - Asisten membantu panduan operasional, bukan eksekutor aksi.
 - Untuk aksi data (approve, upload, update status), user tetap perlu melakukan langkah di modul terkait.
+
+### 4.24 System Settings (Superadmin)
+
+#### Kegunaan
+
+- Mengelola konfigurasi penting aplikasi tanpa mengubah source code atau file `.env`.
+- Menjadikan variabel sensitif/non-sensitif lebih dinamis dan bisa diubah terkontrol.
+
+#### Cakupan Pengaturan
+
+- AI Assistant: provider key/model/base URL/SSL, temperature, feature toggle.
+- Tracking order: enable OTP verification, allowed channels, OTP expiration.
+- Payment/Shipping: iPaymu dan RajaOngkir parameter utama.
+- Integrasi Perpusnas: endpoint dan kredensial.
+- Reminder channel: email/whatsapp/sms enable + webhook URL.
+
+#### Keamanan
+
+- Nilai sensitif (API key/token/password/webhook privat) disimpan terenkripsi.
+- UI menampilkan masked value untuk secret.
+- Semua perubahan settings tercatat pada audit log.
+
+### 4.25 Tracking Order Publik dengan OTP
+
+#### Kegunaan
+
+- Membatasi keterbukaan detail order publik agar tidak bisa diakses hanya dengan menebak nomor order.
+
+#### Alur Singkat
+
+1. User isi nomor order pada halaman tracking.
+2. User pilih channel verifikasi (phone/email/WhatsApp) dan isi kontak.
+3. Sistem kirim OTP ke channel yang dipilih.
+4. User input OTP.
+5. Setelah valid, detail order bisa diakses pada sesi tersebut.
+
+#### Catatan
+
+- Kanal OTP, masa berlaku OTP, dan enable/disable verifikasi diatur dari System Settings.
+- Batas percobaan OTP dibatasi untuk mencegah brute-force sederhana.
+
+### 4.26 License Management (Owner / Superadmin)
+
+#### Kegunaan
+
+- Mengontrol siapa yang berhak menjalankan sistem secara runtime.
+- Membatasi akses web jika lisensi belum valid.
+
+#### Tipe Lisensi
+
+- Owner Code (lokal): lisensi internal untuk pemilik utama instance.
+- Commercial Token: token signed untuk customer lain dengan domain binding.
+
+#### Komponen Lisensi Komersial
+
+- Nama customer.
+- Email customer (opsional).
+- Domain customer (wajib).
+- Tanggal expired (opsional).
+- Plan.
+- Trial flag.
+
+#### Alur Aktivasi Lisensi
+
+1. Login sebagai owner/superadmin.
+2. Buka System Settings -> bagian Lisensi Sistem.
+3. Pilih salah satu:
+    - Masukkan kode owner secara manual.
+    - Generate lisensi komersial dari form customer/domain/plan.
+4. Simpan.
+5. Status lisensi berubah menjadi VALID jika token/kode cocok.
+
+#### Alur Revoke Lisensi Komersial
+
+1. Buka System Settings -> Lisensi Sistem.
+2. Centang opsi revoke lisensi aktif.
+3. Simpan.
+4. Hash token akan masuk blacklist revoke, lalu token tidak bisa dipakai lagi.
+
+#### Catatan Operasional
+
+- Issuer secret wajib disiapkan untuk generate/verifikasi token komersial.
+- Token hanya valid pada domain yang sama dengan klaim lisensi.
+- Jika lisensi invalid, user non-owner/non-superadmin akan diblokir dari modul web.
+- Route login + system settings tetap dapat diakses owner/superadmin untuk recovery aktivasi.
 
 ## 5. Cara Menggunakan Storefront Berdasarkan Role
 

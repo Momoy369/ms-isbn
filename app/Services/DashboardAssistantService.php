@@ -6,6 +6,7 @@ use App\Models\AssistantChatLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\SystemSettingService;
 
 class DashboardAssistantService
 {
@@ -14,6 +15,15 @@ class DashboardAssistantService
      */
     public function ask(User $user, string $question, array $context = []): array
     {
+        $settings = app(SystemSettingService::class);
+
+        if (!$settings->getBool('feature.assistant_enabled', true)) {
+            return [
+                'answer' => 'AI Asisten sedang dinonaktifkan sementara oleh superadmin. Silakan hubungi admin untuk mengaktifkan kembali.',
+                'source' => 'disabled',
+            ];
+        }
+
         $question = trim($question);
 
         if ($question === '') {
@@ -74,16 +84,25 @@ class DashboardAssistantService
      */
     private function askWithOpenRouter(User $user, string $question, array $context, string &$reason = ''): ?string
     {
-        $apiKey = trim((string) config('services.openrouter.api_key'));
-        $verifySsl = (bool) config('services.openrouter.verify_ssl', true);
+        $settings = app(SystemSettingService::class);
+        $apiKey = trim((string) $settings->get('assistant.openrouter_api_key', config('services.openrouter.api_key')));
+        $verifySsl = $settings->getBool('assistant.openrouter_verify_ssl', (bool) config('services.openrouter.verify_ssl', true));
+        $temperature = (float) $settings->get('assistant.temperature', 0.2);
+
+        if ($temperature < 0) {
+            $temperature = 0;
+        }
+        if ($temperature > 1) {
+            $temperature = 1;
+        }
 
         if ($apiKey === '') {
             $reason = 'no_key';
             return null;
         }
 
-        $baseUrl = rtrim((string) config('services.openrouter.base_url', 'https://openrouter.ai/api/v1'), '/');
-        $configuredModels = (string) config('services.openrouter.model', '');
+        $baseUrl = rtrim((string) $settings->get('assistant.openrouter_base_url', config('services.openrouter.base_url', 'https://openrouter.ai/api/v1')), '/');
+        $configuredModels = (string) $settings->get('assistant.openrouter_model', config('services.openrouter.model', ''));
         $configuredList = array_values(array_filter(array_map('trim', explode(',', $configuredModels))));
         $fallbackList = [
             'meta-llama/llama-3.1-8b-instruct:free',
@@ -103,7 +122,7 @@ class DashboardAssistantService
                     ->asJson()
                     ->withHeaders([
                         'HTTP-Referer' => (string) config('app.url', 'http://localhost'),
-                        'X-Title' => 'MS ISBN Dashboard Assistant',
+                        'X-Title' => (string) $settings->get('system.brand_name', 'MS ISBN Dashboard Assistant'),
                     ]);
 
                 if (!$verifySsl) {
@@ -112,7 +131,7 @@ class DashboardAssistantService
 
                 $response = $http->post($baseUrl . '/chat/completions', [
                     'model' => $model,
-                    'temperature' => 0.2,
+                    'temperature' => $temperature,
                     'messages' => [
                         [
                             'role' => 'system',
@@ -164,16 +183,25 @@ class DashboardAssistantService
      */
     private function askWithOpenAi(User $user, string $question, array $context, string &$reason = ''): ?string
     {
-        $apiKey = trim((string) config('services.openai.api_key'));
-        $verifySsl = (bool) config('services.openai.verify_ssl', true);
+        $settings = app(SystemSettingService::class);
+        $apiKey = trim((string) $settings->get('assistant.openai_api_key', config('services.openai.api_key')));
+        $verifySsl = $settings->getBool('assistant.openai_verify_ssl', (bool) config('services.openai.verify_ssl', true));
+        $temperature = (float) $settings->get('assistant.temperature', 0.2);
+
+        if ($temperature < 0) {
+            $temperature = 0;
+        }
+        if ($temperature > 1) {
+            $temperature = 1;
+        }
 
         if ($apiKey === '') {
             $reason = 'no_key';
             return null;
         }
 
-        $baseUrl = rtrim((string) config('services.openai.base_url', 'https://api.openai.com/v1'), '/');
-        $model = (string) config('services.openai.model', 'gpt-4o-mini');
+        $baseUrl = rtrim((string) $settings->get('assistant.openai_base_url', config('services.openai.base_url', 'https://api.openai.com/v1')), '/');
+        $model = (string) $settings->get('assistant.openai_model', config('services.openai.model', 'gpt-4o-mini'));
 
         $systemPrompt = $this->buildSystemPrompt($user, $context);
 
@@ -190,7 +218,7 @@ class DashboardAssistantService
 
             $response = $http->post($baseUrl . '/chat/completions', [
                 'model' => $model,
-                'temperature' => 0.2,
+                'temperature' => $temperature,
                 'messages' => [
                     [
                         'role' => 'system',
@@ -291,6 +319,8 @@ class DashboardAssistantService
      */
     private function buildSystemPrompt(User $user, array $context): string
     {
+        $settings = app(SystemSettingService::class);
+        $brandName = (string) $settings->get('system.brand_name', 'MS ISBN Publishing');
         $role = (string) $user->role;
         $readme = $this->readKnowledgeFile(base_path('README.md'));
         $manual = $this->readKnowledgeFile(base_path('docs/manual-book-sistem.md'));
@@ -304,6 +334,7 @@ class DashboardAssistantService
 
         return <<<PROMPT
 Anda adalah AI Asisten untuk sistem MS ISBN Publishing.
+Brand sistem: {$brandName}
 Tugas Anda: menjawab pertanyaan user tentang fitur, cara penggunaan fitur, dan navigasi dashboard sesuai role user.
 
 Aturan jawaban:

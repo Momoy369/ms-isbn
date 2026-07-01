@@ -83,13 +83,50 @@
         @if (session('danger'))
             <div class="alert">{{ session('danger') }}</div>
         @endif
+        @if (session('success'))
+            <div class="alert" style="background:#dcfce7;border-color:#86efac;">{{ session('success') }}</div>
+        @endif
 
         <form method="POST" action="{{ route('store.track.lookup') }}">
             @csrf
             <label for="order_number">Nomor Order</label>
             <input id="order_number" name="order_number" type="text" value="{{ old('order_number') }}" required>
+
+            @if (!empty($trackingVerificationEnabled))
+                <label for="verification_channel">Channel Verifikasi</label>
+                <select id="verification_channel" name="verification_channel" required
+                    style="width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:.75rem .8rem;margin:.4rem 0 .8rem;">
+                    @foreach ($allowedChannels as $ch)
+                        <option value="{{ $ch }}" {{ old('verification_channel') === $ch ? 'selected' : '' }}>
+                            {{ strtoupper($ch) }}
+                        </option>
+                    @endforeach
+                </select>
+
+                <label for="verification_contact">Kontak Verifikasi (email / nomor telepon)</label>
+                <input id="verification_contact" name="verification_contact" type="text"
+                    value="{{ old('verification_contact') }}" required>
+            @endif
+
             <button type="submit">Cari Order</button>
         </form>
+
+        @if (!empty($challengeId) && !empty($challengeOrderNumber))
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:1rem 0;">
+            <h3 style="margin:.2rem 0 .5rem;">Verifikasi OTP</h3>
+            <p style="margin-top:0; color:#64748b;">Masukkan OTP yang sudah dikirim untuk order
+                <strong>{{ $challengeOrderNumber }}</strong>.
+            </p>
+
+            <form method="POST" action="{{ route('store.track.verify') }}">
+                @csrf
+                <input type="hidden" name="order_number" value="{{ $challengeOrderNumber }}">
+                <input type="hidden" name="challenge_id" value="{{ $challengeId }}">
+                <label for="otp">Kode OTP</label>
+                <input id="otp" name="otp" type="text" maxlength="12" required>
+                <button type="submit">Verifikasi & Lihat Order</button>
+            </form>
+        @endif
     </div>
 </body>
 

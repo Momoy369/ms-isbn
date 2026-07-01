@@ -56,6 +56,19 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
     - Login/register/forgot/reset/verify/confirm memakai visual language yang konsisten.
     - Tambah toggle show/hide password.
     - Tambah indikator kekuatan password + checklist aturan realtime pada register/reset.
+- Fitur keamanan baru: **Verifikasi OTP Tracking Order Publik**.
+    - Tracking order (`/store/track`) sekarang dapat memakai challenge OTP via phone/email/WhatsApp.
+    - Channel OTP dan masa berlaku OTP dikelola dari System Settings (superadmin).
+    - Akses detail order publik dibatasi ke sesi yang sudah lolos OTP.
+- Fitur platform baru: **System Settings (Superadmin)** di `/settings/system`.
+    - Konfigurasi penting dipindah ke dynamic settings (database) agar tidak hardcode di code/env.
+    - API key sensitif disimpan terenkripsi, ditampilkan masked di UI, dan tercatat pada audit log perubahan.
+    - Tersedia audit log perubahan settings (siapa, kapan, key lama/baru masked).
+- Fitur baru: **License Management (Owner/Superadmin)**.
+    - Sistem dapat mewajibkan lisensi aktif sebelum modul web bisa diakses.
+    - Mendukung 2 tipe lisensi: owner-code lokal dan token komersial (signed token).
+    - Token komersial mendukung domain binding, optional expiry, trial flag, plan metadata, dan revoke.
+    - Settings menyediakan generator token komersial + status validasi + alasan invalid.
 
 ### Fitur yang Diupdate / Dikurangi
 
@@ -248,10 +261,12 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 - Ebook sudah diperlakukan sebagai produk tanpa stok fisik.
 - Manual book sistem sudah tersedia di dokumen terpisah.
 - Phase 1 storefront profesional sudah dimulai: CTA paket penerbitan diperjelas dan FAQ dipisah untuk customer/author.
+- Tracking order publik sudah ditambah verifikasi OTP berbasis channel (phone/email/WhatsApp) + challenge session.
+- System Settings superadmin sudah tersedia untuk konfigurasi dinamis (assistant, tracking, payment/shipping, perpusnas, reminder).
+- License Management sudah aktif (enforcement middleware + settings aktivasi/generate/revoke lisensi).
 
 ### Masih Perlu Dikerjakan
 
-- Verifikasi tambahan untuk tracking order publik.
 - Idempotency key dan audit log callback iPaymu yang lebih lengkap.
 - Watermark ebook dinamis berbasis identitas pembeli.
 - Multi-payment gateway sebagai fallback selain iPaymu.
@@ -259,7 +274,6 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 
 ## Fitur Yang Belum Sempurna (Known Gaps)
 
-- Halaman tracking order publik belum memakai verifikasi tambahan (contoh OTP/email/telepon) untuk membatasi keterbukaan data.
 - Pengelolaan stok dan kompensasi rollback stok saat skenario callback edge-case masih perlu hardening lebih lanjut.
 - Notifikasi status order store belum lengkap untuk semua transisi penting.
 - Dokumentasi operasional (SOP role per modul) belum menyeluruh.
@@ -270,7 +284,6 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 
 ## To-Do Fitur Baru (Belum Ada)
 
-- Tambah verifikasi tracking order (OTP WA/email atau minimal validasi phone/email pembeli).
 - Tambah fitur multi-payment gateway (fallback selain iPaymu).
 - Tambah laporan penjualan storefront periodik (harian/mingguan/bulanan) dengan export.
 - Tambah fitur reset reader session per order di halaman admin store orders.
@@ -439,6 +452,48 @@ Sprint 5 ditutup sebagai baseline fitur pasca-pembelian. Fokus berikutnya diarah
 Repositori ini menggunakan lisensi GNU General Public License v3.0.
 
 Lihat file [LICENSE](LICENSE) untuk teks lisensi lengkap.
+
+## Lisensi Aplikasi (Runtime)
+
+Selain lisensi source code repository, aplikasi ini kini memiliki lisensi runtime internal.
+
+### Mode Lisensi
+
+- Owner Code: kode lisensi lokal yang digenerate dari fingerprint owner + `APP_URL`.
+- Commercial Token: token signed (HS256) untuk distribusi ke customer lain.
+
+### Klaim Lisensi Komersial
+
+- `customer_name`
+- `customer_email` (opsional)
+- `domain` (wajib, domain binding)
+- `expires_at` (opsional)
+- `plan` (mis. standard/pro/enterprise)
+- `trial` (boolean)
+
+### Keamanan
+
+- Signature token diverifikasi menggunakan issuer secret.
+- Token hanya valid pada domain yang sesuai.
+- Token bisa direvoke via hash blacklist (`license.revoked_hashes`).
+- Secret dan data lisensi sensitif disimpan terenkripsi via `system_settings`.
+
+### Cara Aktivasi
+
+1. Login sebagai `owner`/`superadmin`.
+2. Buka `/settings/system`.
+3. Isi kode lisensi aktif, atau generate token komersial dari panel lisensi.
+4. Simpan settings.
+
+### Distribusi Lisensi ke Pengguna Lain
+
+Model saat ini adalah self-hosted issuer (manual issuance oleh owner/superadmin):
+
+- Customer membeli lisensi melalui proses bisnis Anda (manual atau gateway pembayaran internal).
+- Owner/superadmin generate token lisensi komersial di System Settings.
+- Token diberikan ke customer untuk aktivasi instance mereka.
+
+Jika dibutuhkan, tahap lanjutan dapat menambahkan license server terpisah (otomatis issue/revoke/renew).
 
 - Implementasi multi-payment gateway penuh (provider tambahan selain iPaymu).
 - Penyusunan SOP operasional lengkap per role dan per modul.

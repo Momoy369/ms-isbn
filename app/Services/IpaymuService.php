@@ -11,10 +11,11 @@ class IpaymuService
 {
     public function createInvoiceCheckout(AuthorInvoice $invoice): array
     {
-        $apiKey = (string) config('services.ipaymu.api_key');
-        $va = (string) config('services.ipaymu.va');
-        $endpoint = rtrim((string) config('services.ipaymu.base_url', 'https://my.ipaymu.com/api/v2'), '/');
-        $verifySsl = (bool) config('services.ipaymu.verify_ssl', true);
+        $settings = app(SystemSettingService::class);
+        $apiKey = (string) $settings->get('payment.ipaymu_api_key', config('services.ipaymu.api_key'));
+        $va = (string) $settings->get('payment.ipaymu_va', config('services.ipaymu.va'));
+        $endpoint = rtrim((string) $settings->get('payment.ipaymu_base_url', config('services.ipaymu.base_url', 'https://my.ipaymu.com/api/v2')), '/');
+        $verifySsl = $settings->getBool('payment.ipaymu_verify_ssl', (bool) config('services.ipaymu.verify_ssl', true));
 
         if (empty($apiKey) || empty($va)) {
             $ref = 'IPAYMU-DUMMY-' . now()->format('YmdHis') . '-' . $invoice->id;
@@ -97,10 +98,11 @@ class IpaymuService
 
     public function createStoreOrderCheckout(StoreOrder $order): array
     {
-        $apiKey = (string) config('services.ipaymu.api_key');
-        $va = (string) config('services.ipaymu.va');
-        $endpoint = rtrim((string) config('services.ipaymu.base_url', 'https://my.ipaymu.com/api/v2'), '/');
-        $verifySsl = (bool) config('services.ipaymu.verify_ssl', true);
+        $settings = app(SystemSettingService::class);
+        $apiKey = (string) $settings->get('payment.ipaymu_api_key', config('services.ipaymu.api_key'));
+        $va = (string) $settings->get('payment.ipaymu_va', config('services.ipaymu.va'));
+        $endpoint = rtrim((string) $settings->get('payment.ipaymu_base_url', config('services.ipaymu.base_url', 'https://my.ipaymu.com/api/v2')), '/');
+        $verifySsl = $settings->getBool('payment.ipaymu_verify_ssl', (bool) config('services.ipaymu.verify_ssl', true));
 
         if (empty($apiKey) || empty($va)) {
             $ref = 'IPAYMU-STORE-' . now()->format('YmdHis') . '-' . $order->id;

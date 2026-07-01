@@ -2,15 +2,18 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Event;
-use App\Models\Notification;
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorUpgradeRequest;
+use App\Models\Notification;
+use App\Models\SystemSetting;
 use App\Models\StorePackageConsultation;
+use App\Services\SystemSettingService;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,6 +33,41 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
+        $globalBrandName = (string) Config::get('app.name', 'MS ISBN Publishing');
+
+        try {
+            /** @var SystemSettingService $systemSettingService */
+            $systemSettingService = app(SystemSettingService::class);
+            $configuredName = (string) $systemSettingService->get('system.brand_name', $globalBrandName);
+
+            if (trim($configuredName) !== '') {
+                $globalBrandName = $configuredName;
+                Config::set('app.name', $configuredName);
+            }
+        } catch (\Throwable $e) {
+            // Skip DB-backed brand name resolution when settings table is not ready.
+        }
+
+        Config::set('adminlte.title', $globalBrandName);
+        Config::set('adminlte.logo', $globalBrandName);
+        Config::set('adminlte.logo_img_alt', $globalBrandName);
+
+        try {
+            $licenseRequired = (string) app(SystemSettingService::class)->get('license.required', '1');
+            if ($licenseRequired === '') {
+                SystemSetting::query()->updateOrCreate(
+                    ['key' => 'license.required'],
+                    [
+                        'value' => '1',
+                        'is_encrypted' => false,
+                        'description' => 'Wajib lisensi untuk akses sistem',
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            // Skip implicit default setting creation when table is unavailable.
+        }
+
         Gate::before(function ($user, string $ability) {
             // Keep superadmin global bypass except role-specific navigation abilities.
             if (
@@ -44,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
         $abilityRoles = [
             'menu-authenticated' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'author', 'finance', 'superadmin', 'customer', 'reader'],
+            'menu-superadmin-settings' => ['superadmin', 'owner'],
             'menu-role-files' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-backoffice-dashboard' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-author' => ['author'],
@@ -224,6 +263,14 @@ class AppServiceProvider extends ServiceProvider
                 'label' => $pendingEbookCount > 0 ? (string) $pendingEbookCount : null,
                 'label_color' => $pendingEbookCount > 0 ? 'warning' : null,
             ]);
+
+            $event->menu->add([
+                'key' => 'system-settings-dynamic',
+                'text' => 'System Settings',
+                'route' => 'settings.system.index',
+                'icon' => 'fas fa-sliders-h',
+                'can' => 'menu-superadmin-settings',
+            ]);
         });
 
         View::composer('*', function ($view) {
@@ -247,6 +294,8 @@ class AppServiceProvider extends ServiceProvider
                 'unreadNotificationCount',
                 $count
             );
+
+            $view->with('globalBrandName', config('app.name', 'MS ISBN Publishing'));
         });
     }
 }

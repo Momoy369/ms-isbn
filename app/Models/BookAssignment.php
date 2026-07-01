@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Services\SystemSettingService;
 
 class BookAssignment extends Model
 {
@@ -92,6 +93,18 @@ class BookAssignment extends Model
             return 'completed';
         }
 
+        $warningHours = 24;
+
+        try {
+            $warningHours = (int) app(SystemSettingService::class)->get('workflow.assignment_warning_hours', 24);
+        } catch (\Throwable $e) {
+            $warningHours = 24;
+        }
+
+        if ($warningHours < 1) {
+            $warningHours = 1;
+        }
+
         if (
             now()->gt(
                 $this->deadline_at
@@ -104,7 +117,7 @@ class BookAssignment extends Model
             now()->diffInHours(
                 $this->deadline_at,
                 false
-            ) <= 24
+            ) <= $warningHours
         ) {
             return 'warning';
         }

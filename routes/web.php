@@ -51,6 +51,7 @@ use App\Http\Controllers\AdminAuthorUpgradeRequestController;
 use App\Http\Controllers\PersonalBoardController;
 use App\Http\Controllers\ManuscriptPageCounterController;
 use App\Http\Controllers\DashboardAssistantController;
+use App\Http\Controllers\SystemSettingController;
 
 Route::get('/', function () {
 
@@ -92,6 +93,9 @@ Route::get('/store/track', [StorefrontController::class, 'trackForm'])
 Route::post('/store/track', [StorefrontController::class, 'trackLookup'])
     ->name('store.track.lookup');
 
+Route::post('/store/track/verify', [StorefrontController::class, 'trackVerify'])
+    ->name('store.track.verify');
+
 Route::get('/store/track/{orderNumber}', [StorefrontController::class, 'trackShow'])
     ->name('store.track.show');
 
@@ -123,6 +127,17 @@ Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'call
     ->name('payments.ipaymu.callback');
 
 Route::middleware('auth')->group(function () {
+
+    Route::middleware('role:superadmin,owner')->group(function () {
+        Route::get('/settings/system', [SystemSettingController::class, 'index'])
+            ->name('settings.system.index');
+
+        Route::get('/settings/system/audit-export', [SystemSettingController::class, 'exportAuditCsv'])
+            ->name('settings.system.audit.export');
+
+        Route::put('/settings/system', [SystemSettingController::class, 'update'])
+            ->name('settings.system.update');
+    });
 
     Route::get('/assistant', [DashboardAssistantController::class, 'index'])
         ->name('assistant.index');

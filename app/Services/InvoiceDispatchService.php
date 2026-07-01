@@ -40,7 +40,9 @@ class InvoiceDispatchService
 
     private function sendEmail(?string $email, string $title, string $message): void
     {
-        if (!$email || !(bool) config('services.reminder.email_enabled', false)) {
+        $settings = app(SystemSettingService::class);
+
+        if (!$email || !$settings->getBool('reminder.email_enabled', (bool) config('services.reminder.email_enabled', false))) {
             return;
         }
 
@@ -58,11 +60,13 @@ class InvoiceDispatchService
 
     private function sendWhatsapp(?string $phone, string $message): void
     {
-        if (!$phone || !(bool) config('services.reminder.whatsapp_enabled', false)) {
+        $settings = app(SystemSettingService::class);
+
+        if (!$phone || !$settings->getBool('reminder.whatsapp_enabled', (bool) config('services.reminder.whatsapp_enabled', false))) {
             return;
         }
 
-        $url = (string) config('services.reminder.whatsapp_webhook_url', '');
+        $url = (string) $settings->get('reminder.whatsapp_webhook_url', config('services.reminder.whatsapp_webhook_url', ''));
         if ($url === '') {
             Log::info('WhatsApp dispatch dilewati, webhook belum disetel.', ['phone' => $phone]);
             return;
@@ -83,11 +87,13 @@ class InvoiceDispatchService
 
     private function sendSms(?string $phone, string $message): void
     {
-        if (!$phone || !(bool) config('services.reminder.sms_enabled', false)) {
+        $settings = app(SystemSettingService::class);
+
+        if (!$phone || !$settings->getBool('reminder.sms_enabled', (bool) config('services.reminder.sms_enabled', false))) {
             return;
         }
 
-        $url = (string) config('services.reminder.sms_webhook_url', '');
+        $url = (string) $settings->get('reminder.sms_webhook_url', config('services.reminder.sms_webhook_url', ''));
         if ($url === '') {
             Log::info('SMS dispatch dilewati, webhook belum disetel.', ['phone' => $phone]);
             return;

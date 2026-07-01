@@ -15,8 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
 
             'role' =>
-                \App\Http\Middleware\RoleMiddleware::class
+                \App\Http\Middleware\RoleMiddleware::class,
+            'license' =>
+                \App\Http\Middleware\EnsureLicenseIsValid::class,
 
+        ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureLicenseIsValid::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

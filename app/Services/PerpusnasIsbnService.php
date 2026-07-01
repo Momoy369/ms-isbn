@@ -91,6 +91,7 @@ class PerpusnasIsbnService
     private function postJson(string $path, array $payload): array
     {
         $creds = $this->credentials();
+        $settings = app(SystemSettingService::class);
         $body = array_merge($payload, [
             'token' => $creds['token'],
             'username' => $creds['username'],
@@ -100,9 +101,9 @@ class PerpusnasIsbnService
         try {
             $response = Http::timeout(20)
                 ->withOptions([
-                    'verify' => (bool) config('services.perpusnas.verify_ssl', true),
+                    'verify' => $settings->getBool('integrations.perpusnas_verify_ssl', (bool) config('services.perpusnas.verify_ssl', true)),
                 ])
-                ->post(rtrim((string) config('services.perpusnas.base_url'), '/') . $path, $body);
+                ->post(rtrim((string) $settings->get('integrations.perpusnas_base_url', config('services.perpusnas.base_url')), '/') . $path, $body);
 
             $json = $response->json();
             $isSuccessStatus = strtolower((string) data_get($json, 'status')) === 'success';
@@ -189,9 +190,10 @@ class PerpusnasIsbnService
 
     private function credentials(): array
     {
-        $token = (string) config('services.perpusnas.token', '');
-        $username = (string) config('services.perpusnas.username', '');
-        $password = (string) config('services.perpusnas.password', '');
+        $settings = app(SystemSettingService::class);
+        $token = (string) $settings->get('integrations.perpusnas_token', config('services.perpusnas.token', ''));
+        $username = (string) $settings->get('integrations.perpusnas_username', config('services.perpusnas.username', ''));
+        $password = (string) $settings->get('integrations.perpusnas_password', config('services.perpusnas.password', ''));
 
         return [
             'token' => $token,

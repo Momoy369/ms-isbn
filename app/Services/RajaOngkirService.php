@@ -10,7 +10,9 @@ class RajaOngkirService
 {
     public function provincesWithMeta(): array
     {
-        $apiKey = (string) config('services.rajaongkir.key');
+        $settings = app(SystemSettingService::class);
+        $apiKey = (string) $settings->get('shipping.rajaongkir_api_key', config('services.rajaongkir.key'));
+        $verifySsl = $settings->getBool('shipping.rajaongkir_verify_ssl', (bool) config('services.rajaongkir.verify_ssl', true));
 
         if (empty($apiKey)) {
             return [
@@ -23,7 +25,7 @@ class RajaOngkirService
         try {
             $response = Http::timeout(20)
                 ->withOptions([
-                    'verify' => config('services.rajaongkir.verify_ssl', true),
+                    'verify' => $verifySsl,
                 ])
                 ->withHeaders(['key' => $apiKey])
                 ->get('https://api.rajaongkir.com/starter/province');
@@ -61,7 +63,9 @@ class RajaOngkirService
 
     public function citiesWithMeta(string $provinceId): array
     {
-        $apiKey = (string) config('services.rajaongkir.key');
+        $settings = app(SystemSettingService::class);
+        $apiKey = (string) $settings->get('shipping.rajaongkir_api_key', config('services.rajaongkir.key'));
+        $verifySsl = $settings->getBool('shipping.rajaongkir_verify_ssl', (bool) config('services.rajaongkir.verify_ssl', true));
 
         if (empty($apiKey)) {
             return [
@@ -74,7 +78,7 @@ class RajaOngkirService
         try {
             $response = Http::timeout(20)
                 ->withOptions([
-                    'verify' => config('services.rajaongkir.verify_ssl', true),
+                    'verify' => $verifySsl,
                 ])
                 ->withHeaders(['key' => $apiKey])
                 ->get('https://api.rajaongkir.com/starter/city', [
@@ -115,8 +119,10 @@ class RajaOngkirService
 
     public function estimateCost(string $destinationCityId, int $weightGram, string $courier = 'jne'): array
     {
-        $apiKey = (string) config('services.rajaongkir.key');
-        $originCityId = (string) config('services.rajaongkir.origin_city_id', '501');
+        $settings = app(SystemSettingService::class);
+        $apiKey = (string) $settings->get('shipping.rajaongkir_api_key', config('services.rajaongkir.key'));
+        $originCityId = (string) $settings->get('shipping.rajaongkir_origin_city_id', config('services.rajaongkir.origin_city_id', '501'));
+        $verifySsl = $settings->getBool('shipping.rajaongkir_verify_ssl', (bool) config('services.rajaongkir.verify_ssl', true));
 
         if (empty($apiKey)) {
             $dummyCost = 12000 + (int) ceil($weightGram / 1000) * 3500;
@@ -133,7 +139,7 @@ class RajaOngkirService
         try {
             $response = Http::timeout(20)
                 ->withOptions([
-                    'verify' => config('services.rajaongkir.verify_ssl', true),
+                    'verify' => $verifySsl,
                 ])
                 ->withHeaders([
                     'key' => $apiKey,
