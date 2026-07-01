@@ -61,6 +61,19 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Export CSV berdasarkan filter aktif untuk kebutuhan monitoring dan handover.
 - Shortcut sidebar dinamis ke Dashboard Operasional dengan badge jumlah antrean aktif.
 
+### 4.1 Papan Pribadi Internal (Mirip Trello)
+
+- Papan kerja otomatis untuk role internal: `admin`, `editor`, `layouter`, `designer`, `isbn`, `owner`, `finance`, `superadmin`.
+- Tidak tersedia untuk `author` dan `customer`.
+- Memiliki 3 kolom kanban: `To Do`, `Scheduled`, `Done`.
+- Kartu digenerate otomatis dari workload role (contoh: assignment produksi, antrean ISBN, invoice pending, review upgrade author, lead konsultasi paket).
+- Setiap kartu menampilkan sumber pekerjaan dan tautan cepat ke modul asal.
+- User internal tetap bisa menambah kartu manual pribadi (judul/catatan/prioritas/due date).
+- Kartu manual dapat diedit, dipindah kolom, dan diarsip oleh pemilik kartu.
+- Kartu otomatis bersifat read-only dari sisi user dan hanya berubah jika data di modul sumber berubah.
+- Tersedia filter cepat papan pribadi berdasarkan prioritas dan due date (`overdue`, `hari ini`, `7 hari ke depan`, `tanpa due date`).
+- Data tetap private per akun sesuai role user yang login.
+
 ### 12. Layout Generator dan Optimasi Kesiapan
 
 - Filter kesiapan layout diterapkan di level query database (bukan post-processing halaman) agar pagination akurat.

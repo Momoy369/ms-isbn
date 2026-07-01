@@ -48,6 +48,7 @@ use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\CustomerEbookLibraryController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\AdminAuthorUpgradeRequestController;
+use App\Http\Controllers\PersonalBoardController;
 
 Route::get('/', function () {
 
@@ -185,6 +186,21 @@ Route::middleware('auth')->group(function () {
     Route::middleware([
         'role:admin,editor,layouter,designer,isbn,owner,finance,superadmin'
     ])->group(function () {
+
+        Route::get('/personal-board', [PersonalBoardController::class, 'index'])
+            ->name('personal-board.index');
+
+        Route::post('/personal-board', [PersonalBoardController::class, 'store'])
+            ->name('personal-board.store');
+
+        Route::put('/personal-board/{card}', [PersonalBoardController::class, 'update'])
+            ->name('personal-board.update');
+
+        Route::post('/personal-board/{card}/move', [PersonalBoardController::class, 'move'])
+            ->name('personal-board.move');
+
+        Route::delete('/personal-board/{card}', [PersonalBoardController::class, 'destroy'])
+            ->name('personal-board.destroy');
 
         Route::get(
             '/layout-generator',

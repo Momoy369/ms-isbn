@@ -50,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
             'menu-production' => ['admin', 'editor', 'layouter', 'designer', 'owner', 'superadmin'],
             'menu-assignment-all' => ['admin', 'owner', 'finance', 'superadmin'],
             'menu-assignment-worker' => ['admin', 'editor', 'layouter', 'designer', 'owner', 'superadmin'],
+            'menu-personal-board' => ['admin', 'editor', 'layouter', 'designer', 'isbn', 'owner', 'finance', 'superadmin'],
             'menu-isbn' => ['admin', 'isbn', 'owner', 'superadmin'],
             'menu-user-management' => ['admin', 'isbn', 'superadmin'],
             'menu-finance' => ['admin', 'owner', 'finance', 'superadmin'],

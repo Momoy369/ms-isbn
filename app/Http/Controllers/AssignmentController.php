@@ -11,8 +11,16 @@ class AssignmentController extends Controller
     {
         $assignments =
             BookAssignment::with(
-                'book'
+                'book.publishingPackage'
             )
+                ->where(function ($query) {
+                    $query->where('role', '!=', 'editor')
+                        ->orWhereHas('book', function ($bookQuery) {
+                            $bookQuery->whereHas('publishingPackage', function ($packageQuery) {
+                                $packageQuery->where('includes_editing', true);
+                            })->orWhereNull('publishing_package_id');
+                        });
+                })
                 ->latest()
                 ->get();
 
@@ -231,57 +239,35 @@ class AssignmentController extends Controller
     {
         $userId = auth()->id();
 
-        $assignments =
-            BookAssignment::with('book')
+        $baseQuery = BookAssignment::query()
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->where('role', '!=', 'editor')
+                    ->orWhereHas('book', function ($bookQuery) {
+                        $bookQuery->whereHas('publishingPackage', function ($packageQuery) {
+                            $packageQuery->where('includes_editing', true);
+                        })->orWhereNull('publishing_package_id');
+                    });
+            });
 
-                ->where(
-                    'user_id',
-                    $userId
-                )
+        $assignments = (clone $baseQuery)
+            ->with('book.publishingPackage')
+            ->latest()
+            ->get();
 
-                ->latest()
+        $activeAssignments = (clone $baseQuery)
+            ->whereNull('completed_at')
+            ->count();
 
-                ->get();
+        $overdueAssignments = (clone $baseQuery)
+            ->whereNull('completed_at')
+            ->where('deadline_at', '<', now())
+            ->count();
 
-        $activeAssignments =
-            BookAssignment::where(
-                'user_id',
-                $userId
-            )
-                ->whereNull(
-                    'completed_at'
-                )
-                ->count();
-
-        $overdueAssignments =
-            BookAssignment::where(
-                'user_id',
-                $userId
-            )
-                ->whereNull(
-                    'completed_at'
-                )
-                ->where(
-                    'deadline_at',
-                    '<',
-                    now()
-                )
-                ->count();
-
-        $completedThisMonth =
-            BookAssignment::where(
-                'user_id',
-                $userId
-            )
-                ->whereMonth(
-                    'completed_at',
-                    now()->month
-                )
-                ->whereYear(
-                    'completed_at',
-                    now()->year
-                )
-                ->count();
+        $completedThisMonth = (clone $baseQuery)
+            ->whereMonth('completed_at', now()->month)
+            ->whereYear('completed_at', now()->year)
+            ->count();
 
         return view(
 

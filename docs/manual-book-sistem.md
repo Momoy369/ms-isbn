@@ -54,8 +54,6 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 
 - Melihat dashboard customer.
 - Melacak order dan invoice store.
-- Mengajukan upgrade menjadi author.
-- Mengakses storefront publik.
 
 ## 3. Alur Umum Penggunaan
 
@@ -71,25 +69,18 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 
 - Masuk ke dashboard internal.
 - Cek dashboard operasional, review upgrade author, storefront catalog, dan order store.
-- Gunakan ekspor CSV untuk handover atau laporan.
-
-### Author
 
 - Masuk ke dashboard author.
 - Gunakan grup menu "Storefront & Customer" untuk pindah ke dashboard customer, riwayat order, atau storefront.
-- Cek royalti, invoice, dan claim buku.
 
 ### Customer / Reader
 
 - Masuk ke dashboard customer.
-- Cek order, invoice, status pembayaran, dan riwayat.
-- Gunakan storefront untuk melihat katalog dan melacak pesanan.
 
 ### Tim Produksi
 
 - Buka dashboard operasional atau workspace masing-masing role.
 - Periksa assignment, revisi, dan file final.
-- Selesaikan tugas lalu update status.
 
 ### Finance / ISBN / Owner
 
@@ -382,7 +373,40 @@ Whitelist tambahan per file:
 - Refund yang disetujui akan mengembalikan stok print jika order memang berupa pembelian print.
 - Fitur ini adalah alur refund operasional internal, bukan integrasi otomatis ke payment gateway.
 
-### 4.8 Storefront Order Tracking
+### 4.8 Papan Pribadi Internal (Board Kerja Otomatis)
+
+#### Kegunaan
+
+- Menampilkan workload aktual per role dalam bentuk board kanban sederhana.
+- Mengurangi pekerjaan yang terlewat karena tugas diambil langsung dari modul operasional.
+- Menyediakan prioritisasi cepat berbasis due date dan urgensi status.
+- Tetap memberi ruang catatan/planning manual personal untuk kebutuhan non-transaksional.
+
+#### Siapa yang Bisa Mengakses
+
+- Role internal: `admin`, `editor`, `layouter`, `designer`, `isbn`, `owner`, `finance`, `superadmin`.
+- Role `author` dan `customer` tidak memiliki akses fitur ini.
+
+#### Cara Pakai
+
+1. Buka menu `Papan Pribadi` dari sidebar.
+2. Sistem otomatis memuat kartu sesuai role user dari sumber data kerja terkait:
+    - Assignment produksi (editor/layouter/designer).
+    - Antrean ISBN (role ISBN dan role pengawas internal).
+    - Invoice pending dan lead konsultasi paket (finance dan role pengawas internal).
+    - Review upgrade author (admin/isbn/superadmin).
+3. Jika perlu, tambahkan kartu manual pribadi (judul/catatan/prioritas/due date) untuk agenda pribadi.
+4. Gunakan filter cepat untuk menyaring semua kartu berdasarkan prioritas dan due date (`Overdue`, `Hari Ini`, `7 Hari ke Depan`, `Tanpa Due Date`).
+5. Untuk kartu manual, Anda bisa edit, pindah kolom, atau arsip sesuai kebutuhan.
+6. Klik tombol sumber pada kartu otomatis untuk membuka modul asal dan memproses pekerjaan.
+
+#### Catatan Penting
+
+- Board bersifat hybrid: kartu sistem read-only, kartu manual bisa dikelola oleh pemiliknya.
+- Kartu bersifat private per akun sesuai role login, bukan board kolaboratif antar user.
+- Perubahan status kartu mengikuti perubahan data pada modul asal, bukan diubah langsung dari board.
+
+### 4.9 Storefront Order Tracking
 
 #### Kegunaan
 
@@ -396,7 +420,7 @@ Whitelist tambahan per file:
 3. Buka detail hasil tracking.
 4. Jika status belum lunas, lanjutkan pembayaran dari gateway yang tersedia.
 
-### 4.9 Customer Dashboard
+### 4.10 Customer Dashboard
 
 #### Kegunaan
 
@@ -423,7 +447,7 @@ Whitelist tambahan per file:
 
 - Jika login dari storefront sebagai staff, sistem tetap mengarahkan ke panel internal.
 
-### 4.10 Customer Order & Invoice Store
+### 4.11 Customer Order & Invoice Store
 
 #### Kegunaan
 
@@ -437,7 +461,7 @@ Whitelist tambahan per file:
 3. Buka detail order untuk melihat invoice dan pengiriman.
 4. Lanjutkan pembayaran jika order masih pending/confirmed.
 
-### 4.11 Author Dashboard
+### 4.12 Author Dashboard
 
 #### Kegunaan
 
@@ -463,7 +487,7 @@ Whitelist tambahan per file:
 
 - Jika dashboard customer 403, pastikan role author tetap memiliki hak akses customer.
 
-### 4.12 Upgrade Customer/Reader ke Author
+### 4.13 Upgrade Customer/Reader ke Author
 
 #### Kegunaan
 
@@ -484,7 +508,7 @@ Whitelist tambahan per file:
 - Approved: disetujui, role berubah ke author.
 - Rejected: ditolak dengan catatan reviewer.
 
-### 4.13 Review Upgrade Author (Admin)
+### 4.14 Review Upgrade Author (Admin)
 
 #### Kegunaan
 
@@ -513,7 +537,7 @@ Whitelist tambahan per file:
 
 - Jika lampiran tidak tersedia, cek storage public dan path file pada request.
 
-### 4.14 Paket Penerbitan
+### 4.15 Paket Penerbitan
 
 #### Kegunaan
 
@@ -539,7 +563,7 @@ Whitelist tambahan per file:
 
 - Paket yang tampil di storefront dipilih dari paket yang aktif/tersedia di sistem.
 
-### 4.15 Finance, Invoice, dan Pembayaran Author
+### 4.16 Finance, Invoice, dan Pembayaran Author
 
 #### Kegunaan
 
@@ -553,7 +577,7 @@ Whitelist tambahan per file:
 3. Upload bukti bayar jika diperlukan.
 4. Gunakan callback/payment gateway untuk pembaruan status otomatis.
 
-### 4.16 Royalty System
+### 4.17 Royalty System
 
 #### Kegunaan
 
@@ -568,7 +592,7 @@ Whitelist tambahan per file:
 4. Ajukan payout jika saldo mencukupi.
 5. Finance/owner memproses approve, pay, atau reject.
 
-### 4.17 Legacy Catalog dan External Sales
+### 4.18 Legacy Catalog dan External Sales
 
 #### Kegunaan
 
@@ -581,7 +605,7 @@ Whitelist tambahan per file:
 2. Isi data buku, format, nilai penjualan, dan rate royalti.
 3. Simpan untuk kebutuhan laporan dan royalti.
 
-### 4.18 Branding dan Navigasi
+### 4.19 Branding dan Navigasi
 
 #### Kegunaan
 

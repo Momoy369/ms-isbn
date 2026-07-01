@@ -367,6 +367,12 @@ return [
                     'can' => 'menu-assignment-worker',
                 ],
                 [
+                    'text' => 'Papan Pribadi',
+                    'route' => 'personal-board.index',
+                    'icon' => 'fas fa-columns',
+                    'can' => 'menu-personal-board',
+                ],
+                [
                     'text' => 'Production',
                     'url' => 'production',
                     'icon' => 'fas fa-industry',

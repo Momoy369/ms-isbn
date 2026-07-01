@@ -311,33 +311,63 @@ class Book extends Model
 
     public function syncAssignments()
     {
-        $this->syncAssignmentRole(
-            'editor',
-            $this->editor,
-            3
-        );
+        $package = $this->relationLoaded('publishingPackage')
+            ? $this->publishingPackage
+            : $this->publishingPackage()->first();
+
+        $includesEditing = !$package || (bool) $package->includes_editing;
+
+        if ($includesEditing) {
+            $this->syncAssignmentRole(
+                'editor',
+                $this->editor
+            );
+        } else {
+            // Paket non-editing: assignment editor aktif tidak relevan untuk antrean operasional.
+            $this->assignments()
+                ->where('role', 'editor')
+                ->whereNull('completed_at')
+                ->delete();
+        }
 
         $this->syncAssignmentRole(
             'layouter',
-            $this->layouter,
-            2
+            $this->layouter
         );
 
         $this->syncAssignmentRole(
             'designer',
-            $this->designer,
-            2
+            $this->designer
+        );
+    }
+
+    public function productionSlaStartAt()
+    {
+        return ($this->created_at ?? now())->copy();
+    }
+
+    public function productionSlaDeadlineAt()
+    {
+        return $this->productionSlaStartAt()->addMonthNoOverflow();
+    }
+
+    public function productionSlaDays(): int
+    {
+        return (int) $this->productionSlaStartAt()->diffInDays(
+            $this->productionSlaDeadlineAt()
         );
     }
 
     private function syncAssignmentRole(
         string $role,
-        ?string $personName,
-        int $slaDays
+        ?string $personName
     ) {
         if (!$personName) {
             return;
         }
+
+        $slaDays = $this->productionSlaDays();
+        $deadlineAt = $this->productionSlaDeadlineAt();
 
         $user = User::where(
             'name',
@@ -373,9 +403,7 @@ class Book extends Model
                         $slaDays,
 
                     'deadline_at' =>
-                        now()->addDays(
-                            $slaDays
-                        )
+                        $deadlineAt
 
                 ]);
 
@@ -427,7 +455,13 @@ class Book extends Model
                 $user?->id,
 
             'person_name' =>
-                $personName
+                $personName,
+
+            'sla_days' =>
+                $slaDays,
+
+            'deadline_at' =>
+                $deadlineAt
 
         ]);
     }
