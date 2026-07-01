@@ -176,6 +176,58 @@
         </div>
     </div>
 
+    <div class="card card-outline card-warning shadow-sm mb-3">
+        <div class="card-header">
+            <h3 class="card-title font-weight-bold mb-0">
+                <i class="fas fa-bell mr-2"></i>Alert SLA Operasional
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center mb-2">
+                <span class="badge badge-warning mr-2">Attention (4-7 hari):
+                    {{ $operationsSlaData['summary']['attention'] }}</span>
+                <span class="badge badge-danger mr-2">Critical (>7 hari):
+                    {{ $operationsSlaData['summary']['critical'] }}</span>
+                <span class="badge badge-dark">Total Risiko: {{ $operationsSlaData['summary']['total_risk'] }}</span>
+            </div>
+
+            @if (count($operationsSlaData['by_status']) > 0)
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th class="text-center">Threshold</th>
+                                <th class="text-center">Attention</th>
+                                <th class="text-center">Critical</th>
+                                <th class="text-center">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($operationsSlaData['by_status'] as $slaRow)
+                                <tr>
+                                    <td>{{ $slaRow['label'] }}</td>
+                                    <td class="text-center text-muted">
+                                        A: {{ $slaRow['attention_days'] }}h / C: {{ $slaRow['critical_days'] }}h
+                                    </td>
+                                    <td class="text-center"><span
+                                            class="badge badge-warning">{{ $slaRow['attention'] }}</span></td>
+                                    <td class="text-center"><span
+                                            class="badge badge-danger">{{ $slaRow['critical'] }}</span></td>
+                                    <td class="text-center"><span class="badge badge-dark">{{ $slaRow['total'] }}</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-muted">Belum ada antrean operasional yang masuk zona risiko SLA untuk filter saat ini.
+                </div>
+            @endif
+        </div>
+    </div>
+
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card card-outline card-primary shadow-sm">
@@ -363,202 +415,222 @@
         </div>
     </div>
 
-    {{-- SUMMARY WIDGETS --}}
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-info shadow-sm">
-                <div class="inner">
-                    <h3>{{ $totalBooks }}</h3>
-                    <p>Total Buku</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-book"></i>
-                </div>
-            </div>
+    <div class="card card-outline card-light shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title font-weight-bold mb-0">
+                <i class="fas fa-layer-group mr-2"></i>Monitoring Produksi Internal (Legacy)
+            </h3>
+            <button class="btn btn-tool" type="button" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+            </button>
         </div>
+        <div class="card-body" style="display: none;">
 
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-danger shadow-sm">
-                <div class="inner">
-                    <h3>{{ $overdueAssignments }}</h3>
-                    <p>Assignment Terlambat</p>
+            {{-- SUMMARY WIDGETS --}}
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info shadow-sm">
+                        <div class="inner">
+                            <h3>{{ $totalBooks }}</h3>
+                            <p>Total Buku</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-exclamation-circle"></i>
+
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger shadow-sm">
+                        <div class="inner">
+                            <h3>{{ $overdueAssignments }}</h3>
+                            <p>Assignment Terlambat</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning shadow-sm">
+                        <div class="inner">
+                            <h3>{{ $warningAssignments }}</h3>
+                            <p>Deadline &le; 1 Hari</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-secondary shadow-sm">
+                        <div class="inner">
+                            <h3>{{ $editingOverdue }}</h3>
+                            <p>Editing Terlambat</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-primary shadow-sm">
+                        <div class="inner">
+                            <h3>{{ $layoutOverdue }}</h3>
+                            <p>Layout Terlambat</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-warning shadow-sm">
-                <div class="inner">
-                    <h3>{{ $warningAssignments }}</h3>
-                    <p>Deadline &le; 1 Hari</p>
+            {{-- QUEUE TABLES --}}
+            <div class="row">
+                {{-- Queue Editing --}}
+                <div class="col-md-12">
+                    <div class="card card-outline card-warning shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold"><i class="fas fa-edit mr-2 text-warning"></i>Queue
+                                Editing
+                            </h3>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover table-striped text-nowrap m-0">
+                                <thead>
+                                    <tr>
+                                        <th>Naskah</th>
+                                        <th>Editor</th>
+                                        <th>Deadline</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($editingQueue as $item)
+                                        <tr>
+                                            <td>{{ $item->book->judul }}</td>
+                                            <td>{{ $item->person_name }}</td>
+                                            <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
+                                            <td class="text-center">
+                                                @if ($item->getWarningLevel() == 'overdue')
+                                                    <span class="badge badge-danger">Terlambat</span>
+                                                @elseif($item->getWarningLevel() == 'warning')
+                                                    <span class="badge badge-warning">Deadline < 1 Hari</span>
+                                                        @else
+                                                            <span class="badge badge-success">Aman</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian
+                                                editing</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-clock"></i>
+
+                {{-- Queue Layout --}}
+                <div class="col-md-12">
+                    <div class="card card-outline card-primary shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold"><i
+                                    class="fas fa-layer-group mr-2 text-primary"></i>Queue
+                                Layout
+                            </h3>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover table-striped text-nowrap m-0">
+                                <thead>
+                                    <tr>
+                                        <th>Naskah</th>
+                                        <th>Layouter</th>
+                                        <th>Deadline</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($layoutQueue as $item)
+                                        <tr>
+                                            <td>{{ $item->book->judul }}</td>
+                                            <td>{{ $item->person_name }}</td>
+                                            <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
+                                            <td class="text-center">
+                                                @if ($item->getWarningLevel() == 'overdue')
+                                                    <span class="badge badge-danger">Terlambat</span>
+                                                @elseif($item->getWarningLevel() == 'warning')
+                                                    <span class="badge badge-warning">Deadline < 1 Hari</span>
+                                                        @else
+                                                            <span class="badge badge-success">Aman</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian
+                                                layout</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Queue Cover Design --}}
+                <div class="col-md-12">
+                    <div class="card card-outline card-info shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold"><i class="fas fa-paint-brush mr-2 text-info"></i>Queue
+                                Cover
+                                Design</h3>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover table-striped text-nowrap m-0">
+                                <thead>
+                                    <tr>
+                                        <th>Naskah</th>
+                                        <th>Desainer</th>
+                                        <th>Deadline</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($coverQueue as $item)
+                                        <tr>
+                                            <td>{{ $item->book->judul }}</td>
+                                            <td>{{ $item->person_name }}</td>
+                                            <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
+                                            <td class="text-center">
+                                                @if ($item->getWarningLevel() == 'overdue')
+                                                    <span class="badge badge-danger">Terlambat</span>
+                                                @elseif($item->getWarningLevel() == 'warning')
+                                                    <span class="badge badge-warning">Deadline < 1 Hari</span>
+                                                        @else
+                                                            <span class="badge badge-success">Aman</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian
+                                                sampul</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-secondary shadow-sm">
-                <div class="inner">
-                    <h3>{{ $editingOverdue }}</h3>
-                    <p>Editing Terlambat</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-edit"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-primary shadow-sm">
-                <div class="inner">
-                    <h3>{{ $layoutOverdue }}</h3>
-                    <p>Layout Terlambat</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-layer-group"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- QUEUE TABLES --}}
-    <div class="row">
-        {{-- Queue Editing --}}
-        <div class="col-md-12">
-            <div class="card card-outline card-warning shadow-sm">
-                <div class="card-header">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-edit mr-2 text-warning"></i>Queue Editing
-                    </h3>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover table-striped text-nowrap m-0">
-                        <thead>
-                            <tr>
-                                <th>Naskah</th>
-                                <th>Editor</th>
-                                <th>Deadline</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($editingQueue as $item)
-                                <tr>
-                                    <td>{{ $item->book->judul }}</td>
-                                    <td>{{ $item->person_name }}</td>
-                                    <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
-                                    <td class="text-center">
-                                        @if ($item->getWarningLevel() == 'overdue')
-                                            <span class="badge badge-danger">Terlambat</span>
-                                        @elseif($item->getWarningLevel() == 'warning')
-                                            <span class="badge badge-warning">Deadline < 1 Hari</span>
-                                                @else
-                                                    <span class="badge badge-success">Aman</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian editing</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        {{-- Queue Layout --}}
-        <div class="col-md-12">
-            <div class="card card-outline card-primary shadow-sm">
-                <div class="card-header">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-layer-group mr-2 text-primary"></i>Queue
-                        Layout
-                    </h3>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover table-striped text-nowrap m-0">
-                        <thead>
-                            <tr>
-                                <th>Naskah</th>
-                                <th>Layouter</th>
-                                <th>Deadline</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($layoutQueue as $item)
-                                <tr>
-                                    <td>{{ $item->book->judul }}</td>
-                                    <td>{{ $item->person_name }}</td>
-                                    <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
-                                    <td class="text-center">
-                                        @if ($item->getWarningLevel() == 'overdue')
-                                            <span class="badge badge-danger">Terlambat</span>
-                                        @elseif($item->getWarningLevel() == 'warning')
-                                            <span class="badge badge-warning">Deadline < 1 Hari</span>
-                                                @else
-                                                    <span class="badge badge-success">Aman</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian layout</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        {{-- Queue Cover Design --}}
-        <div class="col-md-12">
-            <div class="card card-outline card-info shadow-sm">
-                <div class="card-header">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-paint-brush mr-2 text-info"></i>Queue Cover
-                        Design</h3>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover table-striped text-nowrap m-0">
-                        <thead>
-                            <tr>
-                                <th>Naskah</th>
-                                <th>Desainer</th>
-                                <th>Deadline</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($coverQueue as $item)
-                                <tr>
-                                    <td>{{ $item->book->judul }}</td>
-                                    <td>{{ $item->person_name }}</td>
-                                    <td>{{ optional($item->deadline_at)->format('d M Y') }}</td>
-                                    <td class="text-center">
-                                        @if ($item->getWarningLevel() == 'overdue')
-                                            <span class="badge badge-danger">Terlambat</span>
-                                        @elseif($item->getWarningLevel() == 'warning')
-                                            <span class="badge badge-warning">Deadline < 1 Hari</span>
-                                                @else
-                                                    <span class="badge badge-success">Aman</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Tidak ada antrian sampul</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 

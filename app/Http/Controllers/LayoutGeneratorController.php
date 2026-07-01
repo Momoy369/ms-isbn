@@ -23,12 +23,13 @@ class LayoutGeneratorController extends Controller
     {
         $query = Book::query()
             ->with([
-                'sectionsGenerator:id,book_id,section_type,content,sort_order,title',
+                'sectionsGenerator:id,book_id,section_type,sort_order,title',
                 'files' => fn($fileQuery) => $fileQuery
                     ->select('id', 'book_id', 'type', 'is_active')
                     ->where('type', 'cover')
                     ->where('is_active', true),
-            ]);
+            ])
+            ->withCount('sectionsGenerator');
 
         $search = trim((string) $request->input('q', ''));
         $bookType = (string) $request->input('book_type', '');
@@ -46,8 +47,11 @@ class LayoutGeneratorController extends Controller
             $query->where('book_type', $bookType);
         }
 
+        $this->applyReadinessFilter($query, $readiness);
+
         $books = $query
             ->latest()
+            ->withQueryString()
             ->paginate(20);
 
         $books->getCollection()->transform(function (Book $book) {
@@ -58,16 +62,6 @@ class LayoutGeneratorController extends Controller
 
             return $book;
         });
-
-        if ($readiness !== '') {
-            $filtered = $books->getCollection()->filter(function (Book $book) use ($readiness): bool {
-                return $readiness === 'ready'
-                    ? (bool) $book->getAttribute('layout_ready')
-                    : !(bool) $book->getAttribute('layout_ready');
-            })->values();
-
-            $books->setCollection($filtered);
-        }
 
         $summary = [
             'listed' => $books->count(),
@@ -728,6 +722,61 @@ class LayoutGeneratorController extends Controller
                     $item->update(['sort_order' => $targetOrder]);
                 }
             });
+    }
+
+    private function applyReadinessFilter($query, string $readiness): void
+    {
+        if ($readiness === '') {
+            return;
+        }
+
+        if ($readiness === 'ready') {
+            $query
+                ->whereNotNull('judul')
+                ->where('judul', '<>', '')
+                ->whereNotNull('penulis_1')
+                ->where('penulis_1', '<>', '')
+                ->whereNotNull('isbn')
+                ->where('isbn', '<>', '')
+                ->whereHas('files', function ($fileQuery): void {
+                    $fileQuery->where('type', 'cover')->where('is_active', true);
+                })
+                ->whereHas('sectionsGenerator', function ($sectionsQuery): void {
+                    $sectionsQuery->where('section_type', 'preface');
+                })
+                ->whereHas('sectionsGenerator', function ($sectionsQuery): void {
+                    $sectionsQuery->whereIn('section_type', ['author', 'about_author']);
+                })
+                ->whereHas('sectionsGenerator', function ($sectionsQuery): void {
+                    $sectionsQuery->whereIn('section_type', ['chapter', 'poem']);
+                });
+
+            return;
+        }
+
+        if ($readiness === 'not_ready') {
+            $query->where(function ($readinessQuery): void {
+                $readinessQuery
+                    ->whereNull('judul')
+                    ->orWhere('judul', '')
+                    ->orWhereNull('penulis_1')
+                    ->orWhere('penulis_1', '')
+                    ->orWhereNull('isbn')
+                    ->orWhere('isbn', '')
+                    ->orWhereDoesntHave('files', function ($fileQuery): void {
+                        $fileQuery->where('type', 'cover')->where('is_active', true);
+                    })
+                    ->orWhereDoesntHave('sectionsGenerator', function ($sectionsQuery): void {
+                        $sectionsQuery->where('section_type', 'preface');
+                    })
+                    ->orWhereDoesntHave('sectionsGenerator', function ($sectionsQuery): void {
+                        $sectionsQuery->whereIn('section_type', ['author', 'about_author']);
+                    })
+                    ->orWhereDoesntHave('sectionsGenerator', function ($sectionsQuery): void {
+                        $sectionsQuery->whereIn('section_type', ['chapter', 'poem']);
+                    });
+            });
+        }
     }
 
     private function safeFileName(?string $value): string

@@ -273,6 +273,8 @@ class ProductionDashboardController extends Controller
             'adaptation_queue' => $adaptationQueueCount,
         ];
 
+        $operationsSlaData = $this->buildOperationsSlaData($operationsFilters);
+
         return view(
             'production.dashboard',
             compact(
@@ -294,6 +296,7 @@ class ProductionDashboardController extends Controller
                 'revisionQueue',
                 'adaptationQueue',
                 'operationsSummary',
+                'operationsSlaData',
                 'operationsFilters',
                 'statusOptions',
                 'slaAgeOptions',
@@ -504,5 +507,116 @@ class ProductionDashboardController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    private function buildOperationsSlaData(array $operationsFilters): array
+    {
+        $pendingStatuses = [
+            'paid',
+            'revision_requested',
+            'ebook_revision_requested',
+            'printing',
+            'processing',
+            'ebook_publishing',
+            'shipping',
+        ];
+
+        $thresholds = $this->operationsSlaThresholds();
+
+        $query = AuthorBookOrder::query()
+            ->whereIn('order_type', ['reprint', 'ebook_publication'])
+            ->whereIn('status', $pendingStatuses);
+
+        if ($operationsFilters['channel'] === 'print') {
+            $query->where('order_type', 'reprint');
+        }
+
+        if ($operationsFilters['channel'] === 'ebook') {
+            $query->where('order_type', 'ebook_publication');
+        }
+
+        $this->applyCommonOrderFilters($query, $operationsFilters);
+
+        $orders = (clone $query)
+            ->select('id', 'status', 'created_at')
+            ->get();
+
+        $summary = [
+            'attention' => 0,
+            'critical' => 0,
+            'total_risk' => 0,
+        ];
+
+        $statusBuckets = [];
+        $statusLabels = $this->statusOptions();
+
+        foreach ($orders as $order) {
+            $statusKey = (string) $order->status;
+            $statusThreshold = $thresholds[$statusKey] ?? ['attention_days' => 4, 'critical_days' => 8];
+            $ageDays = (int) Carbon::parse($order->created_at)->diffInDays(now());
+
+            if ($ageDays >= $statusThreshold['critical_days']) {
+                $summary['critical']++;
+                $summary['total_risk']++;
+
+                if (!isset($statusBuckets[$statusKey])) {
+                    $statusBuckets[$statusKey] = [
+                        'status' => $statusKey,
+                        'label' => $statusLabels[$statusKey] ?? ucfirst(str_replace('_', ' ', $statusKey)),
+                        'attention' => 0,
+                        'critical' => 0,
+                        'total' => 0,
+                        'attention_days' => $statusThreshold['attention_days'],
+                        'critical_days' => $statusThreshold['critical_days'],
+                    ];
+                }
+
+                $statusBuckets[$statusKey]['critical']++;
+                $statusBuckets[$statusKey]['total']++;
+                continue;
+            }
+
+            if ($ageDays >= $statusThreshold['attention_days']) {
+                $summary['attention']++;
+                $summary['total_risk']++;
+
+                if (!isset($statusBuckets[$statusKey])) {
+                    $statusBuckets[$statusKey] = [
+                        'status' => $statusKey,
+                        'label' => $statusLabels[$statusKey] ?? ucfirst(str_replace('_', ' ', $statusKey)),
+                        'attention' => 0,
+                        'critical' => 0,
+                        'total' => 0,
+                        'attention_days' => $statusThreshold['attention_days'],
+                        'critical_days' => $statusThreshold['critical_days'],
+                    ];
+                }
+
+                $statusBuckets[$statusKey]['attention']++;
+                $statusBuckets[$statusKey]['total']++;
+            }
+        }
+
+        $byStatus = array_values($statusBuckets);
+
+        usort($byStatus, fn($a, $b) => $b['total'] <=> $a['total']);
+
+        return [
+            'summary' => $summary,
+            'by_status' => $byStatus,
+        ];
+    }
+
+    private function operationsSlaThresholds(): array
+    {
+        return [
+            'paid' => ['attention_days' => 2, 'critical_days' => 4],
+            'revision_requested' => ['attention_days' => 3, 'critical_days' => 6],
+            'ebook_revision_requested' => ['attention_days' => 3, 'critical_days' => 6],
+            'processing' => ['attention_days' => 3, 'critical_days' => 6],
+            'printing' => ['attention_days' => 4, 'critical_days' => 8],
+            'ebook_publishing' => ['attention_days' => 4, 'critical_days' => 8],
+            'shipping' => ['attention_days' => 2, 'critical_days' => 5],
+        ];
     }
 }
