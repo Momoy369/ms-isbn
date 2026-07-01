@@ -51,6 +51,24 @@
                 <div class="icon"><i class="fas fa-check-circle"></i></div>
             </div>
         </div>
+        <div class="col-md-3">
+            <div class="small-box bg-danger mb-0">
+                <div class="inner">
+                    <h3>{{ number_format($stats['overdue']) }}</h3>
+                    <p>Overdue Follow-up</p>
+                </div>
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="small-box bg-secondary mb-0">
+                <div class="inner">
+                    <h3>{{ number_format($stats['unplanned']) }}</h3>
+                    <p>Belum Dijadwalkan</p>
+                </div>
+                <div class="icon"><i class="fas fa-calendar-times"></i></div>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -65,6 +83,11 @@
                         <option value="{{ $option }}" @selected($status === $option)>{{ strtoupper($option) }}</option>
                     @endforeach
                 </select>
+                <select name="follow_up" class="form-control form-control-sm">
+                    @foreach ($followUpOptions as $key => $label)
+                        <option value="{{ $key }}" @selected($followUp === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
                 <button class="btn btn-sm btn-outline-primary" type="submit">Filter</button>
             </form>
         </div>
@@ -77,6 +100,7 @@
                         <th>Paket & Layanan</th>
                         <th>Detail Naskah</th>
                         <th>Estimasi</th>
+                        <th>Follow-up Finance</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -130,10 +154,29 @@
                                 <strong>Rp
                                     {{ number_format((float) $consultation->estimated_total, 0, ',', '.') }}</strong>
                             </td>
-                            <td style="min-width:220px;">
+                            <td style="min-width:260px;">
+                                <div class="small">
+                                    <strong>Next Action:</strong>
+                                    @if ($consultation->next_action_at)
+                                        {{ optional($consultation->next_action_at)->format('d M Y') }}
+                                        @if (optional($consultation->next_action_at)->isPast())
+                                            <span class="badge badge-danger ml-1">Overdue</span>
+                                        @elseif (optional($consultation->next_action_at)->isToday())
+                                            <span class="badge badge-warning ml-1">Due Today</span>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Belum dijadwalkan</span>
+                                    @endif
+                                </div>
+                                @if ($consultation->finance_notes)
+                                    <div class="small text-muted mt-1"><strong>Catatan Internal:</strong>
+                                        {{ $consultation->finance_notes }}</div>
+                                @endif
+                            </td>
+                            <td style="min-width:320px;">
                                 <form method="POST"
                                     action="{{ route('finance.store.package-consultations.update-status', $consultation) }}"
-                                    class="form-inline" style="gap:.35rem;">
+                                    class="d-grid" style="gap:.35rem;">
                                     @csrf
                                     @method('PUT')
                                     <select name="status" class="form-control form-control-sm" required>
@@ -142,13 +185,17 @@
                                                 {{ strtoupper($option) }}</option>
                                         @endforeach
                                     </select>
-                                    <button class="btn btn-sm btn-primary" type="submit">Update</button>
+                                    <input type="date" name="next_action_at" class="form-control form-control-sm"
+                                        value="{{ optional($consultation->next_action_at)->format('Y-m-d') }}">
+                                    <textarea name="finance_notes" class="form-control form-control-sm" rows="2" maxlength="3000"
+                                        placeholder="Catatan internal finance (opsional)">{{ old('finance_notes', $consultation->finance_notes) }}</textarea>
+                                    <button class="btn btn-sm btn-primary" type="submit">Update Lead</button>
                                 </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-3">Belum ada lead configurator.</td>
+                            <td colspan="6" class="text-center text-muted py-3">Belum ada lead configurator.</td>
                         </tr>
                     @endforelse
                 </tbody>

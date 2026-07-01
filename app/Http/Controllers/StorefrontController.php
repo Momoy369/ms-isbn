@@ -300,8 +300,8 @@ class StorefrontController extends Controller
             ->sum();
 
         $pageSurcharge = 0;
-        if ($pageCount !== null && $pageCount > 220) {
-            $extraPages = $pageCount - 220;
+        if ($pageCount !== null && $pageCount > 125) {
+            $extraPages = $pageCount - 125;
             $pageSurcharge = $extraPages * 1500;
         }
 

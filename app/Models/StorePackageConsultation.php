@@ -22,6 +22,8 @@ class StorePackageConsultation extends Model
         'selected_services',
         'estimated_total',
         'notes',
+        'finance_notes',
+        'next_action_at',
         'status',
         'source',
     ];
@@ -29,6 +31,7 @@ class StorePackageConsultation extends Model
     protected $casts = [
         'selected_services' => 'array',
         'target_publish_date' => 'date',
+        'next_action_at' => 'date',
         'package_base_price' => 'decimal:2',
         'estimated_total' => 'decimal:2',
     ];

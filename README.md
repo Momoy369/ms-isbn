@@ -240,6 +240,7 @@ Progress terbaru:
 - ✅ Step 4 MVP selesai: configurator paket penerbitan sudah live (kalkulasi estimasi + simpan request lead konsultasi).
 - ✅ Layanan opsional configurator sekarang dinamis dari master Additional Services (tidak statis hardcoded).
 - ✅ Tahap berikutnya sudah berjalan: finance/admin bisa memantau lead configurator dan update status follow-up.
+- ✅ Follow-up finance sudah ditingkatkan: ada catatan internal dan tanggal next action per lead (dengan penanda due/overdue).
 
 ## Roadmap Sprint Mingguan
 

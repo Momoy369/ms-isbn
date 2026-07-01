@@ -370,7 +370,7 @@
                         <strong id="estimate-services">Rp 0</strong>
                     </div>
                     <div class="estimate-row">
-                        <span>Surcharge halaman > 220</span>
+                        <span>Surcharge halaman > 125</span>
                         <strong id="estimate-pages">Rp 0</strong>
                     </div>
                     <div class="estimate-row total">
@@ -382,7 +382,7 @@
                     Rumus MVP:
                     <br>1) Paket dasar sesuai pilihan.
                     <br>2) Layanan opsional dijumlahkan.
-                    <br>3) Jika halaman naskah > 220, ada surcharge Rp 1.500 per halaman ekstra.
+                    <br>3) Jika halaman naskah > 125, ada surcharge Rp 1.500 per halaman ekstra.
                 </div>
                 <div class="hint" style="margin-top:.8rem;">
                     Estimasi ini bukan invoice final. Nilai akhir dapat disesuaikan setelah review naskah, kompleksitas
@@ -421,8 +421,8 @@
 
             function getPageSurcharge() {
                 const pages = Number(pageCountInput?.value || 0);
-                if (!Number.isFinite(pages) || pages <= 220) return 0;
-                return (pages - 220) * 1500;
+                if (!Number.isFinite(pages) || pages <= 125) return 0;
+                return (pages - 125) * 1500;
             }
 
             function updateEstimate() {
