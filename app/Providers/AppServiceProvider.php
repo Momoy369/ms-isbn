@@ -110,6 +110,14 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             $event->menu->add([
+                'key' => 'customer-ebook-library-dynamic',
+                'text' => 'Library Ebook',
+                'route' => 'customer.ebooks.index',
+                'icon' => 'fas fa-book-open',
+                'can' => 'menu-customer-dashboard',
+            ]);
+
+            $event->menu->add([
                 'key' => 'author-storefront-group-dynamic',
                 'text' => 'Storefront & Customer',
                 'icon' => 'fas fa-store',
@@ -161,11 +169,37 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             $event->menu->add([
-                'key' => 'finance-store-vouchers-dynamic',
-                'text' => 'Voucher Storefront',
-                'route' => 'finance.store.vouchers.index',
+                'key' => 'finance-storefront-group-dynamic',
+                'text' => 'Storefront',
                 'icon' => 'fas fa-ticket-alt',
                 'can' => 'menu-finance',
+                'submenu' => [
+                    [
+                        'text' => 'Catalog Storefront',
+                        'route' => 'finance.store.catalog.index',
+                        'icon' => 'fas fa-book',
+                    ],
+                    [
+                        'text' => 'Order Storefront',
+                        'route' => 'finance.store.orders.index',
+                        'icon' => 'fas fa-clipboard-list',
+                    ],
+                    [
+                        'text' => 'Voucher Storefront',
+                        'route' => 'finance.store.vouchers.index',
+                        'icon' => 'fas fa-ticket-alt',
+                    ],
+                    [
+                        'text' => 'Export Penjualan',
+                        'route' => 'finance.export.store-sales',
+                        'icon' => 'fas fa-file-csv',
+                    ],
+                    [
+                        'text' => 'Lihat Store Publik',
+                        'route' => 'store.index',
+                        'icon' => 'fas fa-external-link-alt',
+                    ],
+                ],
             ]);
 
             $event->menu->add([

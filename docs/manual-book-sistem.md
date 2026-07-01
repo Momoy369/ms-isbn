@@ -259,6 +259,50 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 - FAQ singkat.
 - Badge format pada produk print + ebook.
 
+### Library Ebook Internal
+
+#### Kegunaan
+
+- Menampilkan daftar ebook yang sudah dibeli customer/reader.
+- Menjadi pintu masuk cepat untuk membuka reader ebook tanpa mencari order satu per satu.
+
+#### Cara Pakai
+
+1. Buka menu Library Ebook dari dashboard customer atau sidebar.
+2. Lihat daftar ebook yang statusnya sudah aktif.
+3. Masukkan password baca pada baris ebook yang ingin dibuka.
+4. Sistem akan mengarahkan ke halaman reader jika password benar.
+
+#### Catatan
+
+- Daftar ini hanya menampilkan ebook yang sudah dibayar dan memiliki akses baca.
+- Password baca tetap diperlukan untuk menjaga keamanan akses.
+
+### Refund Order Store
+
+#### Kegunaan
+
+- Memberi customer jalan untuk mengajukan refund setelah order dibayar.
+- Memberi finance alur review untuk menyetujui atau menolak permintaan refund.
+
+#### Cara Pakai
+
+1. Buka detail order di dashboard customer.
+2. Isi alasan refund dan kirim permintaan.
+3. Finance menerima notifikasi dan meninjau permintaan pada halaman order store.
+4. Finance menyetujui atau menolak refund beserta catatan.
+
+#### Status Refund
+
+- `requested`: customer mengajukan refund.
+- `approved`: finance menyetujui refund dan order dibatalkan.
+- `rejected`: finance menolak refund.
+
+#### Catatan
+
+- Refund yang disetujui akan mengembalikan stok print jika order memang berupa pembelian print.
+- Fitur ini adalah alur refund operasional internal, bukan integrasi otomatis ke payment gateway.
+
 ### 4.8 Storefront Order Tracking
 
 #### Kegunaan

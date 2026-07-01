@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoreOrder;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class CustomerOrderController extends Controller
@@ -46,5 +48,41 @@ class CustomerOrderController extends Controller
         $order->load('item');
 
         return view('customer.orders.show', compact('order'));
+    }
+
+    public function requestRefund(Request $request, StoreOrder $order, NotificationService $notifications)
+    {
+        abort_if($order->user_id !== auth()->id(), 403);
+
+        if (!in_array($order->status, ['paid', 'packed', 'shipped', 'completed'], true)) {
+            return back()->with('warning', 'Refund hanya dapat diajukan untuk order yang sudah dibayar.');
+        }
+
+        if ($order->refund_status === 'requested') {
+            return back()->with('warning', 'Refund untuk order ini sudah diajukan dan sedang menunggu review.');
+        }
+
+        $data = $request->validate([
+            'refund_reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $order->update([
+            'refund_status' => 'requested',
+            'refund_reason' => $data['refund_reason'],
+            'refund_requested_at' => now(),
+            'refund_notes' => null,
+        ]);
+
+        $financeUsers = User::whereIn('role', ['finance', 'owner', 'superadmin'])->get(['id']);
+        foreach ($financeUsers as $user) {
+            $notifications->send(
+                (int) $user->id,
+                'Permintaan Refund Order Store',
+                'Order ' . $order->order_number . ' mengajukan refund dan menunggu review finance.',
+                optional($order->item)->book_id
+            );
+        }
+
+        return back()->with('success', 'Permintaan refund sudah dikirim.');
     }
 }

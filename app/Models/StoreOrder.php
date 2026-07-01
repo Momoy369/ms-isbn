@@ -53,6 +53,11 @@ class StoreOrder extends Model
         'admin_notes',
         'confirmed_at',
         'completed_at',
+        'refund_status',
+        'refund_reason',
+        'refund_notes',
+        'refund_requested_at',
+        'refund_reviewed_at',
     ];
 
     protected $casts = [
@@ -71,6 +76,8 @@ class StoreOrder extends Model
         'reader_last_used_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
+        'refund_requested_at' => 'datetime',
+        'refund_reviewed_at' => 'datetime',
     ];
 
     public function user()

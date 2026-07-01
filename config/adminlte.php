@@ -440,31 +440,6 @@ return [
             ],
         ],
         [
-            'text' => 'Storefront',
-            'icon' => 'fas fa-shopping-basket',
-            'can' => 'menu-finance',
-            'submenu' => [
-                [
-                    'text' => 'Katalog Store',
-                    'route' => 'finance.store.catalog.index',
-                    'icon' => 'fas fa-book-open',
-                    'can' => 'menu-finance',
-                ],
-                [
-                    'text' => 'Order Store',
-                    'route' => 'finance.store.orders.index',
-                    'icon' => 'fas fa-receipt',
-                    'can' => 'menu-finance',
-                ],
-                [
-                    'text' => 'Lihat Store Publik',
-                    'route' => 'store.index',
-                    'icon' => 'fas fa-external-link-alt',
-                    'can' => 'menu-finance',
-                ],
-            ],
-        ],
-        [
             'text' => 'Workspace Percetakan',
             'route' => 'printing.workspace.index',
             'icon' => 'fas fa-print',

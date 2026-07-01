@@ -79,14 +79,14 @@
                 </form>
             </div>
         </div>
-        <div class="card-body table-responsive p-0">
-            <table class="table table-sm table-hover mb-0">
-                <thead class="bg-light">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0 align-middle">
+                <thead class="thead-light">
                     <tr>
                         <th>Order</th>
                         <th>Produk</th>
-                        <th>Pembeli</th>
-                        <th>Nominal</th>
+                        <th>Pelanggan</th>
+                        <th>Total</th>
                         <th>Status</th>
                         <th style="min-width:260px;">Aksi</th>
                     </tr>
@@ -98,7 +98,7 @@
                                 <strong>{{ $order->order_number }}</strong>
                                 <div class="small text-muted">{{ $order->created_at->format('d M Y H:i') }}</div>
                                 <div class="small"><a href="{{ route('store.track.show', $order->order_number) }}"
-                                        target="_blank">Lacak Publik</a></div>
+                                        target="_blank" rel="noopener">Lacak Publik</a></div>
                             </td>
                             <td>
                                 {{ $order->item->title ?? '-' }}
@@ -109,7 +109,20 @@
                                         @if ($order->voucher_discount_amount > 0)
                                             <br>Diskon: Rp
                                             {{ number_format($order->voucher_discount_amount, 0, ',', '.') }}
+                                            @if ($order->subtotal_before_discount && $order->subtotal_before_discount > $order->subtotal)
+                                                <br>Total setelah diskon: Rp
+                                                {{ number_format($order->subtotal, 0, ',', '.') }}
+                                            @endif
                                         @endif
+                                    </div>
+                                @endif
+                                @if ($order->refund_status && $order->refund_status !== 'none')
+                                    <div class="small mt-1">
+                                        Refund:
+                                        <span
+                                            class="badge badge-{{ $order->refund_status === 'approved' ? 'success' : ($order->refund_status === 'rejected' ? 'danger' : 'warning') }}">
+                                            {{ strtoupper($order->refund_status) }}
+                                        </span>
                                     </div>
                                 @endif
                             </td>
@@ -124,7 +137,7 @@
                                     class="row">
                                     @csrf
                                     @method('PUT')
-                                    <div class="col-md-5 mb-1">
+                                    <div class="col-12 mb-1">
                                         <select name="status" class="form-control form-control-sm" required>
                                             @foreach (['pending', 'confirmed', 'paid', 'packed', 'shipped', 'completed', 'cancelled'] as $option)
                                                 <option value="{{ $option }}" @selected($order->status === $option)>
@@ -132,22 +145,48 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-5 mb-1">
+                                    <div class="col-12 mb-1">
                                         <input type="text" name="admin_notes" class="form-control form-control-sm"
                                             value="{{ $order->admin_notes }}" placeholder="Catatan admin">
                                     </div>
-                                    <div class="col-md-4 mb-1">
+                                    <div class="col-12 mb-1">
                                         <input type="text" name="shipping_courier" class="form-control form-control-sm"
                                             value="{{ $order->shipping_courier }}" placeholder="Kurir (JNE/Sicepat)">
                                     </div>
-                                    <div class="col-md-4 mb-1">
+                                    <div class="col-12 mb-1">
                                         <input type="text" name="tracking_number" class="form-control form-control-sm"
                                             value="{{ $order->tracking_number }}" placeholder="No Resi">
                                     </div>
-                                    <div class="col-md-2 mb-1">
+                                    <div class="col-12 mb-1">
                                         <button class="btn btn-xs btn-primary" type="submit">Simpan</button>
                                     </div>
                                 </form>
+
+                                @if ($order->refund_status === 'requested')
+                                    @if ($order->refund_reason)
+                                        <div class="small text-muted mt-2">
+                                            Alasan customer: {{ $order->refund_reason }}
+                                        </div>
+                                    @endif
+                                    <form method="POST"
+                                        action="{{ route('finance.store.orders.refund.approve', $order) }}" class="mt-2">
+                                        @csrf
+                                        <input type="text" name="refund_notes"
+                                            class="form-control form-control-sm mb-1"
+                                            placeholder="Catatan approval refund (opsional)">
+                                        <button class="btn btn-xs btn-success" type="submit">Setujui Refund</button>
+                                    </form>
+
+                                    <form method="POST"
+                                        action="{{ route('finance.store.orders.refund.reject', $order) }}"
+                                        class="mt-1">
+                                        @csrf
+                                        <input type="text" name="refund_notes"
+                                            class="form-control form-control-sm mb-1"
+                                            placeholder="Catatan penolakan refund (opsional)">
+                                        <button class="btn btn-xs btn-outline-danger" type="submit">Tolak Refund</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -158,8 +197,8 @@
                 </tbody>
             </table>
         </div>
-        @if ($orders->hasPages())
-            <div class="card-footer">{{ $orders->links() }}</div>
-        @endif
     </div>
+    @if ($orders->hasPages())
+        <div class="card-footer">{{ $orders->links() }}</div>
+    @endif
 @endsection

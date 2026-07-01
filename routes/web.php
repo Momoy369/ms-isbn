@@ -44,6 +44,7 @@ use App\Http\Controllers\BookPackageItemController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\EbookPublishingWorkspaceController;
 use App\Http\Controllers\CustomerDashboardController;
+use App\Http\Controllers\CustomerEbookLibraryController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\AdminAuthorUpgradeRequestController;
 
@@ -510,6 +511,12 @@ Route::middleware('auth')->group(function () {
             Route::put('/finance/store/orders/{order}', [AdminStoreOrderController::class, 'update'])
                 ->name('finance.store.orders.update');
 
+            Route::post('/finance/store/orders/{order}/refund/approve', [AdminStoreOrderController::class, 'approveRefund'])
+                ->name('finance.store.orders.refund.approve');
+
+            Route::post('/finance/store/orders/{order}/refund/reject', [AdminStoreOrderController::class, 'rejectRefund'])
+                ->name('finance.store.orders.refund.reject');
+
             Route::post('/external-sales', [AdminExternalSalesController::class, 'store'])
                 ->name('external-sales.store');
 
@@ -593,11 +600,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/customer', [CustomerDashboardController::class, 'index'])
             ->name('customer.dashboard');
 
+        Route::get('/customer/ebooks', [CustomerEbookLibraryController::class, 'index'])
+            ->name('customer.ebooks.index');
+
+        Route::post('/customer/ebooks/{order}/open', [CustomerEbookLibraryController::class, 'open'])
+            ->name('customer.ebooks.open');
+
         Route::get('/customer/orders', [CustomerOrderController::class, 'index'])
             ->name('customer.orders.index');
 
         Route::get('/customer/orders/{order}', [CustomerOrderController::class, 'show'])
             ->name('customer.orders.show');
+
+        Route::post('/customer/orders/{order}/refund', [CustomerOrderController::class, 'requestRefund'])
+            ->name('customer.orders.refund');
     });
 
     Route::middleware([

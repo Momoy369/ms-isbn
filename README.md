@@ -139,6 +139,8 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 - Validasi status transition order storefront sudah dibuat lebih ketat.
 - Notifikasi otomatis ke customer saat status order berubah sudah aktif.
 - Voucher/promo code storefront sudah bisa dibuat, dikelola, dan dipakai saat checkout.
+- Library ebook internal sudah tersedia untuk customer/reader yang sudah membeli ebook.
+- Refund order store sudah bisa diajukan customer dan direview finance.
 - Workflow upgrade customer/reader ke author sudah dilengkapi checklist, lampiran, review admin, notifikasi, dan ekspor.
 - Ebook sudah diperlakukan sebagai produk tanpa stok fisik.
 - Manual book sistem sudah tersedia di dokumen terpisah.
@@ -167,10 +169,8 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 ## To-Do Fitur Baru (Belum Ada)
 
 - Tambah verifikasi tracking order (OTP WA/email atau minimal validasi phone/email pembeli).
-- Tambah library ebook internal (list ebook yang sudah dibeli per akun).
 - Tambah fitur multi-payment gateway (fallback selain iPaymu).
 - Tambah laporan penjualan storefront periodik (harian/mingguan/bulanan) dengan export.
-- Tambah modul retur/refund order store.
 - Tambah fitur reset reader session per order di halaman admin store orders.
 - Tambah throttling percobaan password reader (anti brute-force).
 - Tambah watermark dinamis berbasis identitas pembeli (nama/email di setiap halaman PDF).
@@ -248,16 +248,17 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
     - Dokumentasi baseline EXPLAIN query untuk mode base/ready/not_ready.
     - Penambahan metrik hit-rate cache validasi layout.
 
-### Sprint 5 (Minggu 5) - Fitur Pasca-Pembelian
+### Sprint 5 (Minggu 5) - Fitur Pasca-Pembelian ✅ SELESAI
 
-- Prioritas tinggi:
-    - Library ebook internal per customer (daftar ebook yang sudah dibeli).
-    - Modul retur/refund order store (alur request dan approval).
-- Prioritas menengah:
-    - Sinkronisasi stok pada edge-case callback/refund.
-    - Penambahan alasan status perubahan order secara terstruktur.
-- Prioritas rendah:
-    - Ringkasan metrik retur/refund di dashboard finance.
+- ✅ Library ebook internal per customer (daftar ebook yang sudah dibeli).
+- ✅ Modul retur/refund order store (alur request customer dan review finance).
+- ✅ Sinkronisasi stok pada edge-case refund.
+- ✅ Penambahan alasan status perubahan order secara terstruktur.
+- ✅ Ringkasan metrik refund di dashboard finance melalui status/riwayat order.
+- ✅ Navigasi storefront/finance/customer sudah diselaraskan untuk alur pasca-pembelian.
+- ✅ Dokumentasi manual book sudah diperbarui untuk library ebook dan refund.
+
+Sprint 5 ditutup sebagai baseline fitur pasca-pembelian. Fokus berikutnya diarahkan ke quality engineering, stabilisasi test environment, dan perluasan regresi untuk alur pembayaran serta reader.
 
 ### Sprint 6 (Minggu 6) - Quality Engineering dan Skalabilitas
 
@@ -302,6 +303,19 @@ Lihat file [LICENSE](LICENSE) untuk teks lisensi lengkap.
 **Database Migrations**
 
 - `2026_07_01_150000_add_layout_generator_readiness_indexes` — menambahkan indeks komposit untuk kebutuhan readiness filter Layout Generator.
+
+### v1.6 - 2026-07-01: Sprint 5 Completion and Post-Purchase Finalization
+
+**Post-Purchase Workflow**
+
+- Library ebook customer diselesaikan sebagai akses cepat ke ebook yang sudah dibeli.
+- Alur refund storefront dilengkapi dengan request dari customer dan review finance.
+- Menu finance storefront dipusatkan dengan voucher, order, dan export penjualan.
+- Dokumentasi manual book ditambah untuk prosedur library ebook dan refund.
+
+**Database**
+
+- `2026_07_01_180000_add_refund_fields_to_store_orders_table` — menambahkan field refund untuk workflow pasca-pembelian.
 
 ### v1.4 - 2026-07-01: Production Operations Workspace and Dashboard
 

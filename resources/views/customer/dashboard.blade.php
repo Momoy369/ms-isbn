@@ -25,6 +25,9 @@
                 <a href="{{ route('store.track.form') }}" class="btn btn-outline-secondary mb-2">
                     <i class="fas fa-search mr-1"></i> Lacak Pesanan
                 </a>
+                <a href="{{ route('customer.ebooks.index') }}" class="btn btn-outline-primary mb-2 ml-2">
+                    <i class="fas fa-book-open mr-1"></i> Library Ebook
+                </a>
             </div>
         </div>
     </div>

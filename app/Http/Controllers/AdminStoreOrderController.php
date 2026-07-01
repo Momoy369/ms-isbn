@@ -84,6 +84,80 @@ class AdminStoreOrderController extends Controller
         return back()->with('success', 'Status order berhasil diperbarui.');
     }
 
+    public function approveRefund(Request $request, StoreOrder $order, NotificationService $notifications)
+    {
+        if ($order->refund_status !== 'requested') {
+            return back()->with('warning', 'Refund hanya bisa disetujui jika statusnya masih requested.');
+        }
+
+        $data = $request->validate([
+            'refund_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $order->update([
+            'refund_status' => 'approved',
+            'refund_notes' => $data['refund_notes'] ?? $order->refund_notes,
+            'refund_reviewed_at' => now(),
+            'status' => 'cancelled',
+            'admin_notes' => trim(($order->admin_notes ? $order->admin_notes . "\n" : '') . 'Refund approved by finance.'),
+        ]);
+
+        $this->restoreStockIfNeeded($order);
+
+        if ($order->user_id) {
+            $notifications->send(
+                (int) $order->user_id,
+                'Refund Pesanan Disetujui',
+                'Refund untuk order ' . $order->order_number . ' telah disetujui oleh finance.',
+                optional($order->item)->book_id
+            );
+        }
+
+        return back()->with('success', 'Refund berhasil disetujui.');
+    }
+
+    public function rejectRefund(Request $request, StoreOrder $order, NotificationService $notifications)
+    {
+        if ($order->refund_status !== 'requested') {
+            return back()->with('warning', 'Refund hanya bisa ditolak jika statusnya masih requested.');
+        }
+
+        $data = $request->validate([
+            'refund_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $order->update([
+            'refund_status' => 'rejected',
+            'refund_notes' => $data['refund_notes'] ?? $order->refund_notes,
+            'refund_reviewed_at' => now(),
+            'admin_notes' => trim(($order->admin_notes ? $order->admin_notes . "\n" : '') . 'Refund rejected by finance.'),
+        ]);
+
+        if ($order->user_id) {
+            $notifications->send(
+                (int) $order->user_id,
+                'Refund Pesanan Ditolak',
+                'Refund untuk order ' . $order->order_number . ' ditolak oleh finance.',
+                optional($order->item)->book_id
+            );
+        }
+
+        return back()->with('success', 'Refund berhasil ditolak.');
+    }
+
+    private function restoreStockIfNeeded(StoreOrder $order): void
+    {
+        if (!$order->item || !$order->item->isPrint() || $order->item->stock === null) {
+            return;
+        }
+
+        if ($order->selected_format === 'ebook' && $order->item->hasSeparateFormats()) {
+            return;
+        }
+
+        $order->item->increment('stock', (int) $order->quantity);
+    }
+
     private function canTransitionStatus(string $currentStatus, string $nextStatus): bool
     {
         $transitions = [
