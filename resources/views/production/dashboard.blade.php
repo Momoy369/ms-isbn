@@ -41,6 +41,64 @@
         ];
     @endphp
 
+    <div class="card card-outline card-secondary shadow-sm mb-3">
+        <div class="card-header">
+            <h3 class="card-title font-weight-bold mb-0">
+                <i class="fas fa-filter mr-2"></i>Filter Operasional
+            </h3>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ route('production.dashboard') }}" class="row">
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Channel</label>
+                    <select name="op_channel" class="form-control form-control-sm">
+                        <option value="all" {{ $operationsFilters['channel'] === 'all' ? 'selected' : '' }}>Semua
+                        </option>
+                        <option value="print" {{ $operationsFilters['channel'] === 'print' ? 'selected' : '' }}>Print
+                        </option>
+                        <option value="ebook" {{ $operationsFilters['channel'] === 'ebook' ? 'selected' : '' }}>Ebook
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Status</label>
+                    <select name="op_status" class="form-control form-control-sm">
+                        @foreach ($statusOptions as $statusValue => $statusText)
+                            <option value="{{ $statusValue }}"
+                                {{ $operationsFilters['status'] === $statusValue ? 'selected' : '' }}>
+                                {{ $statusText }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Adaptasi Cetak</label>
+                    <select name="op_adaptation" class="form-control form-control-sm">
+                        <option value="all" {{ $operationsFilters['adaptation'] === 'all' ? 'selected' : '' }}>Semua
+                        </option>
+                        <option value="yes" {{ $operationsFilters['adaptation'] === 'yes' ? 'selected' : '' }}>Ya
+                        </option>
+                        <option value="no" {{ $operationsFilters['adaptation'] === 'no' ? 'selected' : '' }}>Tidak
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Cari Buku / Author</label>
+                    <input type="text" name="op_keyword" value="{{ $operationsFilters['keyword'] }}"
+                        class="form-control form-control-sm" placeholder="Masukkan kata kunci...">
+                </div>
+                <div class="col-12 d-flex justify-content-end mt-2">
+                    <a href="{{ route('production.dashboard') }}" class="btn btn-sm btn-light border mr-2">
+                        Reset
+                    </a>
+                    <button type="submit" class="btn btn-sm btn-secondary">
+                        Terapkan Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row mb-3">
         <div class="col-lg-3 col-6">
             <div class="small-box bg-primary shadow-sm">
