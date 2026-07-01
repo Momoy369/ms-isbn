@@ -52,6 +52,7 @@ use App\Http\Controllers\PersonalBoardController;
 use App\Http\Controllers\ManuscriptPageCounterController;
 use App\Http\Controllers\DashboardAssistantController;
 use App\Http\Controllers\SystemSettingController;
+use App\Http\Controllers\InstallController;
 
 Route::get('/', function () {
 
@@ -86,6 +87,9 @@ require __DIR__ . '/auth.php';
 
 Route::get('/store', [StorefrontController::class, 'index'])
     ->name('store.index');
+
+Route::get('/install', [InstallController::class, 'index'])
+    ->name('install.index');
 
 Route::get('/store/track', [StorefrontController::class, 'trackForm'])
     ->name('store.track.form');

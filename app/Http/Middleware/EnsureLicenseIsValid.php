@@ -64,7 +64,7 @@ class EnsureLicenseIsValid
             return true;
         }
 
-        if ($request->routeIs('login', 'logout', 'password.*', 'verification.*', 'settings.system.*')) {
+        if ($request->routeIs('login', 'logout', 'password.*', 'verification.*', 'settings.system.*', 'install.*')) {
             return true;
         }
 

@@ -210,8 +210,12 @@
                             <tr>
                                 <td>{{ $bookInsight->nomor_naskah }}</td>
                                 <td>{{ $bookInsight->judul }}</td>
-                                <td class="text-center">{{ (int) ($bookInsight->manuscript_a4_pages ?? 0) }}</td>
-                                <td class="text-center">{{ (int) ($bookInsight->manuscript_a5_pages ?? 0) }}</td>
+                                <td class="text-center">
+                                    {{ (int) ($bookInsight->effective_a4_pages ?? ($bookInsight->manuscript_a4_pages ?? 0)) }}
+                                </td>
+                                <td class="text-center">
+                                    {{ (int) ($bookInsight->effective_a5_pages ?? ($bookInsight->manuscript_a5_pages ?? 0)) }}
+                                </td>
                                 <td class="text-right">Rp
                                     {{ number_format((float) ($bookInsight->package_extra_fee ?? 0), 0, ',', '.') }}</td>
                             </tr>

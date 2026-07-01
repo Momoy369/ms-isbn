@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\DashboardService;
 use App\Models\BookAssignment;
 use App\Models\Book;
+use Illuminate\Support\Collection;
 
 class DashboardController
 {
@@ -77,29 +78,72 @@ class DashboardController
 
                 ->get();
 
-        $trackedBooksQuery = Book::query()->whereNotNull('manuscript_a4_pages');
-        $trackedBooksCount = (clone $trackedBooksQuery)->count();
-        $sumA4Pages = (int) ((clone $trackedBooksQuery)->sum('manuscript_a4_pages') ?? 0);
+        $insightBooks = Book::query()
+            ->select([
+                'id',
+                'judul',
+                'nomor_naskah',
+                'jumlah_halaman',
+                'manuscript_a4_pages',
+                'manuscript_a5_pages',
+                'package_extra_fee',
+                'publishing_package_id',
+            ])
+            ->with('publishingPackage:id,supports_print')
+            ->get();
+
+        $withA4 = $insightBooks->filter(function (Book $book): bool {
+            return $this->effectiveA4Pages($book) > 0;
+        });
+
+        $trackedBooksCount = $withA4->count();
+        $sumA4Pages = (int) $withA4->sum(function (Book $book): int {
+            return $this->effectiveA4Pages($book);
+        });
+
+        $topBooks = $withA4
+            ->sortByDesc(function (Book $book): int {
+                return $this->effectiveA4Pages($book);
+            })
+            ->take(5)
+            ->map(function (Book $book) {
+                $book->effective_a4_pages = $this->effectiveA4Pages($book);
+
+                if (!is_numeric($book->manuscript_a5_pages) || (int) $book->manuscript_a5_pages <= 0) {
+                    $book->effective_a5_pages = (int) round($book->effective_a4_pages * 0.8);
+                } else {
+                    $book->effective_a5_pages = (int) $book->manuscript_a5_pages;
+                }
+
+                return $book;
+            })
+            ->values();
 
         $manuscriptInsights = [
             'tracked_books' => $trackedBooksCount,
-            'unknown_books' => (int) Book::query()->whereNull('manuscript_a4_pages')->count(),
+            'unknown_books' => (int) $insightBooks->filter(function (Book $book): bool {
+                return $this->effectiveA4Pages($book) <= 0;
+            })->count(),
             'sum_a4_pages' => $sumA4Pages,
             'avg_a4_pages' => $trackedBooksCount > 0 ? round($sumA4Pages / $trackedBooksCount, 1) : 0,
-            'max_a4_pages' => (int) ((clone $trackedBooksQuery)->max('manuscript_a4_pages') ?? 0),
-            'over_125_a4' => (int) Book::query()->where('manuscript_a4_pages', '>', 125)->count(),
-            'over_100_a5_print' => (int) Book::query()
-                ->where('manuscript_a5_pages', '>', 100)
-                ->whereHas('publishingPackage', function ($q) {
-                    $q->where('supports_print', true);
+            'max_a4_pages' => $trackedBooksCount > 0
+                ? (int) $withA4->max(function (Book $book): int {
+                    return $this->effectiveA4Pages($book);
                 })
-                ->count(),
-            'top_books' => Book::query()
-                ->select(['id', 'judul', 'nomor_naskah', 'manuscript_a4_pages', 'manuscript_a5_pages', 'package_extra_fee'])
-                ->whereNotNull('manuscript_a4_pages')
-                ->orderByDesc('manuscript_a4_pages')
-                ->limit(5)
-                ->get(),
+                : 0,
+            'over_125_a4' => (int) $withA4->filter(function (Book $book): bool {
+                return $this->effectiveA4Pages($book) > 125;
+            })->count(),
+            'over_100_a5_print' => (int) $withA4->filter(function (Book $book): bool {
+                $effectiveA5 = (int) (is_numeric($book->manuscript_a5_pages) ? $book->manuscript_a5_pages : 0);
+                if ($effectiveA5 <= 0) {
+                    $effectiveA5 = (int) round($this->effectiveA4Pages($book) * 0.8);
+                }
+
+                return $effectiveA5 > 100
+                    && (bool) optional($book->publishingPackage)->supports_print;
+            })->count(),
+            'top_books' => $topBooks,
         ];
 
         return view(
@@ -143,5 +187,17 @@ class DashboardController
 
             ]
         );
+    }
+
+    private function effectiveA4Pages(Book $book): int
+    {
+        $a4 = is_numeric($book->manuscript_a4_pages) ? (int) $book->manuscript_a4_pages : 0;
+        if ($a4 > 0) {
+            return $a4;
+        }
+
+        $fallback = is_numeric($book->jumlah_halaman) ? (int) $book->jumlah_halaman : 0;
+
+        return max(0, $fallback);
     }
 }

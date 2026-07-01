@@ -69,6 +69,12 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
     - Mendukung 2 tipe lisensi: owner-code lokal dan token komersial (signed token).
     - Token komersial mendukung domain binding, optional expiry, trial flag, plan metadata, dan revoke.
     - Settings menyediakan generator token komersial + status validasi + alasan invalid.
+- Insight Naskah di dashboard admin diperbaiki:
+    - Jika `manuscript_a4_pages` kosong, dashboard otomatis fallback ke `jumlah_halaman`.
+    - Ringkasan top naskah dan agregasi A4/A5 tetap muncul meski data A4 mentah belum diisi manual.
+- Halaman instalasi modern tersedia di `/install`:
+    - Menampilkan checklist requirement runtime (PHP, ekstensi, APP_KEY, koneksi DB).
+    - Menampilkan langkah instalasi cepat agar onboarding instance lebih rapi.
 
 ### Fitur yang Diupdate / Dikurangi
 

@@ -23,6 +23,7 @@ Dokumen ini tetap mempertahankan ringkasan fitur per modul agar mudah dipakai se
 - Tracking order publik kini mendukung verifikasi OTP berbasis channel (phone/email/WhatsApp).
 - Menu System Settings khusus superadmin untuk konfigurasi dinamis lintas integrasi.
 - Menu License Management di System Settings untuk aktivasi/generate/revoke lisensi runtime.
+- Halaman instalasi modern di `/install` untuk verifikasi environment sebelum go-live.
 - Tool lintas role: **Hitung Halaman Naskah Otomatis** dengan upload DOCX.
 - Opsi ukuran kertas pada tool: A4, A5, B5, UNESCO (margin tetap 2 cm).
 - Mode komparasi dua ukuran dalam satu submit.
@@ -144,6 +145,30 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 #### Catatan
 
 - Jika angka antrian tidak sesuai, cek filter atau status assignment terakhir.
+- Insight Naskah kini memakai fallback `jumlah_halaman` jika `manuscript_a4_pages` masih kosong.
+
+### 4.27 Halaman Instalasi Modern
+
+#### Kegunaan
+
+- Memberi checklist cepat apakah server siap menjalankan aplikasi.
+- Menyediakan langkah instalasi standar di satu halaman.
+
+#### Akses
+
+- URL: `/install`
+
+#### Checklist yang Ditampilkan
+
+- Versi PHP.
+- Ekstensi wajib (`pdo_mysql`, `mbstring`, `openssl`, `zip`).
+- Status `APP_KEY`.
+- Koneksi DB dasar (cek tabel `users`).
+
+#### Catatan
+
+- Halaman ini bersifat diagnostik/panduan, bukan auto-installer penuh.
+- Pastikan semua item checklist berstatus OK sebelum onboarding user produksi.
 
 #### Output yang Dihasilkan
 
