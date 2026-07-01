@@ -21,6 +21,35 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 
 ## Fitur Yang Sudah Tersedia
 
+### Update Terbaru (Juli 2026)
+
+- Tool global baru: **Hitung Halaman Naskah Otomatis** (`/tools/manuscript-page-counter`) untuk semua role login.
+    - Mendukung ukuran kertas A4, A5, B5, UNESCO.
+    - Margin default 2 cm.
+    - Mendukung mode komparasi dua ukuran dalam satu submit.
+    - Tersedia preset ukuran cepat dan guard agar ukuran pembanding tidak bisa sama dengan ukuran utama.
+- Otomasi biaya paket penulis berbasis halaman naskah DOCX:
+    - Perhitungan A4 over limit (>125 hal) otomatis.
+    - Perhitungan A5 cetak over limit (>100 hal) otomatis untuk paket yang mendukung print.
+    - Komponen biaya tambahan layout/editing/print otomatis masuk ke total order dan invoice.
+- Admin Naskah diperluas:
+    - Form create/edit mendukung input **halaman mentah A4** wajib.
+    - Upload DOCX opsional pada create/edit untuk auto-hitungan A4/A5.
+    - List naskah menampilkan kolom halaman mentah, indikator over-limit, dan informasi paket/workflow yang lebih informatif.
+    - Dashboard backoffice menampilkan panel Insight Naskah (agregasi A4/A5/over-limit).
+- Papan Pribadi internal ditingkatkan menjadi kanban modern:
+    - Drag-and-drop lebih halus, reorder antar/intra kolom, autosave tanpa reload, rollback saat gagal.
+    - Tetap mempertahankan model hybrid (kartu sistem read-only + kartu manual milik user).
+- UX Auth modern (MS Publishing-like):
+    - Login/register/forgot/reset/verify/confirm memakai visual language yang konsisten.
+    - Tambah toggle show/hide password.
+    - Tambah indikator kekuatan password + checklist aturan realtime pada register/reset.
+
+### Fitur yang Diupdate / Dikurangi
+
+- Endpoint legacy approval buku `POST /books/{book}/approve/{type}` masih tersedia untuk kompatibilitas, namun **bukan** alur utama operasional.
+- Alur utama Book Show tetap melalui Action Center orkestrasi endpoint workflow baru.
+
 ### 1. Manajemen Workflow Produksi Naskah
 
 - Input dan pengelolaan data buku/naskah.
@@ -143,6 +172,12 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 ### 11. Branding Dasar
 
 - Konfigurasi logo di area AdminLTE, auth screen, preloader, dan storefront.
+
+### 13. Tool Produktivitas Naskah
+
+- Hitung halaman naskah otomatis lintas role dari upload DOCX.
+- Mendukung estimasi multi ukuran (A4/A5/B5/UNESCO) dengan basis margin konsisten 2 cm.
+- Cocok untuk validasi cepat pra-order paket, pra-produksi, dan cross-check data naskah admin.
 
 ## Manual Book
 

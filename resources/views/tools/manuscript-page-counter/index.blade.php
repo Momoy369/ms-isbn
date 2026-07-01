@@ -182,6 +182,7 @@
     <script>
         (function() {
             const paperSelect = document.getElementById('paper_size');
+            const compareSelect = document.getElementById('compare_paper_size');
             const chips = Array.from(document.querySelectorAll('.paper-chip'));
 
             if (!paperSelect || chips.length === 0) {
@@ -196,15 +197,44 @@
                 });
             };
 
+            const syncCompareOptions = () => {
+                if (!compareSelect) {
+                    return;
+                }
+
+                const selected = (paperSelect.value || '').toUpperCase();
+
+                Array.from(compareSelect.options).forEach((option) => {
+                    const value = (option.value || '').toUpperCase();
+
+                    if (!value) {
+                        option.disabled = false;
+                        return;
+                    }
+
+                    option.disabled = value === selected;
+                });
+
+                if ((compareSelect.value || '').toUpperCase() === selected) {
+                    compareSelect.value = '';
+                }
+            };
+
             chips.forEach((chip) => {
                 chip.addEventListener('click', () => {
                     paperSelect.value = chip.dataset.paper || paperSelect.value;
                     refreshActiveChip();
+                    syncCompareOptions();
                 });
             });
 
-            paperSelect.addEventListener('change', refreshActiveChip);
+            paperSelect.addEventListener('change', () => {
+                refreshActiveChip();
+                syncCompareOptions();
+            });
+
             refreshActiveChip();
+            syncCompareOptions();
         })();
     </script>
 @endsection

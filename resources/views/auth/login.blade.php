@@ -4,64 +4,73 @@
     @endphp
 
     @if ($isStoreFlow)
-        <div class="mb-4 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Login Customer Storefront untuk melanjutkan belanja atau cek status pesanan.
         </div>
     @endif
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <div class="auth-alert">
+            {{ session('status') }}
+        </div>
+    @endif
 
-    <form method="POST" action="{{ route('login') }}">
+    <div class="mb-5">
+        <h2 class="text-2xl font-extrabold text-slate-900">Sign In</h2>
+        <p class="text-sm text-slate-500 mt-1">Gunakan akun terdaftar untuk masuk ke MS Publishing.</p>
+    </div>
+
+    <form method="POST" action="{{ route('login') }}" class="space-y-4">
         @csrf
         <input type="hidden" name="from" value="{{ request('from') }}">
         <input type="hidden" name="return_to" value="{{ request('return_to') }}">
 
-        <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')"
-                required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="field-label">Email</label>
+            <input id="email" class="field-input" type="email" name="email" value="{{ old('email') }}" required
+                autofocus autocomplete="username" placeholder="nama@domain.com">
+            @error('email')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required
-                autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div>
+            <label for="password" class="field-label">Password</label>
+            <div class="password-wrap">
+                <input id="password" class="field-input" type="password" name="password" required
+                    autocomplete="current-password" placeholder="Masukkan password">
+                <button type="button" class="password-toggle" data-toggle-password data-target="password"
+                    aria-label="Tampilkan password">Tampilkan</button>
+            </div>
+            @error('password')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
+        <div class="flex items-center justify-between text-sm pt-1">
+            <label for="remember_me" class="inline-flex items-center text-slate-600">
+                <input id="remember_me" type="checkbox" name="remember"
+                    class="rounded border-slate-300 text-teal-700 shadow-sm focus:ring-teal-500">
+                <span class="ms-2">Remember me</span>
             </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('register'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    href="{{ route('register', ['from' => request('from'), 'return_to' => request('return_to')]) }}">
-                    {{ __('Belum punya akun? Daftar') }}
-                </a>
-            @endif
 
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
+                <a class="auth-link" href="{{ route('password.request') }}">Forgot password?</a>
+            @endif
+        </div>
+
+        <button type="submit" class="cta-btn">
+            Log in to MS Publishing
+        </button>
+
+        <div class="pt-2 text-sm text-slate-600">
+            @if (Route::has('register'))
+                Belum punya akun?
+                <a class="auth-link"
+                    href="{{ route('register', ['from' => request('from'), 'return_to' => request('return_to')]) }}">
+                    Daftar sekarang
                 </a>
             @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
         </div>
     </form>
 </x-guest-layout>

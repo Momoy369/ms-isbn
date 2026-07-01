@@ -14,6 +14,27 @@ Setiap fitur pada manual ini idealnya dibaca dengan pola berikut:
 
 Dokumen ini tetap mempertahankan ringkasan fitur per modul agar mudah dipakai sebagai panduan operasional harian.
 
+## Perubahan Terbaru Sistem (Juli 2026)
+
+### Fitur Ditambahkan
+
+- Tool lintas role: **Hitung Halaman Naskah Otomatis** dengan upload DOCX.
+- Opsi ukuran kertas pada tool: A4, A5, B5, UNESCO (margin tetap 2 cm).
+- Mode komparasi dua ukuran dalam satu submit.
+- Preset cepat ukuran kertas pada tool hitung halaman.
+- Checklist aturan password realtime + indikator kekuatan password pada register/reset.
+
+### Fitur Diupdate
+
+- Halaman auth diperbarui dengan UI modern konsisten (login/register/forgot/reset/verify/confirm).
+- Modul order paket author kini otomatis menghitung biaya tambahan dari halaman A4/A5 (sesuai rule paket).
+- Modul admin naskah (create/edit/list/dashboard) kini menampilkan dan memproses metrik halaman mentah naskah lebih lengkap.
+- Papan pribadi internal diperhalus (drag-drop, reorder, autosave, no reload).
+
+### Fitur Legacy (Masih Ada untuk Kompatibilitas)
+
+- Endpoint lama approval `POST /books/{book}/approve/{type}` tetap tersedia tetapi tidak menjadi alur utama Action Center.
+
 ## 1. Ringkasan Sistem
 
 MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola naskah, workflow produksi, ISBN, invoice, royalti, storefront publik, dan akses customer/author.
@@ -577,6 +598,26 @@ Whitelist tambahan per file:
 3. Upload bukti bayar jika diperlukan.
 4. Gunakan callback/payment gateway untuk pembaruan status otomatis.
 
+### 4.16.1 Otomasi Biaya Paket Berdasarkan Halaman Naskah
+
+#### Kegunaan
+
+- Menghitung biaya tambahan paket author secara otomatis dari naskah DOCX.
+- Menjamin total order dan invoice konsisten dengan jumlah halaman aktual.
+
+#### Rule yang Digunakan
+
+- Basis evaluasi A4 (margin 2 cm):
+    - Jika >125 halaman, halaman lebih dihitung biaya tambahan per halaman.
+- Jika paket termasuk cetak, evaluasi tambahan A5:
+    - Jika >100 halaman A5, halaman lebih dikenai biaya cetak tambahan per halaman.
+- Komponen tambahan bisa mencakup layout, editing, dan print sesuai paket.
+
+#### Hasil
+
+- Nilai biaya tambahan tersimpan pada order dan book.
+- Nilai tersebut ikut ke breakdown dan total invoice.
+
 ### 4.17 Royalty System
 
 #### Kegunaan
@@ -625,6 +666,62 @@ Whitelist tambahan per file:
 #### Catatan
 
 - Author memiliki grup menu gabungan untuk storefront dan customer agar tidak terjebak di satu dashboard saja.
+
+### 4.20 Tool Hitung Halaman Naskah Otomatis (Semua Role Login)
+
+#### Kegunaan
+
+- Menghitung jumlah halaman naskah dari file DOCX secara cepat dan konsisten.
+- Dipakai untuk validasi operasional sebelum order, sebelum input data admin, atau cross-check tim.
+
+#### Akses
+
+- Menu: **Hitung Halaman Naskah**.
+- Role: semua user yang sudah login (internal, author, customer, reader).
+
+#### Cara Pakai
+
+1. Buka menu Hitung Halaman Naskah.
+2. Pilih ukuran kertas utama (A4/A5/B5/UNESCO).
+3. (Opsional) pilih ukuran pembanding.
+4. Upload file DOCX.
+5. Klik hitung, lalu baca hasil halaman utama + hasil komparasi (jika diisi).
+
+#### Catatan
+
+- Margin default: 2 cm.
+- Ukuran pembanding tidak bisa sama dengan ukuran utama.
+- File tidak disimpan sebagai data buku dari tool ini (hanya kalkulasi cepat).
+
+### 4.21 Admin Naskah: Halaman Mentah dan Auto-Hitungan DOCX
+
+#### Kegunaan
+
+- Menjaga kualitas data naskah pada create/edit/list/dashboard admin.
+
+#### Perubahan Operasional
+
+- Form create/edit buku sekarang mewajibkan input halaman mentah A4.
+- Upload DOCX opsional di create/edit untuk menghitung A4/A5 otomatis.
+- Daftar naskah menampilkan metrik halaman mentah + indikator ambang batas.
+- Dashboard backoffice menampilkan insight agregat naskah (A4/A5/over-limit).
+
+### 4.22 Auth Modern + Keamanan Input Password
+
+#### Kegunaan
+
+- Membuat proses login/registrasi/reset lebih jelas, modern, dan aman secara UX.
+
+#### Yang Berubah
+
+- Semua halaman auth menggunakan tampilan visual konsisten MS Publishing.
+- Tersedia toggle tampilkan/sembunyikan password.
+- Register/reset dilengkapi indikator kekuatan password dan checklist aturan realtime:
+    - minimal 8 karakter
+    - huruf besar
+    - huruf kecil
+    - angka
+    - simbol
 
 ## 5. Cara Menggunakan Storefront Berdasarkan Role
 

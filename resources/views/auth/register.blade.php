@@ -4,61 +4,88 @@
     @endphp
 
     @if ($isStoreFlow)
-        <div class="mb-4 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Daftar Customer Storefront untuk melanjutkan checkout dan pelacakan pesanan.
         </div>
     @endif
 
-    <form method="POST" action="{{ route('register') }}">
+    <div class="mb-5">
+        <h2 class="text-2xl font-extrabold text-slate-900">Create Account</h2>
+        <p class="text-sm text-slate-500 mt-1">Daftarkan akun baru untuk mengakses portal MS Publishing.</p>
+    </div>
+
+    <form method="POST" action="{{ route('register') }}" class="space-y-4">
         @csrf
         <input type="hidden" name="from" value="{{ request('from') }}">
         <input type="hidden" name="return_to" value="{{ request('return_to') }}">
 
-        <!-- Name -->
         <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')"
-                required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+            <label for="name" class="field-label">Nama</label>
+            <input id="name" class="field-input" type="text" name="name" value="{{ old('name') }}" required
+                autofocus autocomplete="name" placeholder="Nama lengkap">
+            @error('name')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')"
-                required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <div>
+            <label for="email" class="field-label">Email</label>
+            <input id="email" class="field-input" type="email" name="email" value="{{ old('email') }}" required
+                autocomplete="username" placeholder="nama@domain.com">
+            @error('email')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required
-                autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div>
+            <label for="password" class="field-label">Password</label>
+            <div class="password-wrap">
+                <input id="password" class="field-input" type="password" name="password" required
+                    autocomplete="new-password" placeholder="Minimal 8 karakter" data-password-strength
+                    data-strength-target="register-password-strength"
+                    data-password-rules-target="register-password-rules">
+                <button type="button" class="password-toggle" data-toggle-password data-target="password"
+                    aria-label="Tampilkan password">Tampilkan</button>
+            </div>
+            <div id="register-password-strength" class="password-strength" aria-live="polite">
+                <div class="password-strength-track">
+                    <div class="password-strength-fill" data-strength-fill></div>
+                </div>
+                <div class="password-strength-text" data-strength-text>Kekuatan password: Belum diisi</div>
+            </div>
+            <ul id="register-password-rules" class="password-rules">
+                <li class="password-rule" data-rule="min8">Minimal 8 karakter</li>
+                <li class="password-rule" data-rule="upper">Mengandung huruf besar (A-Z)</li>
+                <li class="password-rule" data-rule="lower">Mengandung huruf kecil (a-z)</li>
+                <li class="password-rule" data-rule="digit">Mengandung angka (0-9)</li>
+                <li class="password-rule" data-rule="symbol">Mengandung simbol (contoh: !@#$)</li>
+            </ul>
+            @error('password')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password"
-                name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+        <div>
+            <label for="password_confirmation" class="field-label">Konfirmasi Password</label>
+            <div class="password-wrap">
+                <input id="password_confirmation" class="field-input" type="password" name="password_confirmation"
+                    required autocomplete="new-password" placeholder="Ulangi password">
+                <button type="button" class="password-toggle" data-toggle-password data-target="password_confirmation"
+                    aria-label="Tampilkan konfirmasi password">Tampilkan</button>
+            </div>
+            @error('password_confirmation')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        <button type="submit" class="cta-btn">Daftar Akun</button>
+
+        <div class="text-sm text-slate-600">
+            Sudah punya akun?
+            <a class="auth-link"
                 href="{{ route('login', ['from' => request('from'), 'return_to' => request('return_to')]) }}">
-                {{ __('Already registered?') }}
+                Login di sini
             </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
         </div>
     </form>
 </x-guest-layout>
