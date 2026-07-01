@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\PublishingPackage;
+use App\Models\AdditionalService;
+use App\Models\StorePackageConsultation;
 use App\Models\StoreCatalogItem;
 use App\Models\StoreOrder;
 use App\Models\StoreVoucher;
@@ -169,6 +171,146 @@ class StorefrontController extends Controller
             'is_fallback' => (bool) ($cityMeta['is_fallback'] ?? false),
             'message' => $cityMeta['message'] ?? null,
         ]);
+    }
+
+    public function packageConfigurator(Request $request)
+    {
+        $packages = PublishingPackage::query()
+            ->orderBy('price')
+            ->orderBy('name')
+            ->get();
+
+        $services = AdditionalService::query()
+            ->where('is_active', true)
+            ->orderBy('service_type')
+            ->orderBy('name')
+            ->get(['id', 'name', 'service_type', 'description', 'price']);
+
+        $selectedPackageId = (int) $request->query('package_id', old('publishing_package_id', 0));
+        $selectedPackage = $packages->firstWhere('id', $selectedPackageId);
+
+        return view('store.package-configurator', [
+            'packages' => $packages,
+            'selectedPackage' => $selectedPackage,
+            'services' => $services,
+            'budgetOptions' => [
+                '< 3 juta',
+                '3 - 5 juta',
+                '5 - 10 juta',
+                '> 10 juta',
+            ],
+        ]);
+    }
+
+    public function submitPackageConfigurator(Request $request, NotificationService $notifications)
+    {
+        $activeServiceIds = AdditionalService::query()
+            ->where('is_active', true)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        $data = $request->validate([
+            'publishing_package_id' => ['required', 'integer', 'exists:publishing_packages,id'],
+            'customer_name' => ['required', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:32'],
+            'customer_email' => ['nullable', 'email', 'max:120'],
+            'manuscript_title' => ['nullable', 'string', 'max:190'],
+            'manuscript_genre' => ['nullable', 'string', 'max:120'],
+            'estimated_page_count' => ['nullable', 'integer', 'min:10', 'max:5000'],
+            'target_publish_date' => ['nullable', 'date', 'after:today'],
+            'budget_range' => ['nullable', 'string', 'max:64'],
+            'services' => ['nullable', 'array'],
+            'services.*' => ['integer'],
+            'notes' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        $selectedServiceIds = collect($data['services'] ?? [])
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => in_array($id, $activeServiceIds, true))
+            ->unique()
+            ->values()
+            ->all();
+
+        $package = PublishingPackage::query()->findOrFail((int) $data['publishing_package_id']);
+
+        $selectedServices = AdditionalService::query()
+            ->whereIn('id', $selectedServiceIds)
+            ->get(['id', 'name', 'price']);
+
+        $estimate = $this->calculatePackageEstimate(
+            $package,
+            $selectedServices,
+            isset($data['estimated_page_count']) ? (int) $data['estimated_page_count'] : null
+        );
+
+        $selectedServicesPayload = $selectedServices
+            ->map(fn($service) => [
+                'id' => (int) $service->id,
+                'name' => (string) $service->name,
+                'price' => (float) $service->price,
+            ])
+            ->values()
+            ->all();
+
+        $consultation = StorePackageConsultation::create([
+            'user_id' => auth()->id(),
+            'publishing_package_id' => $package->id,
+            'package_name' => (string) $package->name,
+            'package_base_price' => (float) $package->price,
+            'customer_name' => $data['customer_name'],
+            'customer_phone' => $data['customer_phone'],
+            'customer_email' => $data['customer_email'] ?? null,
+            'manuscript_title' => $data['manuscript_title'] ?? null,
+            'manuscript_genre' => $data['manuscript_genre'] ?? null,
+            'estimated_page_count' => $data['estimated_page_count'] ?? null,
+            'target_publish_date' => $data['target_publish_date'] ?? null,
+            'budget_range' => $data['budget_range'] ?? null,
+            'selected_services' => $selectedServicesPayload,
+            'estimated_total' => $estimate['total'],
+            'notes' => $data['notes'] ?? null,
+            'status' => 'pending',
+            'source' => 'storefront-configurator',
+        ]);
+
+        $notifyUsers = User::query()
+            ->whereIn('role', ['admin', 'finance', 'owner', 'superadmin'])
+            ->get(['id']);
+
+        foreach ($notifyUsers as $user) {
+            $notifications->send(
+                (int) $user->id,
+                'Lead Paket Penerbitan Baru',
+                'Lead konsultasi baru untuk paket ' . $package->name . ' atas nama ' . $consultation->customer_name
+                . ' (estimasi Rp ' . number_format((float) $consultation->estimated_total, 0, ',', '.') . ').',
+                null
+            );
+        }
+
+        return redirect()
+            ->route('store.package-configurator', ['package_id' => $package->id])
+            ->with('success', 'Permintaan konsultasi berhasil dikirim. Tim kami akan menghubungi Anda untuk tahap berikutnya.');
+    }
+
+    private function calculatePackageEstimate(PublishingPackage $package, $services, ?int $pageCount): array
+    {
+        $base = (float) $package->price;
+        $serviceTotal = collect($services)
+            ->map(fn($service) => (float) ($service->price ?? 0))
+            ->sum();
+
+        $pageSurcharge = 0;
+        if ($pageCount !== null && $pageCount > 220) {
+            $extraPages = $pageCount - 220;
+            $pageSurcharge = $extraPages * 1500;
+        }
+
+        return [
+            'base' => $base,
+            'service_total' => $serviceTotal,
+            'page_surcharge' => $pageSurcharge,
+            'total' => max(0, $base + $serviceTotal + $pageSurcharge),
+        ];
     }
 
     public function placeOrder(Request $request, StoreCatalogItem $item, NotificationService $notifications, IpaymuService $ipaymu, RajaOngkirService $rajaOngkir)

@@ -419,7 +419,7 @@
 
                 <div class="cta-list">
                     <a href="{{ route('store.policies') }}">Lihat Kebijakan Storefront Lengkap</a>
-                    <a href="{{ route('store.index') }}#paket-penerbitan">Tertarik Terbitkan Karya? Lihat Paket
+                    <a href="{{ route('store.package-configurator') }}">Tertarik Terbitkan Karya? Mulai Configurator
                         Penerbitan</a>
                 </div>
 

@@ -27,6 +27,7 @@ use App\Http\Controllers\AdminRoyaltyPayoutController;
 use App\Http\Controllers\AdminStoreCatalogController;
 use App\Http\Controllers\AdminStoreOrderController;
 use App\Http\Controllers\AdminStoreVoucherController;
+use App\Http\Controllers\AdminStorePackageConsultationController;
 use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
@@ -102,6 +103,12 @@ Route::get('/store/shipping/cities', [StorefrontController::class, 'shippingCiti
 
 Route::view('/store/policies', 'store.policies')
     ->name('store.policies');
+
+Route::get('/store/paket/configurator', [StorefrontController::class, 'packageConfigurator'])
+    ->name('store.package-configurator');
+
+Route::post('/store/paket/configurator', [StorefrontController::class, 'submitPackageConfigurator'])
+    ->name('store.package-configurator.submit');
 
 Route::get('/store/{slug}', [StorefrontController::class, 'show'])
     ->name('store.show');
@@ -510,6 +517,12 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/finance/store/orders', [AdminStoreOrderController::class, 'index'])
                 ->name('finance.store.orders.index');
+
+            Route::get('/finance/store/package-consultations', [AdminStorePackageConsultationController::class, 'index'])
+                ->name('finance.store.package-consultations.index');
+
+            Route::put('/finance/store/package-consultations/{consultation}/status', [AdminStorePackageConsultationController::class, 'updateStatus'])
+                ->name('finance.store.package-consultations.update-status');
 
             Route::put('/finance/store/orders/{order}', [AdminStoreOrderController::class, 'update'])
                 ->name('finance.store.orders.update');

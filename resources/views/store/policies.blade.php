@@ -276,7 +276,7 @@
         </section>
 
         <div class="cta">
-            <a class="btn btn-primary" href="{{ route('store.index') }}#paket-penerbitan">Lihat Paket Penerbitan</a>
+            <a class="btn btn-primary" href="{{ route('store.package-configurator') }}">Mulai Configurator Paket</a>
             <a class="btn btn-soft" href="{{ route('store.index') }}">Kembali ke Katalog Buku</a>
         </div>
     </div>

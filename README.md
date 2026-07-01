@@ -237,6 +237,9 @@ Progress terbaru:
 - ✅ FAQ customer dan author sudah dipisah untuk mengurangi kebingungan alur.
 - ✅ Step 2 selesai: detail halaman produk sudah diperkaya dengan preview isi, profil author, dan rekomendasi yang lebih informatif.
 - ✅ Step 3 selesai: kebijakan storefront dipisah ke halaman khusus agar dokumentasi layanan lebih rapi.
+- ✅ Step 4 MVP selesai: configurator paket penerbitan sudah live (kalkulasi estimasi + simpan request lead konsultasi).
+- ✅ Layanan opsional configurator sekarang dinamis dari master Additional Services (tidak statis hardcoded).
+- ✅ Tahap berikutnya sudah berjalan: finance/admin bisa memantau lead configurator dan update status follow-up.
 
 ## Roadmap Sprint Mingguan
 

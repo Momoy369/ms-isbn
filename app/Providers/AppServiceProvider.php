@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use App\Models\Notification;
 use App\Models\AuthorBookOrder;
 use App\Models\AuthorUpgradeRequest;
+use App\Models\StorePackageConsultation;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 
 class AppServiceProvider extends ServiceProvider
@@ -82,6 +83,10 @@ class AppServiceProvider extends ServiceProvider
                 ->count();
 
             $pendingUpgradeCount = AuthorUpgradeRequest::query()
+                ->where('status', 'pending')
+                ->count();
+
+            $pendingPackageLeadCount = StorePackageConsultation::query()
                 ->where('status', 'pending')
                 ->count();
 
@@ -183,6 +188,13 @@ class AppServiceProvider extends ServiceProvider
                         'text' => 'Order Storefront',
                         'route' => 'finance.store.orders.index',
                         'icon' => 'fas fa-clipboard-list',
+                    ],
+                    [
+                        'text' => 'Lead Paket Penerbitan',
+                        'route' => 'finance.store.package-consultations.index',
+                        'icon' => 'fas fa-user-tie',
+                        'label' => $pendingPackageLeadCount > 0 ? (string) $pendingPackageLeadCount : null,
+                        'label_color' => $pendingPackageLeadCount > 0 ? 'warning' : null,
                     ],
                     [
                         'text' => 'Voucher Storefront',

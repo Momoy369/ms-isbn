@@ -637,7 +637,7 @@
                     <p>Untuk calon penulis yang ingin menerbitkan karya, bukan hanya membeli buku jadi.</p>
                 </div>
                 <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                    <a href="{{ $consultationUrl }}" class="btn">{{ $consultationLabel }}</a>
+                    <a href="{{ route('store.package-configurator') }}" class="btn">{{ $consultationLabel }}</a>
                     <a href="{{ route('store.policies') }}#faq-author" class="btn"
                         style="background:#8d806f;">Lihat FAQ Author</a>
                 </div>
@@ -691,8 +691,8 @@
                                 }
                             @endphp
                             <div style="margin-top:.75rem;">
-                                <a href="{{ $packageConsultationUrl }}" class="btn"
-                                    style="width:100%; text-align:center;">Pilih Paket Ini</a>
+                                <a href="{{ route('store.package-configurator', ['package_id' => $package->id]) }}"
+                                    class="btn" style="width:100%; text-align:center;">Pilih Paket Ini</a>
                             </div>
                         </article>
                     @endforeach
@@ -787,7 +787,8 @@
             </details>
             <details>
                 <summary>FAQ Author: Bisa langsung konsultasi paket penerbitan?</summary>
-                <p>Bisa. Klik tombol konsultasi paket lalu isi kebutuhan naskah agar tim penerbit dapat menindaklanjuti.
+                <p>Bisa. Klik tombol konsultasi paket lalu isi configurator paket agar tim penerbit dapat
+                    menindaklanjuti.
                 </p>
             </details>
             <details>
