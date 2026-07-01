@@ -434,6 +434,27 @@
         $isGuest = !auth()->check();
         $currentRole = $isGuest ? null : (string) auth()->user()->role;
         $storeReturnUrl = request()->fullUrl();
+
+        if ($isGuest) {
+            $consultationUrl = route('register', [
+                'from' => 'store',
+                'return_to' => $storeReturnUrl,
+                'intent' => 'publishing-package',
+            ]);
+            $consultationLabel = 'Mulai Konsultasi Paket';
+        } elseif (in_array($currentRole, ['customer', 'reader'], true)) {
+            $consultationUrl = route('profile.edit', [
+                'source' => 'storefront',
+                'intent' => 'publishing-package',
+            ]);
+            $consultationLabel = 'Ajukan Konsultasi Paket';
+        } elseif (in_array($currentRole, ['author'], true)) {
+            $consultationUrl = route('author.dashboard');
+            $consultationLabel = 'Lanjutkan Sebagai Author';
+        } else {
+            $consultationUrl = route('dashboard');
+            $consultationLabel = 'Kelola Dari Panel Internal';
+        }
     @endphp
     <div class="container">
         <section class="hero">
@@ -468,6 +489,7 @@
                 <a href="#katalog-buku">Katalog Buku</a>
                 <a href="#paket-penerbitan">Paket Penerbitan</a>
                 <a href="#cara-kerja">Cara Kerja</a>
+                <a href="{{ route('store.policies') }}">Kebijakan</a>
                 <a href="#faq-store">FAQ</a>
             </div>
             <div class="hero-copy">
@@ -614,14 +636,11 @@
                     <h2>Paket Penerbitan</h2>
                     <p>Untuk calon penulis yang ingin menerbitkan karya, bukan hanya membeli buku jadi.</p>
                 </div>
-                @if ($isGuest)
-                    <a href="{{ route('register', ['from' => 'store', 'return_to' => $storeReturnUrl]) }}"
-                        class="btn">Konsultasi Paket</a>
-                @elseif (in_array($currentRole, ['customer', 'reader'], true))
-                    <a href="{{ route('profile.edit') }}" class="btn">Konsultasi Paket</a>
-                @else
-                    <a href="{{ route('dashboard') }}" class="btn">Kelola Paket</a>
-                @endif
+                <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                    <a href="{{ $consultationUrl }}" class="btn">{{ $consultationLabel }}</a>
+                    <a href="{{ route('store.policies') }}#faq-author" class="btn"
+                        style="background:#8d806f;">Lihat FAQ Author</a>
+                </div>
             </div>
 
             @if ($packages->isEmpty())
@@ -651,10 +670,68 @@
                                     <span class="tag">Cover Design</span>
                                 @endif
                             </div>
+                            @php
+                                $packageQuery = ['package' => $package->name, 'intent' => 'publishing-package'];
+
+                                if ($isGuest) {
+                                    $packageConsultationUrl = route('register', [
+                                        'from' => 'store',
+                                        'return_to' => $storeReturnUrl,
+                                        ...$packageQuery,
+                                    ]);
+                                } elseif (in_array($currentRole, ['customer', 'reader'], true)) {
+                                    $packageConsultationUrl = route('profile.edit', [
+                                        'source' => 'storefront',
+                                        ...$packageQuery,
+                                    ]);
+                                } elseif (in_array($currentRole, ['author'], true)) {
+                                    $packageConsultationUrl = route('author.dashboard');
+                                } else {
+                                    $packageConsultationUrl = route('dashboard');
+                                }
+                            @endphp
+                            <div style="margin-top:.75rem;">
+                                <a href="{{ $packageConsultationUrl }}" class="btn"
+                                    style="width:100%; text-align:center;">Pilih Paket Ini</a>
+                            </div>
                         </article>
                     @endforeach
                 </div>
             @endif
+        </section>
+
+        <section id="kebijakan-store" style="margin:1rem 0 2rem;">
+            <div class="section-head">
+                <div>
+                    <h2>Kebijakan Storefront</h2>
+                    <p>Ringkasan aturan layanan agar proses pembelian dan pemesanan paket lebih transparan.</p>
+                </div>
+                <a href="{{ route('store.policies') }}" class="btn" style="background:#8d806f;">Baca Kebijakan
+                    Lengkap</a>
+            </div>
+            <div class="flow-grid">
+                <div class="flow-card">
+                    <strong>Refund & Komplain</strong>
+                    <div class="meta">Permintaan refund diajukan dari detail order customer dan ditinjau finance
+                        sesuai
+                        bukti transaksi serta status pesanan.</div>
+                </div>
+                <div class="flow-card">
+                    <strong>Pengiriman Buku Cetak</strong>
+                    <div class="meta">Estimasi ongkir dihitung saat checkout. Nomor resi tersedia setelah order
+                        diproses dan dikirim.</div>
+                </div>
+                <div class="flow-card">
+                    <strong>Akses Ebook</strong>
+                    <div class="meta">Ebook dibuka melalui library internal berbasis password reader pada order yang
+                        valid.</div>
+                </div>
+                <div class="flow-card">
+                    <strong>Hak Cipta Karya Author</strong>
+                    <div class="meta">Karya tetap milik author sesuai kesepakatan layanan. Ruang lingkup layanan
+                        mengikuti paket yang dipilih.</div>
+                </div>
+            </div>
         </section>
 
         <section id="cara-kerja">
@@ -691,21 +768,37 @@
             <div class="section-head">
                 <div>
                     <h2>FAQ</h2>
-                    <p>Pertanyaan paling sering ditanyakan customer.</p>
+                    <p>Pertanyaan paling sering ditanyakan customer dan author.</p>
                 </div>
             </div>
-            <details>
-                <summary>Apakah ebook memiliki batas stok?</summary>
+
+            <details open>
+                <summary>FAQ Customer: Apakah ebook memiliki batas stok?</summary>
                 <p>Tidak. Produk ebook dijual tanpa batas stok dan bisa dibeli kapan saja.</p>
             </details>
             <details>
-                <summary>Bagaimana cara melacak order?</summary>
+                <summary>FAQ Customer: Bagaimana cara melacak order?</summary>
                 <p>Gunakan menu Lacak Pesanan di atas, atau cek detail order dari dashboard customer.</p>
             </details>
             <details>
-                <summary>Bisa langsung konsultasi paket penerbitan?</summary>
-                <p>Bisa. Klik tombol Konsultasi Paket, lalu lengkapi data akun/customer untuk tindak lanjut tim
-                    penerbit.</p>
+                <summary>FAQ Customer: Apakah bisa ajukan refund?</summary>
+                <p>Bisa. Refund diajukan dari halaman detail order dan diproses oleh tim finance sesuai status order.
+                </p>
+            </details>
+            <details>
+                <summary>FAQ Author: Bisa langsung konsultasi paket penerbitan?</summary>
+                <p>Bisa. Klik tombol konsultasi paket lalu isi kebutuhan naskah agar tim penerbit dapat menindaklanjuti.
+                </p>
+            </details>
+            <details>
+                <summary>FAQ Author: Apakah saya harus punya akun author dulu?</summary>
+                <p>Tidak wajib. Anda bisa mulai sebagai customer, lalu upgrade ke author saat proses layanan
+                    penerbitan berjalan.</p>
+            </details>
+            <details>
+                <summary>FAQ Author: Apa saja yang termasuk dalam paket?</summary>
+                <p>Tiap paket bisa mencakup editing, layout, cover design, dukungan print, dan/atau ebook sesuai tag
+                    pada kartu paket.</p>
             </details>
         </section>
     </div>

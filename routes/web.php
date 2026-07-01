@@ -100,6 +100,9 @@ Route::get('/store/track/{orderNumber}/reader', [StorefrontController::class, 'r
 Route::get('/store/shipping/cities', [StorefrontController::class, 'shippingCities'])
     ->name('store.shipping.cities');
 
+Route::view('/store/policies', 'store.policies')
+    ->name('store.policies');
+
 Route::get('/store/{slug}', [StorefrontController::class, 'show'])
     ->name('store.show');
 

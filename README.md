@@ -144,14 +144,13 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 - Workflow upgrade customer/reader ke author sudah dilengkapi checklist, lampiran, review admin, notifikasi, dan ekspor.
 - Ebook sudah diperlakukan sebagai produk tanpa stok fisik.
 - Manual book sistem sudah tersedia di dokumen terpisah.
+- Phase 1 storefront profesional sudah dimulai: CTA paket penerbitan diperjelas dan FAQ dipisah untuk customer/author.
 
 ### Masih Perlu Dikerjakan
 
 - Verifikasi tambahan untuk tracking order publik.
 - Idempotency key dan audit log callback iPaymu yang lebih lengkap.
 - Watermark ebook dinamis berbasis identitas pembeli.
-- Library ebook internal untuk akun customer.
-- Modul retur/refund order store.
 - Multi-payment gateway sebagai fallback selain iPaymu.
 - Penguatan test coverage untuk callback, order flow, dan royalty.
 
@@ -186,6 +185,58 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
     - Perbaikan environment test (sqlite driver atau dedicated test DB).
     - Tambah test coverage untuk payment callback, order flow, royalty payout.
     - Tambah test keamanan endpoint reader ebook (token, device hash).
+
+## Roadmap Storefront Profesional (Author + Customer)
+
+Target roadmap ini adalah menjadikan storefront lebih mirip website penerbitan profesional dengan dua funnel yang berjalan paralel:
+
+- Funnel Author: pemesanan paket penerbitan dan layanan produksi.
+- Funnel Customer: pembelian buku cetak/ebook dengan pengalaman retail yang lengkap.
+
+### Phase 1 - Quick Wins (Paling Mungkin Dikerjakan Dulu)
+
+- Paket penerbitan bertingkat di storefront (Basic/Standard/Premium/Custom).
+- Product page lebih kaya: preview isi, profil penulis, rekomendasi judul terkait.
+- Checkout lebih profesional: ringkasan biaya transparan, catatan promo/voucher, invoice jelas.
+- Halaman kebijakan storefront (refund, pengiriman, hak cipta, FAQ tersegmentasi author/customer).
+
+### Phase 2 - Mid (Operasional dan Konversi)
+
+- Configurator paket penerbitan dengan estimasi biaya otomatis.
+- Dashboard author untuk tracking milestone produksi paket.
+- Wishlist, notifikasi restock/pre-order, dan rekomendasi pembelian lanjutan untuk customer.
+- Ticketing support untuk pertanyaan editorial, billing, dan teknis order.
+
+### Phase 3 - Advanced (Scale dan Growth)
+
+- Multi-payment gateway dengan fallback provider.
+- Loyalty dan referral program (author-to-author, reader-to-reader).
+- Marketing automation (journey email/WA) untuk lead author dan repeat buyer customer.
+- Analitik funnel end-to-end (visit -> checkout -> repeat purchase).
+
+### KPI Utama Storefront
+
+- Conversion rate lead author -> deal paket.
+- Conversion rate cart -> order paid.
+- Cart abandonment rate.
+- Refund rate dan waktu penyelesaian refund.
+- Repeat purchase rate customer.
+
+### Langkah Implementasi Bertahap (Start Sekarang)
+
+Urutan kerja awal yang direkomendasikan:
+
+1. Finalisasi halaman paket penerbitan + CTA konsultasi.
+2. Penyempurnaan product detail (preview + profil penulis + related books).
+3. Kebijakan storefront (refund/shipping/FAQ author-customer) dalam halaman terpisah.
+4. Pengerjaan configurator paket sebagai fase lanjutan setelah konten dasar stabil.
+
+Progress terbaru:
+
+- ✅ Step 1 sudah diimplementasikan di landing storefront (CTA konsultasi paket lebih tegas per role).
+- ✅ FAQ customer dan author sudah dipisah untuk mengurangi kebingungan alur.
+- ✅ Step 2 selesai: detail halaman produk sudah diperkaya dengan preview isi, profil author, dan rekomendasi yang lebih informatif.
+- ✅ Step 3 selesai: kebijakan storefront dipisah ke halaman khusus agar dokumentasi layanan lebih rapi.
 
 ## Roadmap Sprint Mingguan
 

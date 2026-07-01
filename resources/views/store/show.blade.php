@@ -257,6 +257,69 @@
             padding: .7rem;
         }
 
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .7rem;
+            margin-top: .8rem;
+        }
+
+        .feature-card {
+            border: 1px solid #e2dacb;
+            border-radius: 12px;
+            background: #fcfaf5;
+            padding: .75rem;
+        }
+
+        .feature-card h4 {
+            margin: 0 0 .35rem;
+            font-size: .92rem;
+            color: #2f2a23;
+        }
+
+        .feature-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .85rem;
+            line-height: 1.45;
+        }
+
+        .cta-list {
+            display: grid;
+            gap: .5rem;
+            margin-top: .75rem;
+        }
+
+        .cta-list a {
+            display: block;
+            text-decoration: none;
+            border: 1px solid #d8cfbf;
+            border-radius: 10px;
+            background: #f7f1e3;
+            color: #3f372f;
+            font-weight: 700;
+            padding: .55rem .65rem;
+        }
+
+        .related-head {
+            margin-top: 1.3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .6rem;
+            flex-wrap: wrap;
+        }
+
+        .related-head h3 {
+            margin: 0;
+        }
+
+        .related-head p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .86rem;
+        }
+
         @media (max-width: 900px) {
             .layout {
                 grid-template-columns: 1fr;
@@ -272,6 +335,10 @@
 
             .cover {
                 height: 300px;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -290,6 +357,15 @@
                     ? $coverPath
                     : asset('storage/' . ltrim($coverPath, '/'));
         }
+
+        $descriptionText = trim((string) ($item->description ?? ''));
+        $previewSnippet =
+            $descriptionText !== ''
+                ? mb_substr($descriptionText, 0, 420) . (mb_strlen($descriptionText) > 420 ? '...' : '')
+                : 'Preview isi buku belum tersedia. Tim penerbit akan menampilkan cuplikan bab pembuka pada pembaruan berikutnya.';
+
+        $authorDisplay =
+            trim((string) ($item->author_name ?? '')) !== '' ? $item->author_name : 'Author belum dicantumkan';
     @endphp
 
     <div class="container">
@@ -327,6 +403,26 @@
                     <div class="price">Rp {{ number_format($item->finalPrice(), 0, ',', '.') }}</div>
                 @endif
                 <div class="desc">{{ $item->description ?: 'Deskripsi buku belum tersedia.' }}</div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Preview Isi</h4>
+                        <p>{{ $previewSnippet }}</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Profil Author</h4>
+                        <p><strong>{{ $authorDisplay }}</strong></p>
+                        <p style="margin-top:.25rem;">Buku ini dipublikasikan melalui storefront penerbit dengan alur
+                            checkout yang terintegrasi untuk format print maupun ebook.</p>
+                    </div>
+                </div>
+
+                <div class="cta-list">
+                    <a href="{{ route('store.policies') }}">Lihat Kebijakan Storefront Lengkap</a>
+                    <a href="{{ route('store.index') }}#paket-penerbitan">Tertarik Terbitkan Karya? Lihat Paket
+                        Penerbitan</a>
+                </div>
+
                 @if ($item->isPrint() && $item->stock !== null)
                     <div class="stock-pill">Stok print tersedia: <strong>{{ $item->stock }}</strong></div>
                 @endif
@@ -515,7 +611,12 @@
         </div>
 
         @if ($relatedAuthor->isNotEmpty())
-            <h3 style="margin-top:1.3rem;">Rekomendasi Penulis Serupa</h3>
+            <div class="related-head">
+                <div>
+                    <h3>Rekomendasi Penulis Serupa</h3>
+                    <p>Judul lain dari author yang relevan untuk menambah referensi pembaca.</p>
+                </div>
+            </div>
             <section class="related">
                 @foreach ($relatedAuthor as $row)
                     <article class="small">
@@ -533,7 +634,12 @@
         @endif
 
         @if ($relatedType->isNotEmpty())
-            <h3 style="margin-top:1.3rem;">Rekomendasi Kategori Format Serupa</h3>
+            <div class="related-head">
+                <div>
+                    <h3>Rekomendasi Format Serupa</h3>
+                    <p>Koleksi lain dengan tipe produk yang sama agar pengalaman belanja lebih terarah.</p>
+                </div>
+            </div>
             <section class="related">
                 @foreach ($relatedType as $row)
                     <article class="small">
