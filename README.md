@@ -134,6 +134,11 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 - Dashboard customer, dashboard author, dan akses lintas role ke storefront/customer sudah diselaraskan.
 - Redirect login/register dari storefront sudah mempertahankan konteks yang aman.
 - Storefront publik sudah ditingkatkan dengan filter katalog, section paket penerbitan, FAQ, dan copywriting layanan.
+- Fondasi monetisasi storefront sudah ada lewat pengelolaan promo price pada katalog admin dan filter operasional order.
+- Laporan penjualan storefront sudah bisa diekspor ke CSV dengan filter tanggal dan status.
+- Validasi status transition order storefront sudah dibuat lebih ketat.
+- Notifikasi otomatis ke customer saat status order berubah sudah aktif.
+- Voucher/promo code storefront sudah bisa dibuat, dikelola, dan dipakai saat checkout.
 - Workflow upgrade customer/reader ke author sudah dilengkapi checklist, lampiran, review admin, notifikasi, dan ekspor.
 - Ebook sudah diperlakukan sebagai produk tanpa stok fisik.
 - Manual book sistem sudah tersedia di dokumen terpisah.
@@ -163,7 +168,6 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 
 - Tambah verifikasi tracking order (OTP WA/email atau minimal validasi phone/email pembeli).
 - Tambah library ebook internal (list ebook yang sudah dibeli per akun).
-- Tambah fitur kupon/voucher promo di storefront.
 - Tambah fitur multi-payment gateway (fallback selain iPaymu).
 - Tambah laporan penjualan storefront periodik (harian/mingguan/bulanan) dengan export.
 - Tambah modul retur/refund order store.
@@ -173,16 +177,10 @@ Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role se
 
 ## To-Do Penyempurnaan Fitur Yang Sudah Ada
 
-- Hardening callback iPaymu:
-    - Idempotency key yang konsisten.
-    - Audit log callback lebih detail.
-    - Retry-safe update status.
 - Penyempurnaan role customer/reader:
     - Flow upgrade ke author dengan approval admin (opsional) dan checklist dokumen.
     - Help text atau SOP mini di area profile bila masih diperlukan.
 - Penyempurnaan admin order:
-    - Validasi status transition yang lebih ketat.
-    - Auto-notify pembeli saat status berubah (paid, packed, shipped, completed).
     - Tombol reset reader session per order.
 - Penyempurnaan quality engineering:
     - Perbaikan environment test (sqlite driver atau dedicated test DB).
@@ -218,16 +216,14 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
 - ✅ Checklist dokumen/verifikasi saat pengajuan upgrade author.
 - Catatan: help text/SOP mini di area profile masih bisa ditambahkan sebagai polish opsional.
 
-### Sprint 4 (Minggu 4) - Monetisasi Storefront
+### Sprint 4 (Minggu 4) - Monetisasi Storefront ✅ SELESAI
 
-- Prioritas tinggi:
-    - Implementasi kupon/voucher promo di storefront.
-    - Laporan penjualan periodik (harian/mingguan/bulanan) + export.
-- Prioritas menengah:
-    - Auto-notify pembeli untuk status packed, shipped, completed.
-    - Validasi status transition order yang lebih ketat di admin.
-- Prioritas rendah:
-    - ✅ Penyempurnaan komponen filter/order list admin (operational dashboard filter + SLA + export + pagination per queue).
+- ✅ Fondasi monetisasi storefront sudah tersedia melalui promo price di katalog admin dan filter operasional order.
+- ✅ Laporan penjualan storefront bisa diekspor ke CSV dengan filter tanggal dan status.
+- ✅ Penyempurnaan komponen filter/order list admin (operational dashboard filter + SLA + export + pagination per queue).
+- ✅ Auto-notify customer saat status order berubah.
+- ✅ Validasi status transition order yang lebih ketat di admin.
+- ✅ Voucher/promo code storefront sudah bisa dibuat, dikelola, dan dipakai saat checkout.
 
 ### Sprint 7 (Minggu 7) - Orkestrasi Workspace Produksi (IN PROGRESS)
 

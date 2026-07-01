@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\PublishingPackage;
 use App\Models\StoreCatalogItem;
 use App\Models\StoreOrder;
+use App\Models\StoreVoucher;
 use App\Models\User;
 use App\Services\IpaymuService;
 use App\Services\NotificationService;
 use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -209,6 +211,7 @@ class StorefrontController extends Controller
             'shipping_courier' => [$needsShipping ? 'required' : 'nullable', 'in:jne,pos,tiki'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'reader_password' => [$hasEbookAccess ? 'required' : 'nullable', 'string', 'min:6', 'max:64'],
+            'voucher_code' => ['nullable', 'string', 'max:64'],
         ]);
 
         $quantity = (int) $data['quantity'];
@@ -217,10 +220,31 @@ class StorefrontController extends Controller
             return back()->with('warning', 'Jumlah pesanan melebihi stok yang tersedia.')->withInput();
         }
 
+        $voucherCode = strtoupper(trim((string) ($data['voucher_code'] ?? '')));
+        $voucher = null;
+
         $unitPrice = $item->hasSeparateFormats() && $selectedFormat
             ? $item->finalPriceForFormat($selectedFormat)
             : $item->finalPrice();
         $productSubtotal = $unitPrice * $quantity;
+
+        if ($voucherCode !== '') {
+            $voucher = StoreVoucher::query()
+                ->whereRaw('UPPER(code) = ?', [$voucherCode])
+                ->first();
+
+            if (!$voucher || !$voucher->isCurrentlyActive()) {
+                return back()->with('warning', 'Kode voucher tidak valid atau sudah tidak aktif.')->withInput();
+            }
+
+            if (!$voucher->appliesToItem($item)) {
+                return back()->with('warning', 'Voucher ini tidak berlaku untuk format produk yang dipilih.')->withInput();
+            }
+
+            if (!$voucher->canApplyToSubtotal($productSubtotal)) {
+                return back()->with('warning', 'Subtotal belum memenuhi minimum penggunaan voucher.')->withInput();
+            }
+        }
 
         $shippingCost = 0;
         $shippingService = null;
@@ -238,63 +262,83 @@ class StorefrontController extends Controller
             $shippingEtd = (string) ($estimate['etd'] ?? null);
         }
 
-        $subtotal = $productSubtotal + $shippingCost;
+        $voucherDiscount = $voucher ? $voucher->calculateDiscount($productSubtotal) : 0.0;
+        $subtotalBeforeDiscount = $productSubtotal + $shippingCost;
+        $subtotal = max(0, $subtotalBeforeDiscount - $voucherDiscount);
 
-        $order = StoreOrder::create([
-            'user_id' => auth()->id(),
-            'store_catalog_item_id' => $item->id,
-            'selected_format' => $selectedFormat ?? ($item->product_type === 'ebook' ? 'ebook' : 'print'),
-            'order_number' => 'SO-' . now()->format('YmdHis') . '-' . random_int(100, 999),
-            'customer_name' => $data['customer_name'],
-            'customer_phone' => $data['customer_phone'],
-            'customer_email' => $data['customer_email'] ?? null,
-            'quantity' => $quantity,
-            'unit_price' => $unitPrice,
-            'subtotal' => $subtotal,
-            'shipping_address' => $data['shipping_address'] ?? null,
-            'shipping_destination_province_id' => $data['shipping_destination_province_id'] ?? null,
-            'shipping_destination_province_name' => $data['shipping_destination_province_name'] ?? null,
-            'shipping_destination_city_id' => $data['shipping_destination_city_id'] ?? null,
-            'shipping_destination_city_name' => $data['shipping_destination_city_name'] ?? null,
-            'shipping_courier' => $data['shipping_courier'] ?? null,
-            'shipping_service' => $shippingService,
-            'shipping_cost' => $shippingCost,
-            'shipping_etd' => $shippingEtd,
-            'notes' => $data['notes'] ?? null,
-            'status' => 'pending',
-            'reader_password_hash' => $hasEbookAccess ? Hash::make((string) $data['reader_password']) : null,
-        ]);
+        try {
+            $checkoutUrl = DB::transaction(function () use ($item, $data, $selectedFormat, $hasEbookAccess, $quantity, $unitPrice, $subtotal, $subtotalBeforeDiscount, $shippingCost, $shippingService, $shippingEtd, $voucher, $voucherCode, $voucherDiscount, $notifications, $ipaymu) {
+                $order = StoreOrder::create([
+                    'user_id' => auth()->id(),
+                    'store_catalog_item_id' => $item->id,
+                    'voucher_id' => $voucher?->id,
+                    'voucher_code' => $voucherCode !== '' ? $voucherCode : null,
+                    'voucher_name' => $voucher?->name,
+                    'selected_format' => $selectedFormat ?? ($item->product_type === 'ebook' ? 'ebook' : 'print'),
+                    'order_number' => 'SO-' . now()->format('YmdHis') . '-' . random_int(100, 999),
+                    'customer_name' => $data['customer_name'],
+                    'customer_phone' => $data['customer_phone'],
+                    'customer_email' => $data['customer_email'] ?? null,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'subtotal_before_discount' => $subtotalBeforeDiscount,
+                    'voucher_discount_amount' => $voucherDiscount,
+                    'subtotal' => $subtotal,
+                    'shipping_address' => $data['shipping_address'] ?? null,
+                    'shipping_destination_province_id' => $data['shipping_destination_province_id'] ?? null,
+                    'shipping_destination_province_name' => $data['shipping_destination_province_name'] ?? null,
+                    'shipping_destination_city_id' => $data['shipping_destination_city_id'] ?? null,
+                    'shipping_destination_city_name' => $data['shipping_destination_city_name'] ?? null,
+                    'shipping_courier' => $data['shipping_courier'] ?? null,
+                    'shipping_service' => $shippingService,
+                    'shipping_cost' => $shippingCost,
+                    'shipping_etd' => $shippingEtd,
+                    'notes' => $data['notes'] ?? null,
+                    'status' => 'pending',
+                    'reader_password_hash' => $hasEbookAccess ? Hash::make((string) $data['reader_password']) : null,
+                ]);
 
-        if ($isPrintPurchase && $item->stock !== null) {
-            $item->decrement('stock', $quantity);
+                if ($voucher) {
+                    $voucher->increment('used_count');
+                }
+
+                if ($item->isPrint() && $item->stock !== null) {
+                    $item->decrement('stock', $quantity);
+                }
+
+                $financeUsers = User::whereIn('role', ['finance', 'owner', 'superadmin'])->get(['id']);
+                foreach ($financeUsers as $user) {
+                    $voucherInfo = $voucher ? ' Voucher ' . $voucher->code . ' dipakai, diskon Rp ' . number_format($voucherDiscount, 0, ',', '.') . '.' : '.';
+                    $notifications->send(
+                        $user->id,
+                        'Order Store Baru',
+                        'Order ' . $order->order_number . ' masuk untuk buku "' . $item->title . '" dengan total Rp ' . number_format($subtotal, 0, ',', '.') . $voucherInfo,
+                        $item->book_id
+                    );
+                }
+
+                $checkout = $ipaymu->createStoreOrderCheckout($order);
+
+                if (empty($checkout['checkout_url'])) {
+                    throw new \RuntimeException('Pesanan tercatat, namun pembuatan checkout iPaymu gagal.');
+                }
+
+                $order->update([
+                    'payment_method' => 'ipaymu',
+                    'payment_gateway' => 'ipaymu',
+                    'gateway_reference' => $checkout['reference'] ?? null,
+                    'gateway_checkout_url' => $checkout['checkout_url'],
+                    'gateway_expires_at' => $checkout['expires_at'] ?? null,
+                    'payment_reference' => $checkout['reference'] ?? $order->payment_reference,
+                ]);
+
+                return $checkout['checkout_url'];
+            });
+        } catch (\Throwable $e) {
+            return back()->with('danger', $e->getMessage())->withInput();
         }
 
-        $financeUsers = User::whereIn('role', ['finance', 'owner', 'superadmin'])->get(['id']);
-        foreach ($financeUsers as $user) {
-            $notifications->send(
-                $user->id,
-                'Order Store Baru',
-                'Order ' . $order->order_number . ' masuk untuk buku "' . $item->title . '" dengan total Rp ' . number_format($subtotal, 0, ',', '.') . '.',
-                $item->book_id
-            );
-        }
-
-        $checkout = $ipaymu->createStoreOrderCheckout($order);
-
-        if (empty($checkout['checkout_url'])) {
-            return back()->with('danger', 'Pesanan tercatat, namun pembuatan checkout iPaymu gagal. Silakan hubungi admin. Nomor order: ' . $order->order_number);
-        }
-
-        $order->update([
-            'payment_method' => 'ipaymu',
-            'payment_gateway' => 'ipaymu',
-            'gateway_reference' => $checkout['reference'] ?? null,
-            'gateway_checkout_url' => $checkout['checkout_url'],
-            'gateway_expires_at' => $checkout['expires_at'] ?? null,
-            'payment_reference' => $checkout['reference'] ?? $order->payment_reference,
-        ]);
-
-        return redirect()->away($checkout['checkout_url']);
+        return redirect()->away($checkoutUrl);
     }
 
     public function trackForm()

@@ -26,6 +26,7 @@ use App\Http\Controllers\AdminLegacyBookController;
 use App\Http\Controllers\AdminRoyaltyPayoutController;
 use App\Http\Controllers\AdminStoreCatalogController;
 use App\Http\Controllers\AdminStoreOrderController;
+use App\Http\Controllers\AdminStoreVoucherController;
 use App\Http\Controllers\AuthorOrderController;
 use App\Http\Controllers\AuthorBookClaimController;
 use App\Http\Controllers\AdminBookClaimController;
@@ -491,6 +492,18 @@ Route::middleware('auth')->group(function () {
             Route::put('/finance/store/catalog/{item}', [AdminStoreCatalogController::class, 'update'])
                 ->name('finance.store.catalog.update');
 
+            Route::get('/finance/store/vouchers', [AdminStoreVoucherController::class, 'index'])
+                ->name('finance.store.vouchers.index');
+
+            Route::post('/finance/store/vouchers', [AdminStoreVoucherController::class, 'store'])
+                ->name('finance.store.vouchers.store');
+
+            Route::put('/finance/store/vouchers/{voucher}', [AdminStoreVoucherController::class, 'update'])
+                ->name('finance.store.vouchers.update');
+
+            Route::delete('/finance/store/vouchers/{voucher}', [AdminStoreVoucherController::class, 'destroy'])
+                ->name('finance.store.vouchers.destroy');
+
             Route::get('/finance/store/orders', [AdminStoreOrderController::class, 'index'])
                 ->name('finance.store.orders.index');
 
@@ -520,6 +533,9 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/finance/export/sales', [AdminFinanceReportController::class, 'exportSalesCsv'])
                 ->name('finance.export.sales');
+
+            Route::get('/finance/export/store-sales', [AdminFinanceReportController::class, 'exportStoreSalesCsv'])
+                ->name('finance.export.store-sales');
 
             Route::get('/invoices/{invoice}/pdf', [InvoiceDocumentController::class, 'download'])
                 ->name('invoices.pdf');

@@ -161,6 +161,14 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             $event->menu->add([
+                'key' => 'finance-store-vouchers-dynamic',
+                'text' => 'Voucher Storefront',
+                'route' => 'finance.store.vouchers.index',
+                'icon' => 'fas fa-ticket-alt',
+                'can' => 'menu-finance',
+            ]);
+
+            $event->menu->add([
                 'key' => 'workspace-ebook-publishing-dynamic',
                 'text' => 'Workspace Ebook Publishing',
                 'route' => 'ebook.workspace.index',

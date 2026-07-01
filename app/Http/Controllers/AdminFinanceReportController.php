@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuthorInvoice;
 use App\Models\ExternalSalesRecord;
+use App\Models\StoreOrder;
 use Illuminate\Http\Request;
 
 class AdminFinanceReportController extends Controller
@@ -104,6 +105,65 @@ class AdminFinanceReportController extends Controller
                     (float) $row->unit_price,
                     (float) $row->gross_amount,
                     ((int) $row->quantity) * $unitPriceForRoyalty * 0.20,
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportStoreSalesCsv(Request $request)
+    {
+        $start = $request->input('start_date');
+        $end = $request->input('end_date');
+        $status = trim((string) $request->input('status', ''));
+
+        $query = StoreOrder::with(['item', 'user'])->orderBy('created_at');
+
+        if ($start) {
+            $query->whereDate('created_at', '>=', $start);
+        }
+
+        if ($end) {
+            $query->whereDate('created_at', '<=', $end);
+        }
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        $rows = $query->get();
+        $filename = 'store_sales_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Order', 'Tanggal', 'Pembeli', 'Produk', 'Format', 'Qty', 'Harga Satuan', 'Subtotal Sebelum Diskon', 'Diskon Voucher', 'Subtotal', 'Ongkir', 'Status', 'Paid At', 'Voucher', 'Kurir', 'Resi']);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row->order_number,
+                    optional($row->created_at)->format('Y-m-d H:i:s'),
+                    $row->customer_name,
+                    optional($row->item)->title,
+                    $row->selected_format,
+                    (int) $row->quantity,
+                    (float) $row->unit_price,
+                    (float) $row->subtotal_before_discount,
+                    (float) $row->voucher_discount_amount,
+                    (float) $row->subtotal,
+                    (float) $row->shipping_cost,
+                    $row->status,
+                    optional($row->paid_at)->format('Y-m-d H:i:s'),
+                    $row->voucher_code,
+                    $row->shipping_courier,
+                    $row->tracking_number,
                 ]);
             }
 

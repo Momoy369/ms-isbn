@@ -245,6 +245,12 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 - Ebook tidak menggunakan stok.
 - Produk print + ebook menampilkan pilihan format saat checkout.
 
+#### Voucher Promo Storefront
+
+- Customer dapat memasukkan kode voucher pada form checkout.
+- Sistem akan memvalidasi masa aktif, batas pemakaian, jenis produk, dan minimal subtotal.
+- Diskon diterapkan ke subtotal produk sebelum total akhir dikirim ke gateway pembayaran.
+
 #### Fitur Tambahan Storefront
 
 - Menu publik yang relevan.

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoreOrder;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class AdminStoreOrderController extends Controller
@@ -28,8 +30,10 @@ class AdminStoreOrderController extends Controller
         return view('finance.store.orders', compact('orders', 'stats', 'status'));
     }
 
-    public function update(Request $request, StoreOrder $order)
+    public function update(Request $request, StoreOrder $order, NotificationService $notifications)
     {
+        $previousStatus = (string) $order->status;
+
         $data = $request->validate([
             'status' => ['required', 'in:pending,confirmed,paid,packed,shipped,completed,cancelled'],
             'admin_notes' => ['nullable', 'string', 'max:2000'],
@@ -37,31 +41,61 @@ class AdminStoreOrderController extends Controller
             'shipping_courier' => ['nullable', 'string', 'max:64'],
         ]);
 
+        $newStatus = (string) $data['status'];
+
+        if ($newStatus !== $previousStatus && !$this->canTransitionStatus($previousStatus, $newStatus)) {
+            return back()->with('warning', 'Transisi status dari ' . strtoupper($previousStatus) . ' ke ' . strtoupper($newStatus) . ' tidak diizinkan.')->withInput();
+        }
+
         $payload = [
-            'status' => $data['status'],
+            'status' => $newStatus,
             'admin_notes' => $data['admin_notes'] ?? $order->admin_notes,
             'tracking_number' => $data['tracking_number'] ?? $order->tracking_number,
             'shipping_courier' => $data['shipping_courier'] ?? $order->shipping_courier,
         ];
 
-        if ($data['status'] === 'confirmed' && !$order->confirmed_at) {
+        if ($newStatus === 'confirmed' && !$order->confirmed_at) {
             $payload['confirmed_at'] = now();
         }
 
-        if ($data['status'] === 'completed' && !$order->completed_at) {
+        if ($newStatus === 'completed' && !$order->completed_at) {
             $payload['completed_at'] = now();
         }
 
-        if ($data['status'] === 'shipped' && !$order->shipped_at) {
+        if ($newStatus === 'shipped' && !$order->shipped_at) {
             $payload['shipped_at'] = now();
         }
 
-        if ($data['status'] === 'paid' && !$order->paid_at) {
+        if ($newStatus === 'paid' && !$order->paid_at) {
             $payload['paid_at'] = now();
         }
 
         $order->update($payload);
 
+        if ($newStatus !== $previousStatus && $order->user_id) {
+            $notifications->send(
+                (int) $order->user_id,
+                'Status Order Store Diperbarui',
+                'Order ' . $order->order_number . ' berubah dari ' . strtoupper($previousStatus) . ' menjadi ' . strtoupper($newStatus) . '.',
+                optional($order->item)->book_id
+            );
+        }
+
         return back()->with('success', 'Status order berhasil diperbarui.');
+    }
+
+    private function canTransitionStatus(string $currentStatus, string $nextStatus): bool
+    {
+        $transitions = [
+            'pending' => ['confirmed', 'paid', 'cancelled'],
+            'confirmed' => ['paid', 'cancelled'],
+            'paid' => ['packed'],
+            'packed' => ['shipped'],
+            'shipped' => ['completed'],
+            'completed' => [],
+            'cancelled' => [],
+        ];
+
+        return in_array($nextStatus, $transitions[$currentStatus] ?? [], true);
     }
 }

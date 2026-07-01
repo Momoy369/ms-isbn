@@ -497,6 +497,12 @@
                     <div class="section-title">Catatan Tambahan</div>
                     <div class="form-grid">
                         <div class="field span-2">
+                            <label>Kode Voucher / Promo (opsional)</label>
+                            <input type="text" name="voucher_code" value="{{ old('voucher_code') }}"
+                                maxlength="64" placeholder="contoh: HEMAT10">
+                            <div class="hint">Jika kode valid, diskon akan diterapkan otomatis saat checkout.</div>
+                        </div>
+                        <div class="field span-2">
                             <label>Catatan</label>
                             <textarea name="notes" rows="2" maxlength="2000">{{ old('notes') }}</textarea>
                         </div>

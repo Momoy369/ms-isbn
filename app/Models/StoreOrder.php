@@ -9,6 +9,9 @@ class StoreOrder extends Model
     protected $fillable = [
         'user_id',
         'store_catalog_item_id',
+        'voucher_id',
+        'voucher_code',
+        'voucher_name',
         'selected_format',
         'order_number',
         'customer_name',
@@ -16,7 +19,9 @@ class StoreOrder extends Model
         'customer_email',
         'quantity',
         'unit_price',
+        'subtotal_before_discount',
         'subtotal',
+        'voucher_discount_amount',
         'shipping_address',
         'shipping_destination_province_id',
         'shipping_destination_province_name',
@@ -53,7 +58,9 @@ class StoreOrder extends Model
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
+        'subtotal_before_discount' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'voucher_discount_amount' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'gateway_expires_at' => 'datetime',
         'paid_at' => 'datetime',
@@ -74,5 +81,10 @@ class StoreOrder extends Model
     public function item()
     {
         return $this->belongsTo(StoreCatalogItem::class, 'store_catalog_item_id');
+    }
+
+    public function voucher()
+    {
+        return $this->belongsTo(StoreVoucher::class, 'voucher_id');
     }
 }

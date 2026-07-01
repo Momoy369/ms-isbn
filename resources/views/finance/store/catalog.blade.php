@@ -28,7 +28,10 @@
     @endforeach
 
     <div class="card mb-3">
-        <div class="card-header"><strong>Tambah Item Store</strong></div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Tambah Item Store</strong>
+            <a href="{{ route('finance.store.vouchers.index') }}" class="btn btn-sm btn-outline-primary">Kelola Voucher</a>
+        </div>
         <div class="card-body">
             <form method="POST" action="{{ route('finance.store.catalog.store') }}" class="row"
                 enctype="multipart/form-data">

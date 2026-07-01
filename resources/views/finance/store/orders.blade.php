@@ -58,15 +58,26 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>Daftar Order</strong>
-            <form method="GET" class="form-inline" style="gap:.4rem;">
-                <select name="status" class="form-control form-control-sm">
-                    <option value="">Semua Status</option>
-                    @foreach (['pending', 'confirmed', 'paid', 'packed', 'shipped', 'completed', 'cancelled'] as $option)
-                        <option value="{{ $option }}" @selected($status === $option)>{{ strtoupper($option) }}</option>
-                    @endforeach
-                </select>
-                <button class="btn btn-sm btn-outline-primary" type="submit">Filter</button>
-            </form>
+            <div class="d-flex flex-wrap align-items-center justify-content-end" style="gap:.5rem;">
+                <form method="GET" class="form-inline" style="gap:.4rem;">
+                    <select name="status" class="form-control form-control-sm">
+                        <option value="">Semua Status</option>
+                        @foreach (['pending', 'confirmed', 'paid', 'packed', 'shipped', 'completed', 'cancelled'] as $option)
+                            <option value="{{ $option }}" @selected($status === $option)>{{ strtoupper($option) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" type="submit">Filter</button>
+                </form>
+
+                <form method="GET" action="{{ route('finance.export.store-sales') }}" class="form-inline"
+                    style="gap:.4rem;">
+                    <input type="hidden" name="status" value="{{ $status }}">
+                    <input type="date" name="start_date" class="form-control form-control-sm">
+                    <input type="date" name="end_date" class="form-control form-control-sm">
+                    <button class="btn btn-sm btn-success" type="submit">Export CSV</button>
+                </form>
+            </div>
         </div>
         <div class="card-body table-responsive p-0">
             <table class="table table-sm table-hover mb-0">
@@ -92,6 +103,15 @@
                             <td>
                                 {{ $order->item->title ?? '-' }}
                                 <div class="small text-muted">Qty: {{ number_format($order->quantity) }}</div>
+                                @if ($order->voucher_code)
+                                    <div class="small text-success">
+                                        Voucher: {{ $order->voucher_code }}
+                                        @if ($order->voucher_discount_amount > 0)
+                                            <br>Diskon: Rp
+                                            {{ number_format($order->voucher_discount_amount, 0, ',', '.') }}
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <div>{{ $order->customer_name }}</div>
