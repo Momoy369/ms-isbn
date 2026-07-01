@@ -328,7 +328,7 @@
                 @endif
                 <div class="desc">{{ $item->description ?: 'Deskripsi buku belum tersedia.' }}</div>
                 @if ($item->isPrint() && $item->stock !== null)
-                    <div class="stock-pill">Stok tersedia: <strong>{{ $item->stock }}</strong></div>
+                    <div class="stock-pill">Stok print tersedia: <strong>{{ $item->stock }}</strong></div>
                 @endif
             </section>
 
@@ -508,13 +508,34 @@
             </section>
         </div>
 
-        @if ($related->isNotEmpty())
-            <h3 style="margin-top:1.3rem;">Buku Lainnya</h3>
+        @if ($relatedAuthor->isNotEmpty())
+            <h3 style="margin-top:1.3rem;">Rekomendasi Penulis Serupa</h3>
             <section class="related">
-                @foreach ($related as $row)
+                @foreach ($relatedAuthor as $row)
                     <article class="small">
                         <div style="font-weight:800;">{{ $row->title }}</div>
                         <div style="font-size:.85rem; color:#6c6457;">{{ $row->author_name ?: '-' }}</div>
+                        <div style="font-size:.78rem; color:#1f6d54; font-weight:700;">
+                            Terjual: {{ number_format((int) ($row->sold_quantity ?? 0)) }}
+                        </div>
+                        <div style="margin:.4rem 0; color:#bb3e03; font-weight:700;">Rp
+                            {{ number_format($row->finalPrice(), 0, ',', '.') }}</div>
+                        <a class="back" href="{{ route('store.show', $row->slug) }}">Lihat</a>
+                    </article>
+                @endforeach
+            </section>
+        @endif
+
+        @if ($relatedType->isNotEmpty())
+            <h3 style="margin-top:1.3rem;">Rekomendasi Kategori Format Serupa</h3>
+            <section class="related">
+                @foreach ($relatedType as $row)
+                    <article class="small">
+                        <div style="font-weight:800;">{{ $row->title }}</div>
+                        <div style="font-size:.85rem; color:#6c6457;">{{ $row->productTypeLabel() }}</div>
+                        <div style="font-size:.78rem; color:#1f6d54; font-weight:700;">
+                            Terjual: {{ number_format((int) ($row->sold_quantity ?? 0)) }}
+                        </div>
                         <div style="margin:.4rem 0; color:#bb3e03; font-weight:700;">Rp
                             {{ number_format($row->finalPrice(), 0, ',', '.') }}</div>
                         <a class="back" href="{{ route('store.show', $row->slug) }}">Lihat</a>

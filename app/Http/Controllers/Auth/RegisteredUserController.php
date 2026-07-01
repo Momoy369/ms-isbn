@@ -12,13 +12,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 
 class RegisteredUserController extends Controller
 {
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('auth.register');
     }
@@ -46,6 +47,16 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        $returnTo = trim((string) $request->input('return_to', ''));
+        $path = parse_url($returnTo, PHP_URL_PATH);
+        $query = parse_url($returnTo, PHP_URL_QUERY);
+
+        if (is_string($path) && Str::startsWith($path, '/store')) {
+            $target = $query ? $path . '?' . $query : $path;
+
+            return redirect($target);
+        }
 
         return redirect(route('store.index', absolute: false));
     }

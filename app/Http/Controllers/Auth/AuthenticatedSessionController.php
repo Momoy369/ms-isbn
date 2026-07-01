@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -29,13 +30,53 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $role = (string) $request->user()->role;
+        $isStoreAuthFlow = $request->input('from') === 'store';
+        $storeReturnTarget = $this->resolveStoreReturnTarget($request);
+
+        if ($isStoreAuthFlow && in_array($role, ['customer', 'reader'], true)) {
+            if ($this->isDashboardIntended($request)) {
+                $request->session()->forget('url.intended');
+            }
+
+            return redirect()->to($storeReturnTarget ?? route('store.index', absolute: false));
+        }
+
         $target = $this->resolveRedirectTarget($role);
+
+        if ($isStoreAuthFlow && !in_array($role, ['customer', 'reader'], true)) {
+            return $this->redirectToIntendedOrTarget($request, $role, $target)
+                ->with('info', 'Anda masuk sebagai staff. Sistem mengarahkan Anda ke panel internal sesuai role.');
+        }
 
         return $this->redirectToIntendedOrTarget($request, $role, $target);
     }
 
+    private function resolveStoreReturnTarget(Request $request): ?string
+    {
+        $returnTo = trim((string) $request->input('return_to', ''));
+
+        if ($returnTo === '') {
+            return null;
+        }
+
+        $path = parse_url($returnTo, PHP_URL_PATH);
+        if (!is_string($path) || !Str::startsWith($path, '/store')) {
+            return null;
+        }
+
+        $query = parse_url($returnTo, PHP_URL_QUERY);
+
+        return $query ? $path . '?' . $query : $path;
+    }
+
     private function redirectToIntendedOrTarget(Request $request, string $role, string $target): RedirectResponse
     {
+        if (in_array($role, ['customer', 'reader'], true) && $this->isDashboardIntended($request)) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->to($target);
+        }
+
         if ($role === 'author' && $this->isDashboardIntended($request)) {
             $request->session()->forget('url.intended');
 

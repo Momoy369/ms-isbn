@@ -7,6 +7,18 @@
 @stop
 
 @section('content')
+    <div class="card card-outline card-secondary mb-3">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center">
+            <div class="mb-2 mb-md-0">
+                <strong>Ingin belanja lagi?</strong>
+                <div class="text-muted small">Kembali ke storefront untuk melihat katalog terbaru.</div>
+            </div>
+            <a href="{{ route('store.index') }}" class="btn btn-info">
+                <i class="fas fa-store mr-1"></i> Buka Storefront
+            </a>
+        </div>
+    </div>
+
     <div class="card card-outline card-info mb-3">
         <div class="card-body">
             <form method="GET" action="{{ route('customer.orders.index') }}" class="row">

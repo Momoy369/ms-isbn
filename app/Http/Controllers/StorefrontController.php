@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PublishingPackage;
 use App\Models\StoreCatalogItem;
 use App\Models\StoreOrder;
 use App\Models\User;
@@ -17,8 +18,32 @@ class StorefrontController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $productType = trim((string) $request->query('type', 'all'));
+        $sort = trim((string) $request->query('sort', 'featured'));
+        $onlyFeatured = $request->boolean('featured');
+        $onlyPromo = $request->boolean('promo');
+        $minPriceInput = trim((string) $request->query('min_price', ''));
+        $maxPriceInput = trim((string) $request->query('max_price', ''));
 
-        $items = StoreCatalogItem::query()
+        $minPrice = is_numeric($minPriceInput) ? max(0, (float) $minPriceInput) : null;
+        $maxPrice = is_numeric($maxPriceInput) ? max(0, (float) $maxPriceInput) : null;
+
+        if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+            [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
+            [$minPriceInput, $maxPriceInput] = [$maxPriceInput, $minPriceInput];
+        }
+
+        $allowedTypes = ['all', 'print', 'ebook', 'print_ebook'];
+        if (!in_array($productType, $allowedTypes, true)) {
+            $productType = 'all';
+        }
+
+        $allowedSorts = ['featured', 'newest', 'price_low', 'price_high', 'title_asc'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'featured';
+        }
+
+        $baseQuery = StoreCatalogItem::query()
             ->where('is_active', true)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
@@ -26,13 +51,59 @@ class StorefrontController extends Controller
                         ->orWhere('author_name', 'like', '%' . $search . '%');
                 });
             })
-            ->orderByDesc('is_featured')
-            ->orderBy('sort_order')
-            ->orderByDesc('id')
+            ->when($minPrice !== null, fn($query) => $query->where('list_price', '>=', $minPrice))
+            ->when($maxPrice !== null, fn($query) => $query->where('list_price', '<=', $maxPrice))
+            ->when($onlyFeatured, fn($query) => $query->where('is_featured', true))
+            ->when($onlyPromo, fn($query) => $query->where(function ($q) {
+                $q->whereNotNull('promo_price')
+                    ->orWhereNotNull('ebook_promo_price');
+            }))
+            ->when($productType !== 'all', fn($query) => $query->where('product_type', $productType));
+
+        $items = (clone $baseQuery)
+            ->when($sort === 'featured', function ($query) {
+                $query->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id');
+            })
+            ->when($sort === 'newest', fn($query) => $query->orderByDesc('id'))
+            ->when($sort === 'price_low', fn($query) => $query->orderBy('list_price')->orderByDesc('id'))
+            ->when($sort === 'price_high', fn($query) => $query->orderByDesc('list_price')->orderByDesc('id'))
+            ->when($sort === 'title_asc', fn($query) => $query->orderBy('title')->orderByDesc('id'))
             ->paginate(12)
             ->withQueryString();
 
-        return view('store.index', compact('items', 'search'));
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'featured' => (clone $baseQuery)->where('is_featured', true)->count(),
+            'ebook_ready' => (clone $baseQuery)->whereIn('product_type', ['ebook', 'print_ebook'])->count(),
+        ];
+
+        $packages = PublishingPackage::query()
+            ->orderBy('price')
+            ->orderBy('name')
+            ->limit(6)
+            ->get();
+
+        $hasActiveFilters = $search !== ''
+            || $productType !== 'all'
+            || $sort !== 'featured'
+            || $onlyFeatured
+            || $onlyPromo
+            || $minPrice !== null
+            || $maxPrice !== null;
+
+        return view('store.index', compact(
+            'items',
+            'search',
+            'productType',
+            'sort',
+            'stats',
+            'packages',
+            'onlyFeatured',
+            'onlyPromo',
+            'minPriceInput',
+            'maxPriceInput',
+            'hasActiveFilters'
+        ));
     }
 
     public function show(string $slug, RajaOngkirService $rajaOngkir)
@@ -41,8 +112,33 @@ class StorefrontController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $related = StoreCatalogItem::where('id', '!=', $item->id)
+        $soldStatuses = ['paid', 'confirmed', 'shipped', 'completed'];
+
+        $relatedAuthor = StoreCatalogItem::query()
+            ->where('id', '!=', $item->id)
             ->where('is_active', true)
+            ->withSum([
+                'orders as sold_quantity' => fn($query) => $query->whereIn('status', $soldStatuses),
+            ], 'quantity')
+            ->when(
+                !empty($item->author_name),
+                fn($query) => $query->where('author_name', $item->author_name)
+            )
+            ->orderByDesc('sold_quantity')
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->limit(4)
+            ->get();
+
+        $relatedType = StoreCatalogItem::query()
+            ->where('id', '!=', $item->id)
+            ->where('is_active', true)
+            ->withSum([
+                'orders as sold_quantity' => fn($query) => $query->whereIn('status', $soldStatuses),
+            ], 'quantity')
+            ->where('product_type', $item->product_type)
+            ->whereNotIn('id', $relatedAuthor->pluck('id'))
+            ->orderByDesc('sold_quantity')
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
             ->limit(4)
@@ -55,7 +151,7 @@ class StorefrontController extends Controller
             'message' => $provinceMeta['message'] ?? null,
         ];
 
-        return view('store.show', compact('item', 'related', 'shippingProvinces', 'shippingMeta'));
+        return view('store.show', compact('item', 'relatedAuthor', 'relatedType', 'shippingProvinces', 'shippingMeta'));
     }
 
     public function shippingCities(Request $request, RajaOngkirService $rajaOngkir)
@@ -93,11 +189,17 @@ class StorefrontController extends Controller
             $hasEbookAccess = $selectedFormat === 'ebook';
         }
 
+        $isPrintPurchase = $item->hasSeparateFormats()
+            ? $selectedFormat === 'print'
+            : $item->product_type === 'print';
+
+        $quantityMax = $isPrintPurchase ? 1000 : 100000;
+
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:32'],
             'customer_email' => ['nullable', 'email', 'max:120'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:' . $quantityMax],
             'selected_format' => [$item->hasSeparateFormats() ? 'required' : 'nullable', 'in:print,ebook'],
             'shipping_destination_province_id' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:32'],
             'shipping_destination_province_name' => [$needsShipping ? 'required' : 'nullable', 'string', 'max:120'],
@@ -111,7 +213,7 @@ class StorefrontController extends Controller
 
         $quantity = (int) $data['quantity'];
 
-        if ($item->stock !== null && $quantity > (int) $item->stock) {
+        if ($isPrintPurchase && $item->stock !== null && $quantity > (int) $item->stock) {
             return back()->with('warning', 'Jumlah pesanan melebihi stok yang tersedia.')->withInput();
         }
 
@@ -163,7 +265,7 @@ class StorefrontController extends Controller
             'reader_password_hash' => $hasEbookAccess ? Hash::make((string) $data['reader_password']) : null,
         ]);
 
-        if ($item->stock !== null) {
+        if ($isPrintPurchase && $item->stock !== null) {
             $item->decrement('stock', $quantity);
         }
 

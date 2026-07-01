@@ -572,7 +572,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware([
         'auth',
-        'role:customer,reader'
+        'role:customer,reader,author'
     ])->group(function () {
         Route::get('/customer', [CustomerDashboardController::class, 'index'])
             ->name('customer.dashboard');

@@ -12,6 +12,13 @@
 @endsection
 
 @section('content')
+    @if (session('info'))
+        <div class="alert alert-info alert-dismissible rounded shadow-sm">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            {{ session('info') }}
+        </div>
+    @endif
+
     <style>
         .dash-hero {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #334155 100%);

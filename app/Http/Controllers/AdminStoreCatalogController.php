@@ -83,6 +83,10 @@ class AdminStoreCatalogController extends Controller
             $ebookReadLink = Storage::url($ebookStored);
         }
 
+        $normalizedStock = ($data['product_type'] ?? '') === 'ebook'
+            ? null
+            : ($data['stock'] ?? null);
+
         StoreCatalogItem::create([
             'book_id' => $data['book_id'] ?? null,
             'legacy_book_id' => $data['legacy_book_id'] ?? null,
@@ -96,7 +100,7 @@ class AdminStoreCatalogController extends Controller
             'promo_price' => $data['promo_price'] ?? null,
             'ebook_price' => (($data['product_type'] ?? '') === 'print_ebook') ? ($data['ebook_price'] ?? null) : null,
             'ebook_promo_price' => (($data['product_type'] ?? '') === 'print_ebook') ? ($data['ebook_promo_price'] ?? null) : null,
-            'stock' => $data['stock'] ?? null,
+            'stock' => $normalizedStock,
             'is_active' => (bool) ($data['is_active'] ?? false),
             'is_featured' => (bool) ($data['is_featured'] ?? false),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
@@ -153,6 +157,10 @@ class AdminStoreCatalogController extends Controller
             $ebookReadLink = Storage::url($ebookStored);
         }
 
+        $normalizedStock = ($data['product_type'] ?? '') === 'ebook'
+            ? null
+            : ($data['stock'] ?? null);
+
         $item->update([
             'title' => $data['title'],
             'subtitle' => $data['subtitle'] ?? null,
@@ -163,7 +171,7 @@ class AdminStoreCatalogController extends Controller
             'promo_price' => $data['promo_price'] ?? null,
             'ebook_price' => (($data['product_type'] ?? '') === 'print_ebook') ? ($data['ebook_price'] ?? null) : null,
             'ebook_promo_price' => (($data['product_type'] ?? '') === 'print_ebook') ? ($data['ebook_promo_price'] ?? null) : null,
-            'stock' => $data['stock'] ?? null,
+            'stock' => $normalizedStock,
             'is_active' => (bool) ($data['is_active'] ?? false),
             'is_featured' => (bool) ($data['is_featured'] ?? false),
             'sort_order' => (int) ($data['sort_order'] ?? 0),

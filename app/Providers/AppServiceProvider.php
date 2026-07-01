@@ -94,11 +94,50 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             $event->menu->add([
+                'key' => 'customer-storefront-dynamic',
+                'text' => 'Kembali ke Storefront',
+                'route' => 'store.index',
+                'icon' => 'fas fa-store',
+                'can' => 'menu-customer-dashboard',
+            ]);
+
+            $event->menu->add([
                 'key' => 'customer-orders-dynamic',
                 'text' => 'Order & Invoice Store',
                 'route' => 'customer.orders.index',
                 'icon' => 'fas fa-file-invoice',
                 'can' => 'menu-customer-dashboard',
+            ]);
+
+            $event->menu->add([
+                'key' => 'author-storefront-group-dynamic',
+                'text' => 'Storefront & Customer',
+                'icon' => 'fas fa-store',
+                'can' => 'menu-author',
+                'label' => 'AUTH',
+                'label_color' => 'info',
+                'submenu' => [
+                    [
+                        'text' => 'Dashboard Author',
+                        'route' => 'author.dashboard',
+                        'icon' => 'fas fa-user-edit',
+                    ],
+                    [
+                        'text' => 'Dashboard Customer',
+                        'route' => 'customer.dashboard',
+                        'icon' => 'fas fa-shopping-bag',
+                    ],
+                    [
+                        'text' => 'Order & Invoice Store',
+                        'route' => 'customer.orders.index',
+                        'icon' => 'fas fa-file-invoice',
+                    ],
+                    [
+                        'text' => 'Kembali ke Storefront',
+                        'route' => 'store.index',
+                        'icon' => 'fas fa-store-alt',
+                    ],
+                ],
             ]);
 
             $event->menu->add([

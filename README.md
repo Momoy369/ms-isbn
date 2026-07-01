@@ -92,6 +92,7 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Dropdown provinsi/kota RajaOngkir saat checkout produk cetak (AJAX, fallback dummy).
 - Label provinsi/kota disimpan di order, bukan hanya city ID.
 - Preview estimasi total harga real-time mengikuti perubahan qty.
+- Storefront juga menampilkan menu publik, section paket penerbitan, copywriting layanan, FAQ, dan shortcut lintas role yang relevan.
 
 ### 9. Penjualan Ebook dan Bundling Print + Ebook
 
@@ -114,10 +115,38 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Role tambahan: customer, reader.
 - Register default ke customer.
 - Upgrade akun customer/reader ke author dari halaman profile (dengan syarat data tertentu).
+- Author dapat mengakses dashboard customer, riwayat order store, dan storefront melalui grup menu gabungan "Storefront & Customer".
 
 ### 11. Branding Dasar
 
 - Konfigurasi logo di area AdminLTE, auth screen, preloader, dan storefront.
+
+## Manual Book
+
+Manual book sistem yang lebih lengkap tersedia di: [docs/manual-book-sistem.md](docs/manual-book-sistem.md)
+
+Dokumen tersebut menjelaskan fungsi, cara pakai, dan alur tiap fitur per role secara lebih rinci.
+
+## Status Implementasi
+
+### Sudah Dikerjakan
+
+- Dashboard customer, dashboard author, dan akses lintas role ke storefront/customer sudah diselaraskan.
+- Redirect login/register dari storefront sudah mempertahankan konteks yang aman.
+- Storefront publik sudah ditingkatkan dengan filter katalog, section paket penerbitan, FAQ, dan copywriting layanan.
+- Workflow upgrade customer/reader ke author sudah dilengkapi checklist, lampiran, review admin, notifikasi, dan ekspor.
+- Ebook sudah diperlakukan sebagai produk tanpa stok fisik.
+- Manual book sistem sudah tersedia di dokumen terpisah.
+
+### Masih Perlu Dikerjakan
+
+- Verifikasi tambahan untuk tracking order publik.
+- Idempotency key dan audit log callback iPaymu yang lebih lengkap.
+- Watermark ebook dinamis berbasis identitas pembeli.
+- Library ebook internal untuk akun customer.
+- Modul retur/refund order store.
+- Multi-payment gateway sebagai fallback selain iPaymu.
+- Penguatan test coverage untuk callback, order flow, dan royalty.
 
 ## Fitur Yang Belum Sempurna (Known Gaps)
 
@@ -133,7 +162,6 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 ## To-Do Fitur Baru (Belum Ada)
 
 - Tambah verifikasi tracking order (OTP WA/email atau minimal validasi phone/email pembeli).
-- Tambah halaman akun customer untuk melihat riwayat order dan invoice store.
 - Tambah library ebook internal (list ebook yang sudah dibeli per akun).
 - Tambah fitur kupon/voucher promo di storefront.
 - Tambah fitur multi-payment gateway (fallback selain iPaymu).
@@ -150,8 +178,8 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
     - Audit log callback lebih detail.
     - Retry-safe update status.
 - Penyempurnaan role customer/reader:
-    - Dashboard khusus customer.
     - Flow upgrade ke author dengan approval admin (opsional) dan checklist dokumen.
+    - Help text atau SOP mini di area profile bila masih diperlukan.
 - Penyempurnaan admin order:
     - Validasi status transition yang lebih ketat.
     - Auto-notify pembeli saat status berubah (paid, packed, shipped, completed).
@@ -182,16 +210,13 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
 - Pending: Verifikasi tracking order (OTP/email/telepon).
 - Partial: Watermark identitas pembeli (saat ini statis, belum dinamis per pembeli).
 
-### Sprint 3 (Minggu 3) - Dashboard Customer dan Role Flow
+### Sprint 3 (Minggu 3) - Dashboard Customer dan Role Flow ✅ SELESAI
 
-- Prioritas tinggi:
-    - Dashboard khusus customer (ringkasan order + status pembayaran).
-    - Riwayat order dan invoice store per akun customer.
-- Prioritas menengah:
-    - Penyempurnaan flow upgrade customer/reader ke author dengan approval admin.
-    - Checklist dokumen/verifikasi saat pengajuan upgrade author.
-- Prioritas rendah:
-    - Penambahan help text/SOP mini di area profile.
+- ✅ Dashboard khusus customer (ringkasan order + status pembayaran).
+- ✅ Riwayat order dan invoice store per akun customer.
+- ✅ Penyempurnaan flow upgrade customer/reader ke author dengan approval admin.
+- ✅ Checklist dokumen/verifikasi saat pengajuan upgrade author.
+- Catatan: help text/SOP mini di area profile masih bisa ditambahkan sebagai polish opsional.
 
 ### Sprint 4 (Minggu 4) - Monetisasi Storefront
 
@@ -250,6 +275,12 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
     - Persiapan multi-payment gateway (desain interface + adapter contract).
 
 ### Backlog (Setelah Sprint 6)
+
+## Lisensi
+
+Repositori ini menggunakan lisensi GNU General Public License v3.0.
+
+Lihat file [LICENSE](LICENSE) untuk teks lisensi lengkap.
 
 - Implementasi multi-payment gateway penuh (provider tambahan selain iPaymu).
 - Penyusunan SOP operasional lengkap per role dan per modul.

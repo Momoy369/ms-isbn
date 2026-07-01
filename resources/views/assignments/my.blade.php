@@ -4,6 +4,13 @@
 
 @section('content')
 
+    @if (session('info'))
+        <div class="alert alert-info alert-dismissible rounded shadow-sm">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            {{ session('info') }}
+        </div>
+    @endif
+
     <div class="card">
 
         <div class="card-header">

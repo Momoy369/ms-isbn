@@ -10,7 +10,12 @@
     <div class="card card-outline card-primary">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="card-title mb-0">Ringkasan Order / Invoice Store</h3>
-            <a href="{{ route('customer.orders.index') }}" class="btn btn-sm btn-light border">Kembali</a>
+            <div>
+                <a href="{{ route('store.index') }}" class="btn btn-sm btn-info mr-1">
+                    <i class="fas fa-store mr-1"></i> Storefront
+                </a>
+                <a href="{{ route('customer.orders.index') }}" class="btn btn-sm btn-light border">Kembali</a>
+            </div>
         </div>
         <div class="card-body">
             <div class="row">

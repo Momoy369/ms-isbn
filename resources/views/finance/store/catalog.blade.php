@@ -98,9 +98,11 @@
                     <input type="number" step="0.01" min="0" name="ebook_promo_price" class="form-control"
                         value="{{ old('ebook_promo_price') }}">
                 </div>
-                <div class="col-md-3 form-group">
+                <div class="col-md-3 form-group" id="add-stock-wrap">
                     <label>Stok (opsional)</label>
-                    <input type="number" min="0" name="stock" class="form-control" value="{{ old('stock') }}">
+                    <input type="number" min="0" name="stock" class="form-control" value="{{ old('stock') }}"
+                        id="add-stock-input">
+                    <small class="text-muted" id="add-stock-note">Kosongkan jika stok tidak dibatasi.</small>
                 </div>
                 <div class="col-md-8 form-group">
                     <label>Deskripsi</label>
@@ -189,7 +191,13 @@
                                     @endif
                                 @endif
                             </td>
-                            <td>{{ $item->stock === null ? 'Tidak dibatasi' : number_format($item->stock) }}</td>
+                            <td>
+                                @if ($item->product_type === 'ebook')
+                                    <span class="text-info">Tidak relevan (Ebook)</span>
+                                @else
+                                    {{ $item->stock === null ? 'Tidak dibatasi' : number_format($item->stock) }}
+                                @endif
+                            </td>
                             <td>
                                 <span
                                     class="badge badge-{{ $item->is_active ? 'success' : 'secondary' }}">{{ $item->is_active ? 'ACTIVE' : 'OFF' }}</span>
@@ -226,7 +234,7 @@
                                     <div class="col-md-3 mb-1">
                                         <input type="number" name="stock" min="0"
                                             class="form-control form-control-sm" value="{{ $item->stock }}"
-                                            placeholder="stok">
+                                            {{ $item->product_type === 'ebook' ? 'disabled' : '' }} placeholder="stok">
                                     </div>
                                     <div class="col-md-3 mb-1">
                                         <input type="number" name="sort_order" min="0"
@@ -242,6 +250,9 @@
                                         <input type="checkbox" name="is_featured" value="1"
                                             @checked($item->is_featured)> fitur
                                     </div>
+                                    @if ($item->product_type === 'ebook')
+                                        <input type="hidden" name="stock" value="">
+                                    @endif
                                     <input type="hidden" name="subtitle" value="{{ $item->subtitle }}">
                                     <input type="hidden" name="author_name" value="{{ $item->author_name }}">
                                     <input type="hidden" name="description" value="{{ $item->description }}">
@@ -279,11 +290,30 @@
             const typeSelect = document.getElementById('add-product-type');
             const priceWrap = document.getElementById('add-ebook-price-wrap');
             const promoWrap = document.getElementById('add-ebook-promo-wrap');
+            const stockWrap = document.getElementById('add-stock-wrap');
+            const stockInput = document.getElementById('add-stock-input');
+            const stockNote = document.getElementById('add-stock-note');
 
             function toggleEbookFields() {
-                const show = typeSelect && typeSelect.value === 'print_ebook';
+                const productType = typeSelect ? typeSelect.value : 'print';
+                const show = productType === 'print_ebook';
                 if (priceWrap) priceWrap.style.display = show ? '' : 'none';
                 if (promoWrap) promoWrap.style.display = show ? '' : 'none';
+
+                if (stockWrap && stockInput) {
+                    if (productType === 'ebook') {
+                        stockInput.value = '';
+                        stockInput.setAttribute('disabled', 'disabled');
+                        if (stockNote) {
+                            stockNote.textContent = 'Ebook tidak membutuhkan stok (penjualan tidak terbatas).';
+                        }
+                    } else {
+                        stockInput.removeAttribute('disabled');
+                        if (stockNote) {
+                            stockNote.textContent = 'Kosongkan jika stok tidak dibatasi.';
+                        }
+                    }
+                }
             }
 
             if (typeSelect) {

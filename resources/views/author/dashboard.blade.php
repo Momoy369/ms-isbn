@@ -110,6 +110,24 @@
 @endsection
 
 @section('content')
+    <div class="card card-outline card-info mb-3">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+            <div class="mb-2 mb-md-0">
+                <strong>Akses Cepat Storefront</strong>
+                <div class="text-muted small">Author dapat berpindah ke katalog toko dan dashboard customer tanpa keluar dari
+                    akun.</div>
+            </div>
+            <div class="d-flex flex-wrap">
+                <a href="{{ route('store.index') }}" class="btn btn-info mr-2 mb-2">
+                    <i class="fas fa-store mr-1"></i> Storefront
+                </a>
+                <a href="{{ route('customer.dashboard') }}" class="btn btn-outline-primary mb-2">
+                    <i class="fas fa-shopping-bag mr-1"></i> Dashboard Customer
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex flex-column" style="gap:1.1rem;">
 
         @foreach (['success', 'warning', 'danger', 'info'] as $type)

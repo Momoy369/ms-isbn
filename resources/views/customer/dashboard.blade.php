@@ -11,6 +11,24 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    <div class="card card-outline card-info mb-3">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+            <div class="mb-2 mb-md-0">
+                <strong>Lanjut Belanja di Storefront</strong>
+                <div class="text-muted small">Anda bisa kembali ke katalog toko kapan saja tanpa keluar dari akun customer.
+                </div>
+            </div>
+            <div class="d-flex flex-wrap">
+                <a href="{{ route('store.index') }}" class="btn btn-info mr-2 mb-2">
+                    <i class="fas fa-store mr-1"></i> Buka Storefront
+                </a>
+                <a href="{{ route('store.track.form') }}" class="btn btn-outline-secondary mb-2">
+                    <i class="fas fa-search mr-1"></i> Lacak Pesanan
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-3 col-6">
             <div class="small-box bg-info">
