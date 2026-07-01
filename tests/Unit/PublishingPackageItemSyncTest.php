@@ -42,8 +42,10 @@ class PublishingPackageItemSyncTest extends TestCase
 
         $book->syncPackageItems();
 
-        $this->assertCount(1, $book->packageItems);
-        $this->assertSame('Sertifikat Penulis', $book->packageItems->first()->name);
-        $this->assertFalse($book->packageItems->first()->is_completed);
+        $items = $book->packageItems()->get();
+
+        $this->assertCount(1, $items);
+        $this->assertSame('Sertifikat Penulis', $items->first()->name);
+        $this->assertFalse($items->first()->is_completed);
     }
 }
