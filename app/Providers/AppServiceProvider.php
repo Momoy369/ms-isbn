@@ -6,7 +6,10 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Event;
 use App\Models\Notification;
+use App\Models\AuthorBookOrder;
+use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -52,6 +55,23 @@ class AppServiceProvider extends ServiceProvider
         foreach ($abilityRoles as $ability => $roles) {
             Gate::define($ability, fn($user) => in_array($user->role, $roles, true));
         }
+
+        Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
+            $pendingEbookCount = AuthorBookOrder::query()
+                ->where('order_type', 'ebook_publication')
+                ->whereIn('status', ['paid', 'ebook_revision_requested'])
+                ->count();
+
+            $event->menu->add([
+                'key' => 'workspace-ebook-publishing-dynamic',
+                'text' => 'Workspace Ebook Publishing',
+                'route' => 'ebook.workspace.index',
+                'icon' => 'fas fa-tablet-alt',
+                'can' => 'menu-ebook-workspace',
+                'label' => $pendingEbookCount > 0 ? (string) $pendingEbookCount : null,
+                'label_color' => $pendingEbookCount > 0 ? 'warning' : null,
+            ]);
+        });
 
         View::composer('*', function ($view) {
 
