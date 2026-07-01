@@ -13,6 +13,34 @@
 
 @section('content')
 
+    @php
+        $statusBadgeMap = [
+            'paid' => 'warning',
+            'revision_requested' => 'danger',
+            'ebook_revision_requested' => 'danger',
+            'printing' => 'primary',
+            'processing' => 'info',
+            'ebook_publishing' => 'primary',
+            'print_completed' => 'success',
+            'ebook_completed' => 'success',
+            'shipping' => 'dark',
+            'shipped' => 'secondary',
+        ];
+
+        $statusLabelMap = [
+            'paid' => 'Menunggu Proses',
+            'revision_requested' => 'Revisi Diminta',
+            'ebook_revision_requested' => 'Revisi Ebook',
+            'printing' => 'Sedang Dicetak',
+            'processing' => 'Sedang Diproses',
+            'ebook_publishing' => 'Sedang Dipublikasikan',
+            'print_completed' => 'Selesai Cetak',
+            'ebook_completed' => 'Selesai Ebook',
+            'shipping' => 'Dikirim',
+            'shipped' => 'Terkirim',
+        ];
+    @endphp
+
     <div class="row mb-3">
         <div class="col-lg-3 col-6">
             <div class="small-box bg-primary shadow-sm">
@@ -77,7 +105,14 @@
                                 <tr>
                                     <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
                                     <td>{{ optional($item->user)->name ?? '-' }}</td>
-                                    <td><span class="badge badge-primary">{{ strtoupper($item->status) }}</span></td>
+                                    @php
+                                        $printStatusKey = (string) $item->status;
+                                        $printBadge = $statusBadgeMap[$printStatusKey] ?? 'secondary';
+                                        $printLabel =
+                                            $statusLabelMap[$printStatusKey] ??
+                                            ucfirst(str_replace('_', ' ', $printStatusKey));
+                                    @endphp
+                                    <td><span class="badge badge-{{ $printBadge }}">{{ $printLabel }}</span></td>
                                     <td>
                                         @if (str_contains((string) $item->notes, 'AUTO_PRINT_ADAPTATION_REQUIRED'))
                                             <span class="badge badge-warning">Needs Print Adaptation</span>
@@ -103,7 +138,8 @@
                     <h3 class="card-title font-weight-bold mb-0">
                         <i class="fas fa-tablet-alt mr-2 text-success"></i>Queue Ebook Publishing
                     </h3>
-                    <a href="{{ route('ebook.workspace.index') }}" class="btn btn-sm btn-outline-success">Buka Workspace</a>
+                    <a href="{{ route('ebook.workspace.index') }}" class="btn btn-sm btn-outline-success">Buka
+                        Workspace</a>
                 </div>
                 <div class="card-body p-0 table-responsive">
                     <table class="table table-hover table-striped text-nowrap m-0">
@@ -120,7 +156,14 @@
                                 <tr>
                                     <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
                                     <td>{{ optional($item->user)->name ?? '-' }}</td>
-                                    <td><span class="badge badge-success">{{ strtoupper($item->status) }}</span></td>
+                                    @php
+                                        $ebookStatusKey = (string) $item->status;
+                                        $ebookBadge = $statusBadgeMap[$ebookStatusKey] ?? 'secondary';
+                                        $ebookLabel =
+                                            $statusLabelMap[$ebookStatusKey] ??
+                                            ucfirst(str_replace('_', ' ', $ebookStatusKey));
+                                    @endphp
+                                    <td><span class="badge badge-{{ $ebookBadge }}">{{ $ebookLabel }}</span></td>
                                     <td>{{ $item->ebook_platform ?? '-' }}</td>
                                 </tr>
                             @empty
@@ -152,7 +195,14 @@
                             @forelse($revisionQueue as $item)
                                 <tr>
                                     <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
-                                    <td>{{ strtoupper($item->status) }}</td>
+                                    @php
+                                        $revisionStatusKey = (string) $item->status;
+                                        $revisionBadge = $statusBadgeMap[$revisionStatusKey] ?? 'secondary';
+                                        $revisionLabel =
+                                            $statusLabelMap[$revisionStatusKey] ??
+                                            ucfirst(str_replace('_', ' ', $revisionStatusKey));
+                                    @endphp
+                                    <td><span class="badge badge-{{ $revisionBadge }}">{{ $revisionLabel }}</span></td>
                                 </tr>
                             @empty
                                 <tr>
@@ -183,7 +233,7 @@
                             @forelse($adaptationQueue as $item)
                                 <tr>
                                     <td>{{ $item->title ?? (optional($item->book)->judul ?? '-') }}</td>
-                                    <td><span class="badge badge-warning">Needs Print Adaptation</span></td>
+                                    <td><span class="badge badge-warning">Perlu Adaptasi Cetak</span></td>
                                 </tr>
                             @empty
                                 <tr>
