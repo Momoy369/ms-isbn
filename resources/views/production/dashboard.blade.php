@@ -87,6 +87,33 @@
                     <input type="text" name="op_keyword" value="{{ $operationsFilters['keyword'] }}"
                         class="form-control form-control-sm" placeholder="Masukkan kata kunci...">
                 </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Tanggal Mulai</label>
+                    <input type="date" name="op_start_date" value="{{ $operationsFilters['start_date_input'] }}"
+                        class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Tanggal Akhir</label>
+                    <input type="date" name="op_end_date" value="{{ $operationsFilters['end_date_input'] }}"
+                        class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Umur SLA</label>
+                    <select name="op_sla_age" class="form-control form-control-sm">
+                        @foreach ($slaAgeOptions as $slaValue => $slaText)
+                            <option value="{{ $slaValue }}"
+                                {{ $operationsFilters['sla_age'] === $slaValue ? 'selected' : '' }}>
+                                {{ $slaText }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2 d-flex align-items-end">
+                    <a href="{{ route('production.dashboard.export', request()->query()) }}"
+                        class="btn btn-sm btn-outline-success w-100">
+                        <i class="fas fa-file-csv mr-1"></i> Export CSV
+                    </a>
+                </div>
                 <div class="col-12 d-flex justify-content-end mt-2">
                     <a href="{{ route('production.dashboard') }}" class="btn btn-sm btn-light border mr-2">
                         Reset

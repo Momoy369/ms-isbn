@@ -330,6 +330,16 @@ Route::middleware('auth')->group(function () {
             );
 
         Route::get(
+            '/production/export',
+            [
+                ProductionDashboardController::class,
+                'exportCsv'
+            ]
+        )->name(
+                'production.dashboard.export'
+            );
+
+        Route::get(
             '/assignment-history',
             [
                 AssignmentHistoryController::class,

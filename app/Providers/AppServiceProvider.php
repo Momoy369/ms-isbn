@@ -57,10 +57,33 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
+            $pendingOperationsCount = AuthorBookOrder::query()
+                ->whereIn('order_type', ['reprint', 'ebook_publication'])
+                ->whereIn('status', [
+                    'paid',
+                    'revision_requested',
+                    'ebook_revision_requested',
+                    'printing',
+                    'processing',
+                    'ebook_publishing',
+                    'shipping',
+                ])
+                ->count();
+
             $pendingEbookCount = AuthorBookOrder::query()
                 ->where('order_type', 'ebook_publication')
                 ->whereIn('status', ['paid', 'ebook_revision_requested'])
                 ->count();
+
+            $event->menu->add([
+                'key' => 'operations-dashboard-dynamic',
+                'text' => 'Dashboard Operasional',
+                'route' => 'production.dashboard',
+                'icon' => 'fas fa-clipboard-list',
+                'can' => 'menu-production',
+                'label' => $pendingOperationsCount > 0 ? (string) $pendingOperationsCount : null,
+                'label_color' => $pendingOperationsCount > 0 ? 'danger' : null,
+            ]);
 
             $event->menu->add([
                 'key' => 'workspace-ebook-publishing-dynamic',

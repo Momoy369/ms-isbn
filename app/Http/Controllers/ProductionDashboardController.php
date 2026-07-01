@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\AuthorBookOrder;
 use App\Models\Book;
 use App\Models\BookAssignment;
@@ -179,61 +181,9 @@ class ProductionDashboardController extends Controller
 
                 ->get();
 
-        $operationsFilters = [
-            'channel' => in_array($request->string('op_channel')->toString(), ['all', 'print', 'ebook'], true)
-                ? $request->string('op_channel')->toString()
-                : 'all',
-            'status' => $request->string('op_status')->toString() ?: 'all',
-            'adaptation' => in_array($request->string('op_adaptation')->toString(), ['all', 'yes', 'no'], true)
-                ? $request->string('op_adaptation')->toString()
-                : 'all',
-            'keyword' => trim($request->string('op_keyword')->toString()),
-        ];
-
-        $statusOptions = [
-            'all' => 'Semua Status',
-            'paid' => 'Menunggu Proses',
-            'revision_requested' => 'Revisi Diminta (Print)',
-            'ebook_revision_requested' => 'Revisi Diminta (Ebook)',
-            'printing' => 'Sedang Dicetak',
-            'processing' => 'Sedang Diproses',
-            'ebook_publishing' => 'Sedang Dipublikasikan',
-            'print_completed' => 'Selesai Cetak',
-            'ebook_completed' => 'Selesai Ebook',
-            'shipping' => 'Sedang Dikirim',
-            'shipped' => 'Terkirim',
-        ];
-
-        $applyOrderFilters = function ($query) use ($operationsFilters) {
-            if ($operationsFilters['status'] !== 'all') {
-                $query->where('status', $operationsFilters['status']);
-            }
-
-            if ($operationsFilters['adaptation'] === 'yes') {
-                $query->where('notes', 'like', '%AUTO_PRINT_ADAPTATION_REQUIRED%');
-            }
-
-            if ($operationsFilters['adaptation'] === 'no') {
-                $query->where(function ($q) {
-                    $q->whereNull('notes')
-                        ->orWhere('notes', 'not like', '%AUTO_PRINT_ADAPTATION_REQUIRED%');
-                });
-            }
-
-            if ($operationsFilters['keyword'] !== '') {
-                $keyword = $operationsFilters['keyword'];
-
-                $query->where(function ($q) use ($keyword) {
-                    $q->where('title', 'like', "%{$keyword}%")
-                        ->orWhereHas('book', function ($bookQuery) use ($keyword) {
-                            $bookQuery->where('judul', 'like', "%{$keyword}%");
-                        })
-                        ->orWhereHas('user', function ($userQuery) use ($keyword) {
-                            $userQuery->where('name', 'like', "%{$keyword}%");
-                        });
-                });
-            }
-        };
+        $operationsFilters = $this->resolveOperationsFilters($request);
+        $statusOptions = $this->statusOptions();
+        $slaAgeOptions = $this->slaAgeOptions();
 
         $showPrintQueue = in_array($operationsFilters['channel'], ['all', 'print'], true);
         $showEbookQueue = in_array($operationsFilters['channel'], ['all', 'ebook'], true);
@@ -247,11 +197,11 @@ class ProductionDashboardController extends Controller
             ->whereIn('status', ['paid', 'ebook_revision_requested', 'ebook_publishing', 'ebook_completed']);
 
         if ($showPrintQueue) {
-            $applyOrderFilters($printQueueQuery);
+            $this->applyCommonOrderFilters($printQueueQuery, $operationsFilters);
         }
 
         if ($showEbookQueue) {
-            $applyOrderFilters($ebookQueueQuery);
+            $this->applyCommonOrderFilters($ebookQueueQuery, $operationsFilters);
         }
 
         $printQueueCount = $showPrintQueue ? (clone $printQueueQuery)->count() : 0;
@@ -276,7 +226,7 @@ class ProductionDashboardController extends Controller
             $revisionQueueQuery->where('order_type', 'ebook_publication');
         }
 
-        $applyOrderFilters($revisionQueueQuery);
+        $this->applyCommonOrderFilters($revisionQueueQuery, $operationsFilters);
 
         $adaptationQueueQuery = AuthorBookOrder::with(['book', 'user'])
             ->where('order_type', 'reprint')
@@ -286,6 +236,8 @@ class ProductionDashboardController extends Controller
             if ($operationsFilters['status'] !== 'all') {
                 $adaptationQueueQuery->where('status', $operationsFilters['status']);
             }
+
+            $this->applyDateAndAgeFilters($adaptationQueueQuery, $operationsFilters);
 
             if ($operationsFilters['keyword'] !== '') {
                 $keyword = $operationsFilters['keyword'];
@@ -343,8 +295,210 @@ class ProductionDashboardController extends Controller
                 'adaptationQueue',
                 'operationsSummary',
                 'operationsFilters',
-                'statusOptions'
+                'statusOptions',
+                'slaAgeOptions'
             )
         );
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $operationsFilters = $this->resolveOperationsFilters($request);
+
+        $exportQuery = AuthorBookOrder::with(['book', 'user'])
+            ->whereIn('order_type', ['reprint', 'ebook_publication'])
+            ->whereIn('status', [
+                'paid',
+                'revision_requested',
+                'ebook_revision_requested',
+                'printing',
+                'processing',
+                'ebook_publishing',
+                'print_completed',
+                'ebook_completed',
+                'shipping',
+                'shipped',
+            ]);
+
+        if ($operationsFilters['channel'] === 'print') {
+            $exportQuery->where('order_type', 'reprint');
+        }
+
+        if ($operationsFilters['channel'] === 'ebook') {
+            $exportQuery->where('order_type', 'ebook_publication');
+        }
+
+        $this->applyCommonOrderFilters($exportQuery, $operationsFilters);
+
+        $orders = $exportQuery->latest()->get();
+
+        $filename = 'operations-dashboard-' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Order ID',
+                'Order Type',
+                'Judul Buku',
+                'Author',
+                'Status',
+                'Platform Ebook',
+                'Adaptasi Cetak',
+                'Tanggal Dibuat',
+            ]);
+
+            foreach ($orders as $order) {
+                fputcsv($handle, [
+                    $order->id,
+                    $order->order_type,
+                    $order->title ?? optional($order->book)->judul,
+                    optional($order->user)->name,
+                    $order->status,
+                    $order->ebook_platform,
+                    str_contains((string) $order->notes, 'AUTO_PRINT_ADAPTATION_REQUIRED') ? 'Ya' : 'Tidak',
+                    optional($order->created_at)?->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function resolveOperationsFilters(Request $request): array
+    {
+        $startDateInput = $request->string('op_start_date')->toString();
+        $endDateInput = $request->string('op_end_date')->toString();
+
+        $startDate = $this->safeParseDate($startDateInput, true);
+        $endDate = $this->safeParseDate($endDateInput, false);
+
+        return [
+            'channel' => in_array($request->string('op_channel')->toString(), ['all', 'print', 'ebook'], true)
+                ? $request->string('op_channel')->toString()
+                : 'all',
+            'status' => $request->string('op_status')->toString() ?: 'all',
+            'adaptation' => in_array($request->string('op_adaptation')->toString(), ['all', 'yes', 'no'], true)
+                ? $request->string('op_adaptation')->toString()
+                : 'all',
+            'keyword' => trim($request->string('op_keyword')->toString()),
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'start_date_input' => $startDateInput,
+            'end_date_input' => $endDateInput,
+            'sla_age' => array_key_exists($request->string('op_sla_age')->toString(), $this->slaAgeOptions())
+                ? $request->string('op_sla_age')->toString()
+                : 'all',
+        ];
+    }
+
+    private function applyCommonOrderFilters($query, array $operationsFilters): void
+    {
+        if ($operationsFilters['status'] !== 'all') {
+            $query->where('status', $operationsFilters['status']);
+        }
+
+        if ($operationsFilters['adaptation'] === 'yes') {
+            $query->where('notes', 'like', '%AUTO_PRINT_ADAPTATION_REQUIRED%');
+        }
+
+        if ($operationsFilters['adaptation'] === 'no') {
+            $query->where(function ($q) {
+                $q->whereNull('notes')
+                    ->orWhere('notes', 'not like', '%AUTO_PRINT_ADAPTATION_REQUIRED%');
+            });
+        }
+
+        if ($operationsFilters['keyword'] !== '') {
+            $keyword = $operationsFilters['keyword'];
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%{$keyword}%")
+                    ->orWhereHas('book', function ($bookQuery) use ($keyword) {
+                        $bookQuery->where('judul', 'like', "%{$keyword}%");
+                    })
+                    ->orWhereHas('user', function ($userQuery) use ($keyword) {
+                        $userQuery->where('name', 'like', "%{$keyword}%");
+                    });
+            });
+        }
+
+        $this->applyDateAndAgeFilters($query, $operationsFilters);
+    }
+
+    private function applyDateAndAgeFilters($query, array $operationsFilters): void
+    {
+        if ($operationsFilters['start_date'] !== null) {
+            $query->where('created_at', '>=', $operationsFilters['start_date']);
+        }
+
+        if ($operationsFilters['end_date'] !== null) {
+            $query->where('created_at', '<=', $operationsFilters['end_date']);
+        }
+
+        if ($operationsFilters['sla_age'] !== 'all') {
+            $now = now();
+
+            if ($operationsFilters['sla_age'] === 'today') {
+                $query->whereDate('created_at', $now->toDateString());
+            }
+
+            if ($operationsFilters['sla_age'] === 'age_1_3') {
+                $query->whereBetween('created_at', [$now->copy()->subDays(3), $now->copy()->subDay()]);
+            }
+
+            if ($operationsFilters['sla_age'] === 'age_4_7') {
+                $query->whereBetween('created_at', [$now->copy()->subDays(7), $now->copy()->subDays(4)]);
+            }
+
+            if ($operationsFilters['sla_age'] === 'age_gt_7') {
+                $query->where('created_at', '<', $now->copy()->subDays(7));
+            }
+        }
+    }
+
+    private function statusOptions(): array
+    {
+        return [
+            'all' => 'Semua Status',
+            'paid' => 'Menunggu Proses',
+            'revision_requested' => 'Revisi Diminta (Print)',
+            'ebook_revision_requested' => 'Revisi Diminta (Ebook)',
+            'printing' => 'Sedang Dicetak',
+            'processing' => 'Sedang Diproses',
+            'ebook_publishing' => 'Sedang Dipublikasikan',
+            'print_completed' => 'Selesai Cetak',
+            'ebook_completed' => 'Selesai Ebook',
+            'shipping' => 'Sedang Dikirim',
+            'shipped' => 'Terkirim',
+        ];
+    }
+
+    private function slaAgeOptions(): array
+    {
+        return [
+            'all' => 'Semua Umur SLA',
+            'today' => 'Hari Ini',
+            'age_1_3' => '1-3 Hari',
+            'age_4_7' => '4-7 Hari',
+            'age_gt_7' => '> 7 Hari',
+        ];
+    }
+
+    private function safeParseDate(string $value, bool $startOfDay): ?Carbon
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Carbon::parse($value);
+
+            return $startOfDay ? $parsed->startOfDay() : $parsed->endOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }
