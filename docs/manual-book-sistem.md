@@ -243,6 +243,19 @@ Whitelist tambahan per file:
 3. Submit buku ke ISBN jika semua syarat terpenuhi.
 4. Approve atau reject dari role berwenang.
 
+#### Pembaruan Alur Book Show (Action Center)
+
+- Action Center di Book Show kini menjalankan alur utama lewat orkestrasi endpoint terpusat:
+    - `POST /books/{book}/workflow/execute-primary`
+    - `POST /books/{book}/workflow/prepare-isbn`
+- Keputusan aksi utama ditentukan otomatis berdasarkan status workflow aktif (next/audit/submit/verify/author approval).
+- Jika tombol utama nonaktif, alasan blocker ditampilkan langsung pada panel yang sama.
+
+#### Catatan Transisi
+
+- Endpoint lama `POST /books/{book}/approve/{type}` masih dipertahankan untuk kompatibilitas.
+- Gunakan endpoint tersebut hanya untuk kebutuhan legacy; operasional harian mengikuti Action Center.
+
 ### 4.5 Layout Generator
 
 #### Kegunaan

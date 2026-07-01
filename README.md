@@ -45,6 +45,10 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Queue pengajuan ISBN.
 - Proses submit/approve ISBN berdasarkan role berwenang.
 - Kontrol readiness file sebelum submit/approval.
+- Book Show kini menggunakan Action Center dengan endpoint orkestrasi utama:
+    - `POST /books/{book}/workflow/execute-primary`
+    - `POST /books/{book}/workflow/prepare-isbn`
+- Endpoint legacy `POST /books/{book}/approve/{type}` masih tersedia sementara untuk kompatibilitas, namun tidak lagi menjadi alur utama UI.
 
 ### 4. Dashboard Operasional
 

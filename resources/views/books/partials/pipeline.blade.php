@@ -5,14 +5,18 @@
 
     <div class="card-body">
         @php
-            $current = $book->workflowIndex();
+            $steps = $book->workflowSteps();
+            $current = array_search($book->workflow_status, $steps, true);
+            $current = $current === false ? 0 : $current;
             $dpPaid = $book->hasPaidInitialPackageInvoice();
             $dpWarning = $book->dpPaymentWarningMessage();
+            $isFinished = $book->workflow_status === 'selesai';
+            $canAdvance = $dpPaid && !$isFinished;
         @endphp
 
         {{-- STEPPER --}}
         <div class="d-flex flex-wrap justify-content-center align-items-start py-4" style="gap: 15px;">
-            @foreach (\App\Models\Book::WORKFLOWS as $index => $step)
+            @foreach ($steps as $index => $step)
                 @php
                     $isDone = $index < $current;
                     $isCurrent = $index == $current;
@@ -73,10 +77,13 @@
                 <form method="POST" action="{{ route('books.next-workflow', $book) }}">
                     @csrf
                     <button type="submit" class="btn btn-primary btn-lg btn-block shadow-sm"
-                        @disabled(!$dpPaid)>
+                        @disabled(!$canAdvance)>
                         <i class="fas fa-forward mr-2"></i> Lanjutkan Tahap
                     </button>
                 </form>
+                @if ($isFinished)
+                    <small class="text-muted d-block mt-2 text-center">Workflow sudah selesai.</small>
+                @endif
             </div>
         </div>
     </div>

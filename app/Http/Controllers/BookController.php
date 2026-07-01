@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Models\PublishingPackage;
 use App\Services\AssignmentRecommendationService;
 use App\Services\BookCompletionOrchestratorService;
+use App\Services\BookWorkflowActionService;
+use App\Services\BookWorkflowGuardService;
 use App\Services\PerpusnasIsbnService;
 
 class BookController extends Controller
@@ -129,7 +131,8 @@ class BookController extends Controller
      */
     public function show(
         Book $book,
-        ReadinessService $readiness
+        ReadinessService $readiness,
+        BookWorkflowGuardService $workflowGuard
     ) {
 
         $book->load([
@@ -148,7 +151,9 @@ class BookController extends Controller
 
             'orders.invoice',
 
-            'orders.user'
+            'orders.user',
+
+            'approvals'
 
         ]);
 
@@ -172,10 +177,63 @@ class BookController extends Controller
 
                 'readiness' =>
                     $readiness
-                        ->calculate($book)
+                        ->calculate($book),
+
+                'workflowUi' =>
+                    $workflowGuard
+                        ->evaluate(
+                            $book,
+                            auth()->user()
+                        )
 
             ]
         );
+    }
+
+    public function workflowActionState(
+        Book $book,
+        BookWorkflowGuardService $workflowGuard
+    ) {
+        $book->load('approvals');
+
+        return response()->json(
+            $workflowGuard->evaluate(
+                $book,
+                auth()->user()
+            )
+        );
+    }
+
+    public function executePrimaryWorkflowAction(
+        Request $request,
+        Book $book,
+        BookWorkflowActionService $workflowAction
+    ) {
+        $result = $workflowAction->executePrimary(
+            $book,
+            auth()->user(),
+            $request->only(['isbn', 'tanggal'])
+        );
+
+        $status = (string) ($result['status'] ?? 'info');
+        $message = (string) ($result['message'] ?? 'Aksi diproses.');
+
+        return back()->with($status, $message);
+    }
+
+    public function prepareIsbnWorkflow(
+        Book $book,
+        BookWorkflowActionService $workflowAction
+    ) {
+        $result = $workflowAction->prepareIsbn(
+            $book,
+            auth()->user()
+        );
+
+        $status = (string) ($result['status'] ?? 'info');
+        $message = (string) ($result['message'] ?? 'Prepare ISBN diproses.');
+
+        return back()->with($status, $message);
     }
 
     /**
@@ -617,9 +675,9 @@ class BookController extends Controller
 
             $book,
 
-            'ISBN Approved',
+            'Legacy Approval Endpoint',
 
-            $request->isbn
+            'Approval type: ' . $type
 
         );
 
@@ -629,7 +687,10 @@ class BookController extends Controller
 
             'Approval berhasil'
 
-        );
+        )->with(
+                'info',
+                'Catatan: endpoint approval lama sedang dalam masa transisi. Gunakan Action Center untuk alur utama.'
+            );
     }
 
     public function submitISBN(

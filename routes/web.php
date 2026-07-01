@@ -325,9 +325,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/books/{book}/next-workflow', [BookController::class, 'nextWorkflow'])
             ->name('books.next-workflow');
 
+        Route::get('/books/{book}/workflow-action-state', [BookController::class, 'workflowActionState'])
+            ->name('books.workflow-action-state');
+
+        Route::post('/books/{book}/workflow/execute-primary', [BookController::class, 'executePrimaryWorkflowAction'])
+            ->name('books.workflow.execute-primary');
+
+        Route::post('/books/{book}/workflow/prepare-isbn', [BookController::class, 'prepareIsbnWorkflow'])
+            ->name('books.workflow.prepare-isbn');
+
         Route::post('/books/{book}/sync-assignment', [BookController::class, 'syncAssignments'])
             ->name('books.sync-assignment');
 
+        // Legacy endpoint (deprecated): dipertahankan sementara untuk backward compatibility.
         Route::post('/books/{book}/approve/{type}', [BookController::class, 'approve'])
             ->name('books.approve');
 

@@ -1,103 +1,42 @@
-<div class="card">
-
+<div class="card card-outline card-info">
     <div class="card-header">
-
-        Approval
-
+        <h5 class="mb-0">Approval Gate</h5>
     </div>
 
     <div class="card-body">
-
         @php
-
-            $types = [
-
-                'editor',
-
-                'layout',
-
-                'author'
-
-            ];
-
+            $approvals = $workflowUi['approvals'] ?? [];
+            $approvedCount = (int) ($workflowUi['approvedCount'] ?? 0);
+            $totalApprovals = (int) ($workflowUi['totalApprovals'] ?? 0);
         @endphp
 
-        @foreach($types as $type)
-
+        @foreach ($approvals as $approval)
             @php
-
-                $approval =
-                    $book->approvals
-                        ->where(
-                            'approval_type',
-                            $type
-                        )
-                        ->first();
-
+                $type = (string) ($approval['type'] ?? '-');
+                $approved = (bool) ($approval['approved'] ?? false);
+                $approvedBy = (string) ($approval['approvedBy'] ?? '');
             @endphp
 
-            <div class="mb-3">
-
-                <strong>
-
-                    {{ strtoupper($type) }}
-
-                </strong>
-
-                <br>
-
-                @if($approval)
-
-                    <span
-                        class="
-                            badge
-                            badge-success
-                        "
-                    >
-
-                        APPROVED
-
-                    </span>
-
-                    <br>
-
-                    {{ $approval->approved_by }}
-
-                @else
-
-                    <form
-                        method="POST"
-                        action="{{ route(
-                            'books.approve',
-                            [
-                                $book,
-                                $type
-                            ]
-                        ) }}"
-                    >
-
-                        @csrf
-
-                        <button
-                            class="
-                                btn
-                                btn-sm
-                                btn-primary
-                            "
-                        >
-
-                            Approve
-
-                        </button>
-
-                    </form>
-
-                @endif
-
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <div>
+                    <strong>{{ strtoupper($type) }}</strong>
+                    @if ($approved)
+                        <small class="d-block text-muted">oleh {{ $approvedBy }}</small>
+                    @else
+                        <small class="d-block text-muted">menunggu approval</small>
+                    @endif
+                </div>
+                <span class="badge {{ $approved ? 'badge-success' : 'badge-secondary' }}">
+                    {{ $approved ? 'APPROVED' : 'PENDING' }}
+                </span>
             </div>
-
         @endforeach
 
+        <div class="alert {{ $approvedCount === $totalApprovals ? 'alert-success' : 'alert-warning' }} mb-0">
+            <strong>{{ $approvedCount }}/{{ $totalApprovals }}</strong> gate approval selesai.
+            @if ($approvedCount !== $totalApprovals)
+                Tahap ini masih membutuhkan persetujuan yang belum lengkap.
+            @endif
+        </div>
     </div>
-
 </div>

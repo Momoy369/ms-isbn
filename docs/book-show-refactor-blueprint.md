@@ -1,8 +1,16 @@
 # Blueprint Refactor Book Show: ISBN Workflow dan Approval
 
 Tanggal: 2026-07-01
-Status: Draft siap implementasi
+Status: Implemented (Fase 1-4)
 Scope: Penyederhanaan proses pada halaman Book Show agar operasional tim lebih fokus, minim langkah manual, dan konsisten terhadap state workflow.
+
+## Status Implementasi Aktual
+
+1. Fase 1 selesai: penyederhanaan UI (Action Center, approvals ringkas, pemisahan operasional vs monitoring).
+2. Fase 2 selesai: guard logic dipusatkan ke service evaluator + endpoint state.
+3. Fase 3 selesai: endpoint orkestrasi `execute-primary` dan `prepare-isbn` aktif.
+4. Fase 4 selesai: endpoint approval legacy diberi deprecation notice + dokumentasi transisi diperbarui.
+5. Catatan QA: feature test baru sudah ditulis, namun eksekusi masih terhambat environment test karena driver SQLite belum tersedia pada PHP CLI.
 
 ## 1) Masalah Utama Saat Ini
 

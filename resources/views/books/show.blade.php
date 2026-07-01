@@ -44,6 +44,8 @@
 
                 <div class="col-lg-4">
 
+                    <h6 class="text-uppercase text-muted small mb-2">Zona Operasional</h6>
+
                     @include('books.partials.production-team')
 
                     @include('books.partials.approvals')
@@ -57,6 +59,8 @@
                 </div>
 
                 <div class="col-lg-8">
+
+                    <h6 class="text-uppercase text-muted small mb-2">Zona Monitoring</h6>
 
                     <div class="accordion" id="bookDetailAccordion">
 
