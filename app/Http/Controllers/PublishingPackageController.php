@@ -25,11 +25,21 @@ class PublishingPackageController extends Controller
             'name' => 'required|max:255',
             'description' => 'nullable|max:1000',
             'price' => 'nullable|numeric|min:0',
+            'supports_print' => 'nullable|boolean',
+            'supports_ebook' => 'nullable|boolean',
         ]);
+
+        if (!$request->boolean('supports_print') && !$request->boolean('supports_ebook')) {
+            return back()->withInput()->withErrors([
+                'supports_print' => 'Pilih minimal satu kanal publikasi: Cetak atau Ebook.',
+            ]);
+        }
 
         $package = PublishingPackage::create($request->only([
             'name',
             'description',
+            'supports_print',
+            'supports_ebook',
             'includes_editing',
             'includes_layout',
             'includes_cover_design',
@@ -39,6 +49,8 @@ class PublishingPackageController extends Controller
             'default_print_quantity',
             'price',
         ]) + [
+            'supports_print' => (bool) $request->boolean('supports_print'),
+            'supports_ebook' => (bool) $request->boolean('supports_ebook'),
             'includes_editing' => (bool) $request->boolean('includes_editing'),
             'includes_layout' => (bool) $request->boolean('includes_layout'),
             'includes_cover_design' => (bool) $request->boolean('includes_cover_design'),
@@ -63,11 +75,21 @@ class PublishingPackageController extends Controller
             'name' => 'required|max:255',
             'description' => 'nullable|max:1000',
             'price' => 'nullable|numeric|min:0',
+            'supports_print' => 'nullable|boolean',
+            'supports_ebook' => 'nullable|boolean',
         ]);
+
+        if (!$request->boolean('supports_print') && !$request->boolean('supports_ebook')) {
+            return back()->withInput()->withErrors([
+                'supports_print' => 'Pilih minimal satu kanal publikasi: Cetak atau Ebook.',
+            ]);
+        }
 
         $publishingPackage->update($request->only([
             'name',
             'description',
+            'supports_print',
+            'supports_ebook',
             'includes_editing',
             'includes_layout',
             'includes_cover_design',
@@ -77,6 +99,8 @@ class PublishingPackageController extends Controller
             'default_print_quantity',
             'price',
         ]) + [
+            'supports_print' => (bool) $request->boolean('supports_print'),
+            'supports_ebook' => (bool) $request->boolean('supports_ebook'),
             'includes_editing' => (bool) $request->boolean('includes_editing'),
             'includes_layout' => (bool) $request->boolean('includes_layout'),
             'includes_cover_design' => (bool) $request->boolean('includes_cover_design'),

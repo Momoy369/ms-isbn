@@ -29,8 +29,32 @@
                     <div><strong>ISBN:</strong> {{ $book->isbn ?? '-' }}</div>
                     <div><strong>Jumlah Cetak:</strong> {{ number_format($order->quantity) }} eksemplar</div>
                     <div><strong>Status Order:</strong> {{ strtoupper($order->status) }}</div>
+                    <div><strong>No Resi:</strong> {{ $order->tracking_number ?? '-' }}</div>
                     <div><strong>Penulis:</strong> {{ optional($order->user)->name ?? '-' }}</div>
                     <div><strong>Alamat Kirim:</strong> {{ $order->shipping_address ?? '-' }}</div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><strong>Minta Revisi ke Layout/Desain</strong></div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('printing.workspace.request-revision', $order) }}"
+                        enctype="multipart/form-data">
+                        @csrf
+                        <div class="form-group">
+                            <label>Pesan Revisi</label>
+                            <textarea name="message" class="form-control" rows="3" required
+                                placeholder="Jelaskan bagian yang harus direvisi oleh tim layout/desain..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Lampiran (opsional)</label>
+                            <input type="file" name="attachment" class="form-control">
+                            <small class="text-muted">Maks 10MB.</small>
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-comment-dots mr-1"></i> Kirim Permintaan Revisi
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -114,6 +138,62 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header"><strong>Komunikasi Produksi (Percetakan, Layout, Desain)</strong></div>
+                <div class="card-body" style="max-height: 420px; overflow-y: auto;">
+                    @php
+                        $thread = $book->messages
+                            ->filter(
+                                fn($msg) => in_array(
+                                    $msg->sender_role,
+                                    ['designer', 'layouter', 'admin', 'owner', 'finance', 'superadmin'],
+                                    true,
+                                ),
+                            )
+                            ->values();
+                    @endphp
+
+                    @forelse ($thread as $msg)
+                        <div class="border rounded p-2 mb-2">
+                            <div class="small text-muted mb-1">
+                                <strong>{{ $msg->sender_name }}</strong> ({{ strtoupper($msg->sender_role) }})
+                                • {{ optional($msg->created_at)->format('d M Y H:i') }}
+                            </div>
+                            <div>{{ $msg->message }}</div>
+                            @if ($msg->attachment)
+                                <div class="mt-1">
+                                    <a href="{{ asset('storage/' . $msg->attachment) }}" target="_blank" rel="noopener">
+                                        Lihat Lampiran
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    @empty
+                        <div class="text-muted">Belum ada komunikasi revisi untuk buku ini.</div>
+                    @endforelse
+                </div>
+                <div class="card-footer">
+                    <div class="small text-muted mb-2">
+                        Tip: gunakan prefix <strong>[LAYOUT]</strong> atau <strong>[DESIGN]</strong> agar konteks revisi
+                        lebih jelas.
+                    </div>
+                    <form method="POST" action="{{ route('books.message.store', $book) }}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="form-group mb-2">
+                            <label>Kirim Pesan Produksi</label>
+                            <textarea name="message" class="form-control" rows="2" required
+                                placeholder="Tulis pesan untuk tim layout/desain..."></textarea>
+                        </div>
+                        <div class="form-group mb-2">
+                            <input type="file" name="attachment" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-paper-plane mr-1"></i> Kirim Pesan
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

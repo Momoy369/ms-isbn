@@ -29,6 +29,24 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Kanal Publikasi</label>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="supports_print" value="1" class="custom-control-input"
+                            id="supports_print" checked>
+                        <label class="custom-control-label" for="supports_print">Cetak (masuk workspace percetakan)</label>
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" name="supports_ebook" value="1" class="custom-control-input"
+                            id="supports_ebook">
+                        <label class="custom-control-label" for="supports_ebook">Ebook (masuk ebook publishing
+                            system)</label>
+                    </div>
+                    @error('supports_print')
+                        <small class="text-danger d-block">{{ $message }}</small>
+                    @enderror
+                </div>
+
+                <div class="form-group">
                     <label>Fitur Paket</label>
                     <div class="custom-control custom-checkbox">
                         <input type="checkbox" name="includes_editing" value="1" class="custom-control-input"

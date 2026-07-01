@@ -9,6 +9,8 @@ class PublishingPackage extends Model
     protected $fillable = [
         'name',
         'description',
+        'supports_print',
+        'supports_ebook',
         'includes_editing',
         'includes_layout',
         'includes_cover_design',
@@ -20,6 +22,8 @@ class PublishingPackage extends Model
     ];
 
     protected $casts = [
+        'supports_print' => 'boolean',
+        'supports_ebook' => 'boolean',
         'includes_editing' => 'boolean',
         'includes_layout' => 'boolean',
         'includes_cover_design' => 'boolean',

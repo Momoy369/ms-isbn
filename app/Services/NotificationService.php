@@ -57,4 +57,39 @@ class NotificationService
             );
         }
     }
+
+    public function sendToBookRoles(
+        Book $book,
+        array $roles,
+        string $title,
+        string $message,
+        ?int $excludeUserId = null
+    ): void {
+        $roles = array_values(array_unique(array_filter(array_map('strval', $roles))));
+
+        if (empty($roles)) {
+            return;
+        }
+
+        $recipients = collect();
+
+        foreach ($book->assignments as $assignment) {
+            if ($assignment->user && in_array((string) $assignment->role, $roles, true)) {
+                $recipients->push($assignment->user);
+            }
+        }
+
+        foreach ($recipients->unique('id') as $user) {
+            if ($excludeUserId && (int) $user->id === (int) $excludeUserId) {
+                continue;
+            }
+
+            $this->send(
+                (int) $user->id,
+                $title,
+                $message,
+                $book->id
+            );
+        }
+    }
 }

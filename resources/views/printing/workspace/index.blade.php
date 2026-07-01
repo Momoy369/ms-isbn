@@ -36,19 +36,40 @@
             </div>
         </div>
         <div class="col-md-3 mb-2">
+            <div class="small-box bg-danger mb-0">
+                <div class="inner">
+                    <h3>{{ $stats['revision_requested'] }}</h3>
+                    <p>Perlu Revisi</p>
+                </div>
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-2">
             <div class="small-box bg-primary mb-0">
                 <div class="inner">
-                    <h3>{{ $stats['processing'] }}</h3>
-                    <p>Dalam Proses Cetak</p>
+                    <h3>{{ $stats['printing'] }}</h3>
+                    <p>Sedang Dicetak</p>
                 </div>
                 <div class="icon"><i class="fas fa-print"></i></div>
             </div>
         </div>
-        <div class="col-md-3 mb-2">
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6 mb-2">
+            <div class="small-box bg-info mb-0">
+                <div class="inner">
+                    <h3>{{ $stats['shipping'] }}</h3>
+                    <p>Dalam Pengiriman</p>
+                </div>
+                <div class="icon"><i class="fas fa-truck"></i></div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-2">
             <div class="small-box bg-success mb-0">
                 <div class="inner">
                     <h3>{{ $stats['completed'] }}</h3>
-                    <p>Selesai</p>
+                    <p>Cetak Selesai / Terkirim</p>
                 </div>
                 <div class="icon"><i class="fas fa-check-circle"></i></div>
             </div>
@@ -65,7 +86,7 @@
                 <div class="col-md-3 mb-2">
                     <select name="status" class="form-control">
                         <option value="">Semua Status</option>
-                        @foreach (['invoiced', 'paid', 'processing', 'completed', 'cancelled'] as $status)
+                        @foreach (['invoiced', 'paid', 'revision_requested', 'printing', 'print_completed', 'shipping', 'shipped', 'delivered', 'processing', 'completed', 'cancelled'] as $status)
                             <option value="{{ $status }}" @selected(request('status') === $status)>
                                 {{ strtoupper($status) }}
                             </option>
@@ -101,6 +122,11 @@
                             <td>{{ $order->created_at->format('d M Y H:i') }}</td>
                             <td>
                                 {{ $order->title ?? (optional($order->book)->judul ?? '-') }}
+                                @if (str_contains((string) $order->notes, 'AUTO_PRINT_ADAPTATION_REQUIRED'))
+                                    <div class="mt-1">
+                                        <span class="badge badge-warning">Needs Print Adaptation</span>
+                                    </div>
+                                @endif
                                 @if ($order->book)
                                     <div class="small">
                                         <a href="{{ route('books.show', $order->book) }}">Buka Detail Naskah</a>
@@ -121,7 +147,7 @@
                                     @csrf
                                     <div class="input-group input-group-sm mb-1">
                                         <select name="status" class="form-control">
-                                            @foreach (['paid', 'processing', 'completed', 'cancelled'] as $st)
+                                            @foreach (['paid', 'revision_requested', 'printing', 'print_completed', 'shipping', 'shipped', 'delivered', 'processing', 'completed', 'cancelled'] as $st)
                                                 <option value="{{ $st }}" @selected($order->status === $st)>
                                                     {{ strtoupper($st) }}
                                                 </option>
@@ -133,10 +159,14 @@
                                     </div>
                                     <input type="text" name="notes" class="form-control form-control-sm"
                                         value="{{ $order->notes }}" placeholder="Catatan tim percetakan...">
+                                    <input type="text" name="tracking_number" class="form-control form-control-sm mt-1"
+                                        value="{{ $order->tracking_number }}" placeholder="No Resi (jika sudah dikirim)">
+                                    <input type="text" name="shipping_notes" class="form-control form-control-sm mt-1"
+                                        value="{{ $order->shipping_notes }}" placeholder="Catatan pengiriman...">
                                 </form>
                                 <a href="{{ route('printing.workspace.show', $order) }}"
                                     class="btn btn-outline-secondary btn-sm mt-1">
-                                    Detail & Final Files
+                                    Detail, Revisi & Final Files
                                 </a>
                             </td>
                         </tr>

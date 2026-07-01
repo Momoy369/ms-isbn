@@ -471,6 +471,12 @@ return [
             'can' => 'menu-printing-workspace',
         ],
         [
+            'text' => 'Workspace Ebook Publishing',
+            'route' => 'ebook.workspace.index',
+            'icon' => 'fas fa-tablet-alt',
+            'can' => 'menu-ebook-workspace',
+        ],
+        [
             'header' => 'Portal Penulis',
             'can' => 'menu-author',
         ],

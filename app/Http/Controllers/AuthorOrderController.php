@@ -20,6 +20,7 @@ class AuthorOrderController extends Controller
 
         $completedBooks = Book::where('author_user_id', $user->id)
             ->where('workflow_status', 'selesai')
+            ->with('publishingPackage')
             ->orderBy('judul')
             ->get();
 
@@ -134,7 +135,10 @@ class AuthorOrderController extends Controller
 
         $book = Book::where('author_user_id', $user->id)
             ->where('workflow_status', 'selesai')
+            ->with('publishingPackage')
             ->findOrFail($data['book_id']);
+
+        $requiresPrintAdaptation = (bool) ($book->publishingPackage && !$book->publishingPackage->supports_print);
 
         $rule = PrintPriceRule::where('is_active', true)->findOrFail($data['print_price_rule_id']);
 
@@ -162,6 +166,12 @@ class AuthorOrderController extends Controller
             'notes' => 'Biaya cetak ulang + ongkir (' . strtoupper($data['courier']) . ' ' . ($shipping['service'] ?? '-') . ').',
         ]);
 
+        $notes = trim((string) ($data['notes'] ?? ''));
+        if ($requiresPrintAdaptation) {
+            $adaptationNote = 'AUTO_PRINT_ADAPTATION_REQUIRED: Buku berasal dari paket ebook-only, perlu penyesuaian naskah ke format cetak sebelum produksi.';
+            $notes = $notes !== '' ? $adaptationNote . PHP_EOL . $notes : $adaptationNote;
+        }
+
         AuthorBookOrder::create([
             'user_id' => $user->id,
             'book_id' => $book->id,
@@ -185,10 +195,14 @@ class AuthorOrderController extends Controller
             'etd' => $shipping['etd'] ?? null,
             'shipping_payload' => $shipping['raw'] ?? null,
             'status' => 'invoiced',
-            'notes' => $data['notes'] ?? null,
+            'notes' => $notes !== '' ? $notes : null,
         ]);
 
-        return back()->with('success', 'Pesanan cetak ulang berhasil dibuat. Invoice telah diterbitkan.');
+        $message = $requiresPrintAdaptation
+            ? 'Pesanan cetak berhasil dibuat untuk buku paket ebook-only. Setelah DP lunas, order masuk workspace percetakan dengan penanda perlu penyesuaian naskah cetak.'
+            : 'Pesanan cetak ulang berhasil dibuat. Invoice telah diterbitkan.';
+
+        return back()->with('success', $message);
     }
 
     public function orderService(Request $request)

@@ -12,6 +12,30 @@
 @endsection
 
 @section('content')
+    <style>
+        .order-stepper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .order-step {
+            font-size: 11px;
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            padding: 3px 8px;
+            color: #6b7280;
+            background: #f9fafb;
+        }
+
+        .order-step.active {
+            border-color: #0ea5e9;
+            color: #0c4a6e;
+            background: #e0f2fe;
+            font-weight: 600;
+        }
+    </style>
+
     @foreach (['success', 'warning', 'danger'] as $type)
         @if (session($type))
             <div class="alert alert-{{ $type }} alert-dismissible rounded">
@@ -49,7 +73,9 @@
                             <select name="publishing_package_id" class="form-control" required>
                                 <option value="">- Pilih Paket -</option>
                                 @foreach ($packages as $pkg)
-                                    <option value="{{ $pkg->id }}">{{ $pkg->name }} - Rp
+                                    <option value="{{ $pkg->id }}">{{ $pkg->name }}
+                                        [{{ $pkg->supports_print ? 'Cetak' : '' }}{{ $pkg->supports_print && $pkg->supports_ebook ? ' + ' : '' }}{{ $pkg->supports_ebook ? 'Ebook' : '' }}]
+                                        - Rp
                                         {{ number_format($pkg->price, 0, ',', '.') }}</option>
                                 @endforeach
                             </select>
@@ -74,12 +100,30 @@
                         @csrf
                         <div class="form-group">
                             <label>Pilih Buku Selesai</label>
-                            <select name="book_id" class="form-control" required>
+                            <select name="book_id" id="reprint-book-id" class="form-control" required>
                                 <option value="">- Pilih Buku -</option>
                                 @foreach ($completedBooks as $book)
-                                    <option value="{{ $book->id }}">{{ $book->judul }}</option>
+                                    @php
+                                        $pkg = $book->publishingPackage;
+                                        $supportsPrint = $pkg ? (bool) $pkg->supports_print : true;
+                                        $supportsEbook = $pkg ? (bool) $pkg->supports_ebook : false;
+                                        $channel =
+                                            $supportsPrint && $supportsEbook
+                                                ? 'Cetak + Ebook'
+                                                : ($supportsPrint
+                                                    ? 'Cetak'
+                                                    : 'Ebook-only');
+                                    @endphp
+                                    <option value="{{ $book->id }}"
+                                        data-supports-print="{{ $supportsPrint ? '1' : '0' }}">
+                                        {{ $book->judul }} [{{ $channel }}]
+                                    </option>
                                 @endforeach
                             </select>
+                            <small id="reprint-adaptation-hint" class="text-warning d-none mt-1">
+                                Buku ini berasal dari paket ebook-only. Order tetap bisa diproses cetak, dan akan ditandai
+                                perlu penyesuaian naskah cetak di workspace percetakan.
+                            </small>
                         </div>
                         <div class="form-group">
                             <label>Rule Harga Cetak</label>
@@ -129,6 +173,11 @@
                                 <option value="tiki">TIKI</option>
                                 <option value="pos">POS</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Catatan untuk Tim Percetakan (opsional)</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                placeholder="Contoh: mohon penyesuaian margin dan ukuran trim untuk versi cetak."></textarea>
                         </div>
                         <button class="btn btn-success" type="submit">
                             <i class="fas fa-print mr-1"></i> Buat Order Cetak Ulang
@@ -185,6 +234,7 @@
                         <th>Judul</th>
                         <th>Total</th>
                         <th>Status</th>
+                        <th>Tracking Pengiriman</th>
                         <th>Invoice</th>
                     </tr>
                 </thead>
@@ -192,10 +242,86 @@
                     @forelse ($orders as $order)
                         <tr>
                             <td>{{ $order->created_at->format('d M Y H:i') }}</td>
-                            <td>{{ $order->order_type === 'new_package' ? 'Paket Baru' : 'Cetak Ulang' }}</td>
+                            <td>
+                                @if ($order->order_type === 'new_package')
+                                    Paket Baru
+                                @elseif ($order->order_type === 'ebook_publication')
+                                    Ebook Publishing
+                                @else
+                                    Cetak Ulang
+                                @endif
+                            </td>
                             <td>{{ $order->title ?? ($order->book->judul ?? '-') }}</td>
                             <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
-                            <td><span class="badge badge-secondary">{{ strtoupper($order->status) }}</span></td>
+                            <td>
+                                <span class="badge badge-secondary mb-1">{{ strtoupper($order->status) }}</span>
+                                @php
+                                    $isEbookFlow = $order->order_type === 'ebook_publication';
+                                    $printSteps = [
+                                        'paid',
+                                        'revision_requested',
+                                        'printing',
+                                        'print_completed',
+                                        'shipping',
+                                        'shipped',
+                                        'delivered',
+                                    ];
+                                    $ebookSteps = [
+                                        'paid',
+                                        'ebook_revision_requested',
+                                        'ebook_publishing',
+                                        'ebook_published',
+                                    ];
+                                    $steps = $isEbookFlow ? $ebookSteps : $printSteps;
+                                @endphp
+                                <div class="order-stepper mt-1">
+                                    @foreach ($steps as $step)
+                                        <span class="order-step {{ $order->status === $step ? 'active' : '' }}">
+                                            {{ strtoupper($step) }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </td>
+                            <td>
+                                @if ($order->order_type === 'ebook_publication')
+                                    <div class="small">
+                                        <div><strong>Platform:</strong> {{ $order->ebook_platform ?? '-' }}</div>
+                                        <div><strong>Status:</strong> {{ strtoupper($order->status) }}</div>
+                                        @if ($order->ebook_submitted_at)
+                                            <div><strong>Submit:</strong>
+                                                {{ $order->ebook_submitted_at->format('d M Y H:i') }}</div>
+                                        @endif
+                                        @if ($order->ebook_published_at)
+                                            <div><strong>Published:</strong>
+                                                {{ $order->ebook_published_at->format('d M Y H:i') }}</div>
+                                        @endif
+                                        @if ($order->ebook_publication_link)
+                                            <div><a href="{{ $order->ebook_publication_link }}" target="_blank"
+                                                    rel="noopener">Lihat Link Ebook</a></div>
+                                        @endif
+                                    </div>
+                                @elseif ($order->order_type !== 'reprint')
+                                    Tidak berlaku
+                                @else
+                                    <div class="small">
+                                        <div><strong>Kurir:</strong> {{ $order->courier ?? '-' }}
+                                            {{ $order->courier_service ?? '' }}</div>
+                                        <div><strong>Resi:</strong> {{ $order->tracking_number ?? '-' }}</div>
+                                        <div><strong>Posisi:</strong> {{ strtoupper($order->status) }}</div>
+                                        @if ($order->shipping_notes)
+                                            <div><strong>Catatan:</strong> {{ $order->shipping_notes }}</div>
+                                        @endif
+                                        @if ($order->shipped_at)
+                                            <div><strong>Terkirim:</strong> {{ $order->shipped_at->format('d M Y H:i') }}
+                                            </div>
+                                        @endif
+                                        @if ($order->delivered_at)
+                                            <div><strong>Diterima:</strong> {{ $order->delivered_at->format('d M Y H:i') }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
                             <td>
                                 @if ($order->invoice)
                                     <a href="{{ route('author.invoices.show', $order->invoice) }}"
@@ -209,7 +335,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-3">Belum ada order.</td>
+                            <td colspan="7" class="text-center text-muted py-3">Belum ada order.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -225,6 +351,8 @@
             const prov = document.getElementById('destination-province');
             const city = document.getElementById('destination-city');
             const cityId = document.getElementById('destination-city-id');
+            const reprintBook = document.getElementById('reprint-book-id');
+            const adaptationHint = document.getElementById('reprint-adaptation-hint');
 
             if (!prov || !city || !cityId) return;
 
@@ -269,6 +397,22 @@
                 const selected = city.options[city.selectedIndex];
                 cityId.value = selected ? (selected.getAttribute('data-id') || '') : '';
             });
+
+            if (reprintBook && adaptationHint) {
+                const renderAdaptationHint = function() {
+                    const selected = reprintBook.options[reprintBook.selectedIndex];
+                    const supportsPrint = selected ? selected.getAttribute('data-supports-print') : '1';
+
+                    if (supportsPrint === '0') {
+                        adaptationHint.classList.remove('d-none');
+                    } else {
+                        adaptationHint.classList.add('d-none');
+                    }
+                };
+
+                reprintBook.addEventListener('change', renderAdaptationHint);
+                renderAdaptationHint();
+            }
         })();
     </script>
 @endsection

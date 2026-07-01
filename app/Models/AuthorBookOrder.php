@@ -32,6 +32,18 @@ class AuthorBookOrder extends Model
         'status',
         'notes',
         'paid_at',
+        'revision_requested_at',
+        'print_started_at',
+        'print_completed_at',
+        'shipping_started_at',
+        'shipped_at',
+        'delivered_at',
+        'tracking_number',
+        'shipping_notes',
+        'ebook_platform',
+        'ebook_publication_link',
+        'ebook_submitted_at',
+        'ebook_published_at',
     ];
 
     protected $casts = [
@@ -41,6 +53,14 @@ class AuthorBookOrder extends Model
         'total_amount' => 'decimal:2',
         'shipping_payload' => 'array',
         'paid_at' => 'datetime',
+        'revision_requested_at' => 'datetime',
+        'print_started_at' => 'datetime',
+        'print_completed_at' => 'datetime',
+        'shipping_started_at' => 'datetime',
+        'shipped_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'ebook_submitted_at' => 'datetime',
+        'ebook_published_at' => 'datetime',
     ];
 
     public function user()

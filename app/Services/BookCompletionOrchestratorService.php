@@ -26,31 +26,67 @@ class BookCompletionOrchestratorService
                 ->first();
         }
 
-        $order = AuthorBookOrder::firstOrCreate(
-            [
-                'book_id' => $book->id,
-                'user_id' => $book->author_user_id,
-                'order_type' => 'reprint',
-                'author_invoice_id' => $invoice?->id,
-            ],
-            [
-                'title' => $book->judul,
-                'pages' => (int) ($book->jumlah_halaman ?? 0),
-                'quantity' => max(1, (int) ($book->jumlah_cetak ?? 1)),
-                'unit_price' => 0,
-                'subtotal' => 0,
-                'shipping_cost' => 0,
-                'total_amount' => (float) ($invoice?->amount ?? 0),
-                'status' => $invoice ? 'invoiced' : 'pending',
-                'notes' => 'AUTO_PRINT_QUEUE:' . $trigger,
-            ]
-        );
+        $supportsPrint = (bool) optional($book->publishingPackage)->supports_print;
+        $supportsEbook = (bool) optional($book->publishingPackage)->supports_ebook;
+
+        if (!$supportsPrint && !$supportsEbook) {
+            // Backward compatible fallback when old package data has no channel configured.
+            $supportsPrint = true;
+        }
+
+        $order = null;
+
+        if ($supportsPrint) {
+            $order = AuthorBookOrder::firstOrCreate(
+                [
+                    'book_id' => $book->id,
+                    'user_id' => $book->author_user_id,
+                    'order_type' => 'reprint',
+                    'author_invoice_id' => $invoice?->id,
+                ],
+                [
+                    'title' => $book->judul,
+                    'pages' => (int) ($book->jumlah_halaman ?? 0),
+                    'quantity' => max(1, (int) ($book->jumlah_cetak ?? 1)),
+                    'unit_price' => 0,
+                    'subtotal' => 0,
+                    'shipping_cost' => 0,
+                    'total_amount' => (float) ($invoice?->amount ?? 0),
+                    'status' => $invoice ? 'invoiced' : 'pending',
+                    'notes' => 'AUTO_PRINT_QUEUE:' . $trigger,
+                ]
+            );
+        }
+
+        if ($supportsEbook) {
+            AuthorBookOrder::firstOrCreate(
+                [
+                    'book_id' => $book->id,
+                    'user_id' => $book->author_user_id,
+                    'order_type' => 'ebook_publication',
+                    'author_invoice_id' => $invoice?->id,
+                ],
+                [
+                    'title' => $book->judul,
+                    'pages' => (int) ($book->jumlah_halaman ?? 0),
+                    'quantity' => 1,
+                    'unit_price' => 0,
+                    'subtotal' => 0,
+                    'shipping_cost' => 0,
+                    'total_amount' => 0,
+                    'status' => $invoice ? 'invoiced' : 'pending',
+                    'notes' => 'AUTO_EBOOK_QUEUE:' . $trigger,
+                ]
+            );
+        }
 
         if ($invoice && $invoice->status === 'paid') {
-            $order->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
+            AuthorBookOrder::where('author_invoice_id', $invoice->id)
+                ->whereIn('order_type', ['reprint', 'ebook_publication'])
+                ->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
         }
 
         if ($invoice) {

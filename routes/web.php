@@ -41,6 +41,7 @@ use App\Http\Controllers\LayoutGeneratorController;
 use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
 use App\Http\Controllers\StorefrontController;
+use App\Http\Controllers\EbookPublishingWorkspaceController;
 
 Route::get('/', function () {
 
@@ -504,8 +505,23 @@ Route::middleware('auth')->group(function () {
             Route::post('/printing/workspace/orders/{order}/status', [PrintingWorkspaceController::class, 'updateStatus'])
                 ->name('printing.workspace.update-status');
 
+            Route::post('/printing/workspace/orders/{order}/request-revision', [PrintingWorkspaceController::class, 'requestRevision'])
+                ->name('printing.workspace.request-revision');
+
             Route::post('/printing/workspace/orders/{order}/upload-final-file', [PrintingWorkspaceController::class, 'uploadFinalFile'])
                 ->name('printing.workspace.upload-final-file');
+
+            Route::get('/ebook/workspace', [EbookPublishingWorkspaceController::class, 'index'])
+                ->name('ebook.workspace.index');
+
+            Route::get('/ebook/workspace/orders/{order}', [EbookPublishingWorkspaceController::class, 'show'])
+                ->name('ebook.workspace.show');
+
+            Route::post('/ebook/workspace/orders/{order}/status', [EbookPublishingWorkspaceController::class, 'updateStatus'])
+                ->name('ebook.workspace.update-status');
+
+            Route::post('/ebook/workspace/orders/{order}/request-revision', [EbookPublishingWorkspaceController::class, 'requestRevision'])
+                ->name('ebook.workspace.request-revision');
         });
 
         Route::get('/my-assignments', [AssignmentController::class, 'myAssignments'])

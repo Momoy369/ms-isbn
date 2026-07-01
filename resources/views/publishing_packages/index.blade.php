@@ -37,6 +37,12 @@
                                 @endif
                             </td>
                             <td>
+                                <div class="mb-1">
+                                    <span
+                                        class="badge badge-{{ $package->supports_print ? 'primary' : 'secondary' }}">Cetak</span>
+                                    <span
+                                        class="badge badge-{{ $package->supports_ebook ? 'success' : 'secondary' }}">Ebook</span>
+                                </div>
                                 <span
                                     class="badge badge-{{ $package->includes_editing ? 'success' : 'secondary' }}">Editing</span>
                                 <span
