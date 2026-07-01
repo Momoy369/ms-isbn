@@ -35,7 +35,7 @@
                     </h3>
                 </div>
 
-                <form method="POST" action="{{ route('books.update', $book) }}">
+                <form method="POST" action="{{ route('books.update', $book) }}" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
 
@@ -160,6 +160,33 @@
                                         @error('ukuran_buku')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 form-group">
+                                        <label for="manuscript_a4_pages">Halaman Mentah A4 (margin 2 cm) <span
+                                                class="text-danger">*</span></label>
+                                        <input type="number" id="manuscript_a4_pages" name="manuscript_a4_pages"
+                                            class="form-control @error('manuscript_a4_pages') is-invalid @enderror"
+                                            value="{{ old('manuscript_a4_pages', $book->manuscript_a4_pages ?? $book->jumlah_halaman) }}"
+                                            min="1" required>
+                                        @error('manuscript_a4_pages')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label for="manuscript_file">Upload DOCX Naskah (opsional auto-hitungan)</label>
+                                        <input type="file" id="manuscript_file" name="manuscript_file"
+                                            class="form-control-file @error('manuscript_file') is-invalid @enderror"
+                                            accept=".docx">
+                                        @error('manuscript_file')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Jika DOCX diupload, sistem menghitung ulang A4/A5 otomatis dan menyimpan versi
+                                            naskah final aktif.
+                                        </small>
                                     </div>
                                 </div>
 

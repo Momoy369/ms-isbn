@@ -34,6 +34,31 @@
             background: #e0f2fe;
             font-weight: 600;
         }
+
+        .pv-chip {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        .pv-chip.good {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .pv-chip.warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .pv-chip.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 
     @foreach (['success', 'warning', 'danger'] as $type)
@@ -62,15 +87,31 @@
             <div class="card h-100">
                 <div class="card-header"><strong>Beli Paket Baru</strong></div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('author.orders.buy-package') }}">
+                    <form method="POST" action="{{ route('author.orders.buy-package') }}" enctype="multipart/form-data"
+                        id="buy-package-form">
                         @csrf
                         <div class="form-group">
                             <label>Judul Naskah Baru</label>
                             <input type="text" name="title" class="form-control" required>
                         </div>
                         <div class="form-group">
+                            <label>Upload Naskah (DOCX)</label>
+                            <input type="file" name="manuscript_file" id="manuscript-file" class="form-control-file"
+                                accept=".docx" required>
+                            <small class="text-muted d-block mt-1">
+                                Sistem menghitung halaman format A4 dan A5 (margin rata 2 cm) secara otomatis.
+                            </small>
+                            <small class="text-muted d-block">
+                                Jika lebih dari 125 halaman A4: biaya tambahan Rp 2.000/halaman untuk layout,
+                                dan tambahan Rp 2.000/halaman untuk editing jika paket termasuk editing.
+                            </small>
+                            <small class="text-muted d-block">
+                                Jika paket termasuk cetak: maksimal 100 halaman A5, kelebihan dikenakan Rp 500/halaman.
+                            </small>
+                        </div>
+                        <div class="form-group">
                             <label>Paket</label>
-                            <select name="publishing_package_id" class="form-control" required>
+                            <select name="publishing_package_id" id="publishing-package-id" class="form-control" required>
                                 <option value="">- Pilih Paket -</option>
                                 @foreach ($packages as $pkg)
                                     <option value="{{ $pkg->id }}">{{ $pkg->name }}
@@ -84,6 +125,27 @@
                             <label>Catatan</label>
                             <textarea name="notes" class="form-control" rows="2"></textarea>
                         </div>
+
+                        <div id="package-preview-box" class="alert alert-light border d-none">
+                            <div class="font-weight-bold mb-1">Estimasi Biaya Otomatis</div>
+                            <div id="package-preview-loading" class="small text-muted d-none">Menghitung halaman dan
+                                biaya...</div>
+                            <div id="package-preview-error" class="small text-danger d-none"></div>
+                            <div id="package-preview-content" class="small d-none">
+                                <div id="pv-badges" class="mb-2"></div>
+                                <div>A4: <span id="pv-a4-pages">0</span> hal (limit <span id="pv-a4-limit">125</span>) |
+                                    Lebih: <span id="pv-a4-over">0</span> hal</div>
+                                <div>A5: <span id="pv-a5-pages">0</span> hal (limit cetak <span id="pv-a5-limit">100</span>)
+                                    | Lebih cetak: <span id="pv-a5-over">0</span> hal</div>
+                                <hr class="my-2">
+                                <div>Biaya paket: <strong id="pv-package-price">Rp 0</strong></div>
+                                <div>Biaya lebih layout: <strong id="pv-layout-fee">Rp 0</strong></div>
+                                <div>Biaya lebih editing: <strong id="pv-editing-fee">Rp 0</strong></div>
+                                <div>Biaya lebih cetak: <strong id="pv-print-fee">Rp 0</strong></div>
+                                <div class="mt-1">Total estimasi: <strong id="pv-total">Rp 0</strong></div>
+                            </div>
+                        </div>
+
                         <button class="btn btn-primary" type="submit">
                             <i class="fas fa-shopping-bag mr-1"></i> Buat Order Paket
                         </button>
@@ -252,7 +314,31 @@
                                 @endif
                             </td>
                             <td>{{ $order->title ?? ($order->book->judul ?? '-') }}</td>
-                            <td>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</td>
+                            <td>
+                                <div>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</div>
+                                @if ($order->order_type === 'new_package' && (int) ($order->manuscript_a4_pages ?? 0) > 0)
+                                    <div class="small text-muted">
+                                        A4: {{ (int) $order->manuscript_a4_pages }} hal.
+                                        @if ((int) ($order->over_limit_pages ?? 0) > 0)
+                                            | Lebih {{ (int) $order->over_limit_pages }} hal.
+                                            | Layout: Rp
+                                            {{ number_format((float) ($order->layout_over_limit_fee ?? 0), 0, ',', '.') }}
+                                            @if ((float) ($order->editing_over_limit_fee ?? 0) > 0)
+                                                | Editing: Rp
+                                                {{ number_format((float) ($order->editing_over_limit_fee ?? 0), 0, ',', '.') }}
+                                            @endif
+                                        @endif
+                                        @if ((int) ($order->manuscript_a5_pages ?? 0) > 0)
+                                            | A5: {{ (int) $order->manuscript_a5_pages }} hal.
+                                        @endif
+                                        @if ((int) ($order->print_over_limit_pages ?? 0) > 0)
+                                            | Cetak lebih {{ (int) $order->print_over_limit_pages }} hal.
+                                            | Cetak: Rp
+                                            {{ number_format((float) ($order->print_over_limit_fee ?? 0), 0, ',', '.') }}
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
                             <td>
                                 <span class="badge badge-secondary mb-1">{{ strtoupper($order->status) }}</span>
                                 @php
@@ -353,50 +439,201 @@
             const cityId = document.getElementById('destination-city-id');
             const reprintBook = document.getElementById('reprint-book-id');
             const adaptationHint = document.getElementById('reprint-adaptation-hint');
+            const packageSelect = document.getElementById('publishing-package-id');
+            const manuscriptFileInput = document.getElementById('manuscript-file');
+            const previewBox = document.getElementById('package-preview-box');
+            const previewLoading = document.getElementById('package-preview-loading');
+            const previewError = document.getElementById('package-preview-error');
+            const previewContent = document.getElementById('package-preview-content');
+            const previewBadges = document.getElementById('pv-badges');
 
-            if (!prov || !city || !cityId) return;
+            const formatRupiah = (num) => {
+                const val = Number(num || 0);
+                return 'Rp ' + val.toLocaleString('id-ID', {
+                    maximumFractionDigits: 0
+                });
+            };
 
-            prov.addEventListener('change', async function() {
-                city.innerHTML = '<option value="">Memuat kota...</option>';
-                cityId.value = '';
+            const setPreviewText = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = String(value);
+                }
+            };
 
-                const selected = prov.options[prov.selectedIndex];
-                const provinceId = selected ? selected.getAttribute('data-id') : '';
+            const hidePreview = () => {
+                if (previewBox) previewBox.classList.add('d-none');
+                if (previewLoading) previewLoading.classList.add('d-none');
+                if (previewError) previewError.classList.add('d-none');
+                if (previewContent) previewContent.classList.add('d-none');
+            };
 
-                if (!provinceId) {
-                    city.innerHTML = '<option value="">- Pilih Kota -</option>';
+            const renderPreviewError = (message) => {
+                if (!previewBox || !previewError || !previewLoading || !previewContent) {
                     return;
                 }
 
-                try {
-                    const url = '{{ route('author.orders.cities') }}' + '?province_id=' +
-                        encodeURIComponent(provinceId);
-                    const resp = await fetch(url);
-                    const json = await resp.json();
-                    const rows = (json && json.data) ? json.data : [];
+                previewBox.classList.remove('d-none');
+                previewLoading.classList.add('d-none');
+                previewContent.classList.add('d-none');
+                previewError.classList.remove('d-none');
+                previewError.textContent = message;
+            };
 
-                    if (json && json.is_fallback) {
-                        city.innerHTML = '<option value="">Data API fallback (dummy)</option>';
-                    } else {
-                        city.innerHTML = '<option value="">- Pilih Kota -</option>';
+            let previewAbortController = null;
+
+            const refreshPackagePreview = async () => {
+                if (!packageSelect || !manuscriptFileInput || !previewBox || !previewLoading || !previewError ||
+                    !previewContent) {
+                    return;
+                }
+
+                const packageId = packageSelect.value;
+                const file = manuscriptFileInput.files && manuscriptFileInput.files[0] ? manuscriptFileInput
+                    .files[0] : null;
+
+                if (!packageId || !file) {
+                    hidePreview();
+                    return;
+                }
+
+                if (previewAbortController) {
+                    previewAbortController.abort();
+                }
+
+                previewAbortController = new AbortController();
+
+                previewBox.classList.remove('d-none');
+                previewLoading.classList.remove('d-none');
+                previewError.classList.add('d-none');
+                previewContent.classList.add('d-none');
+
+                const formData = new FormData();
+                formData.append('_token', '{{ csrf_token() }}');
+                formData.append('publishing_package_id', packageId);
+                formData.append('manuscript_file', file);
+
+                try {
+                    const response = await fetch('{{ route('author.orders.preview-package') }}', {
+                        method: 'POST',
+                        body: formData,
+                        signal: previewAbortController.signal,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const payload = await response.json();
+
+                    if (!response.ok || !payload || payload.ok !== true) {
+                        throw new Error((payload && payload.message) ? payload.message :
+                            'Gagal memproses preview biaya.');
                     }
 
-                    rows.forEach(function(row) {
-                        const opt = document.createElement('option');
-                        opt.value = row.city_name || '';
-                        opt.textContent = (row.type ? row.type + ' ' : '') + (row.city_name || '');
-                        opt.setAttribute('data-id', row.city_id || '');
-                        city.appendChild(opt);
-                    });
-                } catch (e) {
-                    city.innerHTML = '<option value="">Gagal memuat kota</option>';
-                }
-            });
+                    const data = payload.data || {};
 
-            city.addEventListener('change', function() {
-                const selected = city.options[city.selectedIndex];
-                cityId.value = selected ? (selected.getAttribute('data-id') || '') : '';
-            });
+                    setPreviewText('pv-a4-pages', data.a4_pages || 0);
+                    setPreviewText('pv-a4-limit', data.a4_limit || 125);
+                    setPreviewText('pv-a4-over', data.a4_over_pages || 0);
+                    setPreviewText('pv-a5-pages', data.a5_pages || 0);
+                    setPreviewText('pv-a5-limit', data.a5_limit || 100);
+                    setPreviewText('pv-a5-over', data.a5_print_over_pages || 0);
+                    setPreviewText('pv-package-price', formatRupiah(data.package_price || 0));
+                    setPreviewText('pv-layout-fee', formatRupiah(data.layout_fee || 0));
+                    setPreviewText('pv-editing-fee', formatRupiah(data.editing_fee || 0));
+                    setPreviewText('pv-print-fee', formatRupiah(data.print_fee || 0));
+                    setPreviewText('pv-total', formatRupiah(data.total || 0));
+
+                    if (previewBadges) {
+                        const badges = [];
+
+                        badges.push(
+                            `<span class="pv-chip ${Number(data.a4_over_pages || 0) > 0 ? 'danger' : 'good'}">A4 ${Number(data.a4_over_pages || 0) > 0 ? 'Melebihi Batas' : 'Aman'}</span>`
+                        );
+
+                        if (data.supports_print) {
+                            badges.push(
+                                `<span class="pv-chip ${Number(data.a5_print_over_pages || 0) > 0 ? 'warn' : 'good'}">A5 Cetak ${Number(data.a5_print_over_pages || 0) > 0 ? 'Melebihi Batas' : 'Aman'}</span>`
+                            );
+                        } else {
+                            badges.push('<span class="pv-chip good">Paket Non-Cetak</span>');
+                        }
+
+                        if (!data.includes_editing) {
+                            badges.push('<span class="pv-chip warn">Tanpa Editing</span>');
+                        }
+
+                        if (Number(data.extra_fee || 0) > 0) {
+                            badges.push('<span class="pv-chip danger">Ada Biaya Tambahan</span>');
+                        } else {
+                            badges.push('<span class="pv-chip good">Tanpa Biaya Tambahan</span>');
+                        }
+
+                        previewBadges.innerHTML = badges.join('');
+                    }
+
+                    previewLoading.classList.add('d-none');
+                    previewError.classList.add('d-none');
+                    previewContent.classList.remove('d-none');
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    renderPreviewError(error.message || 'Gagal memproses preview biaya.');
+                }
+            };
+
+            if (packageSelect && manuscriptFileInput) {
+                packageSelect.addEventListener('change', refreshPackagePreview);
+                manuscriptFileInput.addEventListener('change', refreshPackagePreview);
+            }
+
+            if (prov && city && cityId) {
+                prov.addEventListener('change', async function() {
+                    city.innerHTML = '<option value="">Memuat kota...</option>';
+                    cityId.value = '';
+
+                    const selected = prov.options[prov.selectedIndex];
+                    const provinceId = selected ? selected.getAttribute('data-id') : '';
+
+                    if (!provinceId) {
+                        city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                        return;
+                    }
+
+                    try {
+                        const url = '{{ route('author.orders.cities') }}' + '?province_id=' +
+                            encodeURIComponent(provinceId);
+                        const resp = await fetch(url);
+                        const json = await resp.json();
+                        const rows = (json && json.data) ? json.data : [];
+
+                        if (json && json.is_fallback) {
+                            city.innerHTML = '<option value="">Data API fallback (dummy)</option>';
+                        } else {
+                            city.innerHTML = '<option value="">- Pilih Kota -</option>';
+                        }
+
+                        rows.forEach(function(row) {
+                            const opt = document.createElement('option');
+                            opt.value = row.city_name || '';
+                            opt.textContent = (row.type ? row.type + ' ' : '') + (row.city_name ||
+                                '');
+                            opt.setAttribute('data-id', row.city_id || '');
+                            city.appendChild(opt);
+                        });
+                    } catch (e) {
+                        city.innerHTML = '<option value="">Gagal memuat kota</option>';
+                    }
+                });
+
+                city.addEventListener('change', function() {
+                    const selected = city.options[city.selectedIndex];
+                    cityId.value = selected ? (selected.getAttribute('data-id') || '') : '';
+                });
+            }
 
             if (reprintBook && adaptationHint) {
                 const renderAdaptationHint = function() {

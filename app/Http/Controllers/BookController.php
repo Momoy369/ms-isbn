@@ -14,6 +14,7 @@ use App\Services\AssignmentRecommendationService;
 use App\Services\BookCompletionOrchestratorService;
 use App\Services\BookWorkflowActionService;
 use App\Services\BookWorkflowGuardService;
+use App\Services\ManuscriptA4PageCounterService;
 use App\Services\PerpusnasIsbnService;
 
 class BookController extends Controller
@@ -59,7 +60,7 @@ class BookController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, ManuscriptA4PageCounterService $pageCounter)
     {
         $request->validate([
 
@@ -75,12 +76,31 @@ class BookController extends Controller
             'author_ktp_number' =>
                 'required|string|max:32',
 
+            'manuscript_a4_pages' =>
+                'required|integer|min:1',
+
+            'manuscript_file' =>
+                'nullable|file|mimes:docx|max:51200',
+
             'jumlah_cetak' =>
                 'required|integer|min:1'
 
         ]);
 
         $author = $this->resolveAuthorFromRequest($request);
+
+        $manuscriptA4Pages = (int) $request->manuscript_a4_pages;
+        $manuscriptA5Pages = null;
+
+        if ($request->hasFile('manuscript_file')) {
+            try {
+                $summary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+                $manuscriptA4Pages = (int) ($summary['a4_pages'] ?? $manuscriptA4Pages);
+                $manuscriptA5Pages = (int) ($summary['a5_pages'] ?? 0);
+            } catch (\Throwable $e) {
+                return back()->withInput()->with('danger', 'Gagal membaca DOCX naskah: ' . $e->getMessage());
+            }
+        }
 
         $book = Book::create([
 
@@ -102,6 +122,15 @@ class BookController extends Controller
             'link_produk' =>
                 $request->link_produk,
 
+            'jumlah_halaman' =>
+                $manuscriptA4Pages,
+
+            'manuscript_a4_pages' =>
+                $manuscriptA4Pages,
+
+            'manuscript_a5_pages' =>
+                $manuscriptA5Pages,
+
             'jumlah_cetak' =>
                 $request->jumlah_cetak,
 
@@ -113,6 +142,23 @@ class BookController extends Controller
 
         ]);
 
+        if ($request->hasFile('manuscript_file')) {
+            $file = $request->file('manuscript_file');
+            $path = $file->store('books/' . $book->nomor_naskah . '/admin-create', 'public');
+
+            $book->files()->create([
+                'type' => 'naskah_final',
+                'original_name' => $file->getClientOriginalName(),
+                'note' => 'Upload naskah awal dari form tambah naskah admin.',
+                'sender_role' => (string) auth()->user()->role,
+                'file_path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'is_active' => true,
+                'version' => 1,
+            ]);
+        }
+
         if ($book->publishing_package_id) {
             $book->load('publishingPackage');
             AuthorInvoice::createPackageInvoice($book);
@@ -122,7 +168,7 @@ class BookController extends Controller
             ->route('books.index')
             ->with(
                 'success',
-                'Naskah berhasil ditambahkan'
+                'Naskah berhasil ditambahkan dengan halaman mentah A4: ' . $manuscriptA4Pages
             );
     }
 
@@ -331,7 +377,8 @@ class BookController extends Controller
     public function update(
         Request $request,
         Book $book,
-        BookActivityService $activity
+        BookActivityService $activity,
+        ManuscriptA4PageCounterService $pageCounter
     ) {
 
         $request->validate([
@@ -356,6 +403,14 @@ class BookController extends Controller
             'jumlah_cetak' =>
 
                 'required|integer|min:1',
+
+            'manuscript_a4_pages' =>
+
+                'required|integer|min:1',
+
+            'manuscript_file' =>
+
+                'nullable|file|mimes:docx|max:51200',
 
             'editor' =>
 
@@ -398,6 +453,19 @@ class BookController extends Controller
             );
         }
 
+        $manuscriptA4Pages = (int) $request->manuscript_a4_pages;
+        $manuscriptA5Pages = $book->manuscript_a5_pages;
+
+        if ($request->hasFile('manuscript_file')) {
+            try {
+                $summary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+                $manuscriptA4Pages = (int) ($summary['a4_pages'] ?? $manuscriptA4Pages);
+                $manuscriptA5Pages = (int) ($summary['a5_pages'] ?? 0);
+            } catch (\Throwable $e) {
+                return back()->withInput()->with('danger', 'Gagal membaca DOCX naskah: ' . $e->getMessage());
+            }
+        }
+
         $book->update([
 
             'nomor_naskah' =>
@@ -436,6 +504,12 @@ class BookController extends Controller
             'jumlah_halaman' =>
                 $request->jumlah_halaman,
 
+            'manuscript_a4_pages' =>
+                $manuscriptA4Pages,
+
+            'manuscript_a5_pages' =>
+                $manuscriptA5Pages,
+
             'ukuran_buku' =>
                 $request->ukuran_buku,
 
@@ -458,6 +532,33 @@ class BookController extends Controller
                 $author?->id,
 
         ]);
+
+        if ($request->hasFile('manuscript_file')) {
+            $book->files()
+                ->where('type', 'naskah_final')
+                ->update([
+                    'is_active' => false,
+                ]);
+
+            $file = $request->file('manuscript_file');
+            $path = $file->store('books/' . $book->nomor_naskah . '/admin-edit', 'public');
+
+            $latestVersion = (int) ($book->files()
+                ->where('type', 'naskah_final')
+                ->max('version') ?? 0);
+
+            $book->files()->create([
+                'type' => 'naskah_final',
+                'original_name' => $file->getClientOriginalName(),
+                'note' => 'Upload naskah dari form edit buku admin.',
+                'sender_role' => (string) auth()->user()->role,
+                'file_path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'is_active' => true,
+                'version' => $latestVersion + 1,
+            ]);
+        }
 
         $book->syncAssignments();
         $book->syncPackageItems();

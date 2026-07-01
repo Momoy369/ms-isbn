@@ -30,7 +30,7 @@
                     </h3>
                 </div>
 
-                <form method="POST" action="{{ route('books.store') }}">
+                <form method="POST" action="{{ route('books.store') }}" enctype="multipart/form-data">
                     @csrf
 
                     <div class="card-body">
@@ -110,6 +110,36 @@
                                     @error('jumlah_cetak')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="manuscript_a4_pages">Halaman Mentah Naskah (A4, margin 2 cm) <span
+                                            class="text-danger">*</span></label>
+                                    <input type="number" id="manuscript_a4_pages" name="manuscript_a4_pages"
+                                        class="form-control @error('manuscript_a4_pages') is-invalid @enderror"
+                                        value="{{ old('manuscript_a4_pages') }}" min="1" placeholder="Contoh: 132"
+                                        required>
+                                    @error('manuscript_a4_pages')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        Wajib diisi sebagai halaman mentah naskah standar A4 (margin kiri/kanan/atas/bawah 2
+                                        cm).
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="manuscript_file">Upload DOCX Naskah (opsional untuk auto-hitungan)</label>
+                                    <input type="file" id="manuscript_file" name="manuscript_file"
+                                        class="form-control-file @error('manuscript_file') is-invalid @enderror"
+                                        accept=".docx">
+                                    @error('manuscript_file')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        Jika diupload, sistem akan menghitung ulang halaman A4/A5 otomatis dan memakai hasil
+                                        hitungan tersebut.
+                                    </small>
                                 </div>
                             </div>
                         </div>

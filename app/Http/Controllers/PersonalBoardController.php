@@ -147,19 +147,34 @@ class PersonalBoardController extends Controller
 
         $data = $request->validate([
             'to_column' => 'required|in:todo,scheduled,done',
+            'before_id' => 'nullable|integer',
         ]);
 
+        $userId = (int) auth()->id();
+        $sourceColumn = (string) $card->board_column;
         $targetColumn = (string) $data['to_column'];
+        $beforeId = isset($data['before_id']) ? (int) $data['before_id'] : null;
 
-        if ($targetColumn !== (string) $card->board_column) {
-            $nextOrder = (int) PersonalBoardCard::query()
-                ->where('user_id', (int) auth()->id())
-                ->where('board_column', $targetColumn)
-                ->max('card_order') + 1;
+        if ($beforeId === (int) $card->id) {
+            $beforeId = null;
+        }
 
+        if ($targetColumn !== $sourceColumn) {
             $card->update([
                 'board_column' => $targetColumn,
-                'card_order' => $nextOrder,
+            ]);
+        }
+
+        $this->reorderColumnCards($userId, $targetColumn, (int) $card->id, $beforeId);
+
+        if ($sourceColumn !== $targetColumn) {
+            $this->normalizeColumnOrder($userId, $sourceColumn);
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Kartu manual berhasil dipindahkan.',
             ]);
         }
 
@@ -358,6 +373,59 @@ class PersonalBoardController extends Controller
     {
         if ((int) $card->user_id !== (int) auth()->id()) {
             abort(403);
+        }
+    }
+
+    private function reorderColumnCards(int $userId, string $column, int $movingCardId, ?int $beforeId): void
+    {
+        $cards = PersonalBoardCard::query()
+            ->where('user_id', $userId)
+            ->where('is_archived', false)
+            ->where('board_column', $column)
+            ->orderBy('card_order')
+            ->orderBy('id')
+            ->get();
+
+        $orderedIds = $cards
+            ->pluck('id')
+            ->reject(fn($id) => (int) $id === $movingCardId)
+            ->values();
+
+        $insertAt = $orderedIds->count();
+
+        if ($beforeId !== null) {
+            $idx = $orderedIds->search(fn($id) => (int) $id === $beforeId);
+            if ($idx !== false) {
+                $insertAt = (int) $idx;
+            }
+        }
+
+        $orderedIds->splice($insertAt, 0, [$movingCardId]);
+
+        foreach ($orderedIds->values() as $i => $id) {
+            PersonalBoardCard::query()
+                ->where('id', (int) $id)
+                ->where('user_id', $userId)
+                ->update([
+                    'card_order' => $i + 1,
+                ]);
+        }
+    }
+
+    private function normalizeColumnOrder(int $userId, string $column): void
+    {
+        $cards = PersonalBoardCard::query()
+            ->where('user_id', $userId)
+            ->where('is_archived', false)
+            ->where('board_column', $column)
+            ->orderBy('card_order')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($cards as $i => $card) {
+            $card->update([
+                'card_order' => $i + 1,
+            ]);
         }
     }
 

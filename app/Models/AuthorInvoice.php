@@ -165,8 +165,10 @@ class AuthorInvoice extends Model
     public static function createPackageInvoice(Book $book): ?self
     {
         $package = $book->publishingPackage;
+        $extraFee = round((float) ($book->package_extra_fee ?? 0), 2);
+        $totalPackageAmount = round((float) ($package->price ?? 0) + $extraFee, 2);
 
-        if (!$package || $package->price <= 0) {
+        if (!$package || $totalPackageAmount <= 0) {
             return null;
         }
 
@@ -186,7 +188,12 @@ class AuthorInvoice extends Model
             return $existing;
         }
 
-        $dpAmount = round(((float) $package->price) * 0.5, 2);
+        $dpAmount = round($totalPackageAmount * 0.5, 2);
+
+        $description = 'DP 50% Paket Penerbitan: ' . $package->name;
+        if ($extraFee > 0) {
+            $description .= ' + Biaya Lebih Naskah';
+        }
 
         return self::create([
             'book_id' => $book->id,
@@ -194,10 +201,12 @@ class AuthorInvoice extends Model
             'type' => 'package',
             'is_package_billing' => true,
             'installment_number' => 1,
-            'description' => 'DP 50% Paket Penerbitan: ' . $package->name,
+            'description' => $description,
             'amount' => $dpAmount,
             'status' => 'pending',
-            'notes' => 'Invoice DP 50% diterbitkan saat paket penerbitan dipilih.',
+            'notes' => $extraFee > 0
+                ? 'Invoice DP 50% diterbitkan saat paket penerbitan dipilih, termasuk biaya lebih naskah A4 di luar batas 125 halaman.'
+                : 'Invoice DP 50% diterbitkan saat paket penerbitan dipilih.',
         ]);
     }
 
@@ -207,8 +216,10 @@ class AuthorInvoice extends Model
     public static function createFinalPackageInvoice(Book $book): ?self
     {
         $package = $book->publishingPackage;
+        $extraFee = round((float) ($book->package_extra_fee ?? 0), 2);
+        $totalPackageAmount = round((float) ($package->price ?? 0) + $extraFee, 2);
 
-        if (!$package || $package->price <= 0 || !$book->author_user_id) {
+        if (!$package || $totalPackageAmount <= 0 || !$book->author_user_id) {
             return null;
         }
 
@@ -221,10 +232,15 @@ class AuthorInvoice extends Model
             return $existing;
         }
 
-        $finalAmount = ((float) $package->price) - round(((float) $package->price) * 0.5, 2);
+        $finalAmount = $totalPackageAmount - round($totalPackageAmount * 0.5, 2);
 
         if ($finalAmount <= 0) {
             return null;
+        }
+
+        $description = 'Pelunasan 50% Paket Penerbitan: ' . $package->name;
+        if ($extraFee > 0) {
+            $description .= ' + Biaya Lebih Naskah';
         }
 
         return self::create([
@@ -233,10 +249,12 @@ class AuthorInvoice extends Model
             'type' => 'package',
             'is_package_billing' => true,
             'installment_number' => 2,
-            'description' => 'Pelunasan 50% Paket Penerbitan: ' . $package->name,
+            'description' => $description,
             'amount' => $finalAmount,
             'status' => 'pending',
-            'notes' => 'Invoice pelunasan diterbitkan saat produksi dinyatakan selesai.',
+            'notes' => $extraFee > 0
+                ? 'Invoice pelunasan diterbitkan saat produksi selesai, termasuk biaya lebih naskah A4 di luar batas 125 halaman.'
+                : 'Invoice pelunasan diterbitkan saat produksi dinyatakan selesai.',
         ]);
     }
 

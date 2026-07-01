@@ -72,6 +72,22 @@ class Book extends Model
 
         'jumlah_halaman',
 
+        'manuscript_a4_pages',
+
+        'manuscript_a5_pages',
+
+        'manuscript_overage_pages',
+
+        'manuscript_print_overage_pages',
+
+        'manuscript_layout_overage_fee',
+
+        'manuscript_editing_overage_fee',
+
+        'manuscript_print_overage_fee',
+
+        'package_extra_fee',
+
         'selling_price',
 
         'revision_fee_amount',
@@ -160,6 +176,10 @@ class Book extends Model
         'royalty_contract_accepted_at' => 'datetime',
         'royalty_contract_rejected_at' => 'datetime',
         'royalty_contract_version' => 'integer',
+        'manuscript_layout_overage_fee' => 'decimal:2',
+        'manuscript_editing_overage_fee' => 'decimal:2',
+        'manuscript_print_overage_fee' => 'decimal:2',
+        'package_extra_fee' => 'decimal:2',
     ];
 
     public function files()

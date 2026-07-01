@@ -49,6 +49,7 @@ use App\Http\Controllers\CustomerEbookLibraryController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\AdminAuthorUpgradeRequestController;
 use App\Http\Controllers\PersonalBoardController;
+use App\Http\Controllers\ManuscriptPageCounterController;
 
 Route::get('/', function () {
 
@@ -121,6 +122,12 @@ Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'call
     ->name('payments.ipaymu.callback');
 
 Route::middleware('auth')->group(function () {
+
+    Route::get('/tools/manuscript-page-counter', [ManuscriptPageCounterController::class, 'index'])
+        ->name('manuscript-page-counter.index');
+
+    Route::post('/tools/manuscript-page-counter', [ManuscriptPageCounterController::class, 'calculate'])
+        ->name('manuscript-page-counter.calculate');
 
     Route::middleware(['role:admin,editor,layouter,designer,isbn,owner,finance,superadmin,author'])->group(function () {
         Route::get('/role-files', [RoleFileController::class, 'index'])
@@ -743,6 +750,9 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/author/orders/buy-package', [AuthorOrderController::class, 'buyPackage'])
                 ->name('author.orders.buy-package');
+
+            Route::post('/author/orders/preview-package', [AuthorOrderController::class, 'previewPackageCharge'])
+                ->name('author.orders.preview-package');
 
             Route::post('/author/orders/reprint', [AuthorOrderController::class, 'reorderPrint'])
                 ->name('author.orders.reprint');

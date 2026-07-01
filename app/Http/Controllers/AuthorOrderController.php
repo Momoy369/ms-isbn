@@ -9,6 +9,7 @@ use App\Models\Book;
 use App\Models\AdditionalService;
 use App\Models\PrintPriceRule;
 use App\Models\PublishingPackage;
+use App\Services\ManuscriptA4PageCounterService;
 use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
 
@@ -62,7 +63,7 @@ class AuthorOrderController extends Controller
         return response()->json($result);
     }
 
-    public function buyPackage(Request $request)
+    public function buyPackage(Request $request, ManuscriptA4PageCounterService $pageCounter)
     {
         $user = auth()->user();
 
@@ -73,6 +74,7 @@ class AuthorOrderController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'publishing_package_id' => ['required', 'exists:publishing_packages,id'],
+            'manuscript_file' => ['required', 'file', 'mimes:docx', 'max:51200'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -89,9 +91,96 @@ class AuthorOrderController extends Controller
         ]);
 
         $book->load('publishingPackage');
+
+        $package = $book->publishingPackage;
+        if (!$package) {
+            return back()->with('danger', 'Paket tidak ditemukan atau tidak aktif.');
+        }
+
+        try {
+            $pageSummary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+        } catch (\Throwable $e) {
+            return back()->with('danger', 'Gagal membaca naskah DOCX: ' . $e->getMessage());
+        }
+
+        $a4Pages = (int) ($pageSummary['a4_pages'] ?? 1);
+        $a5Pages = (int) ($pageSummary['a5_pages'] ?? 1);
+
+        $overage = $this->calculatePackageOverage($package, $a4Pages, $a5Pages);
+
+        $a4Limit = (int) $overage['a4_limit'];
+        $overLimitPages = (int) $overage['a4_over_pages'];
+        $layoutOverageFee = (float) $overage['layout_fee'];
+        $editingOverageFee = (float) $overage['editing_fee'];
+        $a5Limit = (int) $overage['a5_limit'];
+        $printOverLimitPages = (int) $overage['a5_print_over_pages'];
+        $printOverageFee = (float) $overage['print_fee'];
+        $extraFee = (float) $overage['extra_fee'];
+
+        $book->update([
+            'jumlah_halaman' => $a4Pages,
+            'manuscript_a4_pages' => $a4Pages,
+            'manuscript_a5_pages' => $a5Pages,
+            'manuscript_overage_pages' => $overLimitPages,
+            'manuscript_print_overage_pages' => $printOverLimitPages,
+            'manuscript_layout_overage_fee' => $layoutOverageFee,
+            'manuscript_editing_overage_fee' => $editingOverageFee,
+            'manuscript_print_overage_fee' => $printOverageFee,
+            'package_extra_fee' => $extraFee,
+        ]);
+
+        $book->files()
+            ->where('type', 'naskah_final')
+            ->update([
+                'is_active' => false,
+            ]);
+
+        $manuscriptFile = $request->file('manuscript_file');
+        $filePath = $manuscriptFile->store('books/' . $book->nomor_naskah . '/author-order-manuscript', 'public');
+
+        $latestVersion = (int) ($book->files()
+            ->where('type', 'naskah_final')
+            ->max('version') ?? 0);
+
+        $book->files()->create([
+            'type' => 'naskah_final',
+            'original_name' => $manuscriptFile->getClientOriginalName(),
+            'note' => 'Upload awal naskah dari Order Penulis (auto-hitungan A4/A5 margin 2 cm).',
+            'sender_role' => 'author',
+            'file_path' => $filePath,
+            'mime_type' => $manuscriptFile->getMimeType(),
+            'file_size' => $manuscriptFile->getSize(),
+            'is_active' => true,
+            'version' => $latestVersion + 1,
+        ]);
+
         $invoice = AuthorInvoice::createPackageInvoice($book);
 
-        $total = (float) (optional($book->publishingPackage)->price ?? 0);
+        $packagePrice = (float) ($package->price ?? 0);
+        $total = $packagePrice + $extraFee;
+
+        $notes = trim((string) ($data['notes'] ?? ''));
+        if ($overLimitPages > 0) {
+            $breakdown = 'A4: ' . $a4Pages
+                . ' halaman (limit ' . $a4Limit
+                . '). Kelebihan: ' . $overLimitPages
+                . ' halaman. Biaya lebih layout Rp ' . number_format($layoutOverageFee, 0, ',', '.')
+                . ($package->includes_editing
+                    ? ', editing Rp ' . number_format($editingOverageFee, 0, ',', '.')
+                    : ', editing tidak termasuk paket')
+                . '.';
+
+            $notes = $notes !== '' ? $breakdown . PHP_EOL . $notes : $breakdown;
+        }
+
+        if ($printOverLimitPages > 0) {
+            $printBreakdown = 'A5: ' . $a5Pages
+                . ' halaman (limit ' . $a5Limit
+                . ', paket cetak aktif). Kelebihan: ' . $printOverLimitPages
+                . ' halaman. Biaya lebih cetak Rp ' . number_format($printOverageFee, 0, ',', '.') . '.';
+
+            $notes = $notes !== '' ? $printBreakdown . PHP_EOL . $notes : $printBreakdown;
+        }
 
         AuthorBookOrder::create([
             'user_id' => $user->id,
@@ -100,16 +189,75 @@ class AuthorOrderController extends Controller
             'author_invoice_id' => $invoice?->id,
             'order_type' => 'new_package',
             'title' => $book->judul,
+            'pages' => $a4Pages,
+            'manuscript_a4_pages' => $a4Pages,
+            'manuscript_a5_pages' => $a5Pages,
+            'a4_page_limit' => $a4Limit,
+            'a5_page_limit' => $a5Limit,
+            'over_limit_pages' => $overLimitPages,
+            'print_over_limit_pages' => $printOverLimitPages,
+            'layout_over_limit_fee' => $layoutOverageFee,
+            'editing_over_limit_fee' => $editingOverageFee,
+            'print_over_limit_fee' => $printOverageFee,
             'quantity' => 1,
-            'unit_price' => $total,
+            'unit_price' => $packagePrice,
             'subtotal' => $total,
             'shipping_cost' => 0,
             'total_amount' => $total,
             'status' => $invoice ? 'invoiced' : 'pending',
-            'notes' => $data['notes'] ?? null,
+            'notes' => $notes !== '' ? $notes : null,
         ]);
 
-        return back()->with('success', 'Pembelian paket baru berhasil dibuat. Invoice DP 50% sudah diterbitkan.');
+        $message = ($overLimitPages > 0 || $printOverLimitPages > 0)
+            ? 'Order paket berhasil dibuat. Halaman A4/A5 terhitung otomatis dan biaya lebih (jika ada) sudah ditambahkan. Invoice DP 50% sudah diterbitkan.'
+            : 'Pembelian paket baru berhasil dibuat. Invoice DP 50% sudah diterbitkan.';
+
+        return back()->with('success', $message);
+    }
+
+    public function previewPackageCharge(Request $request, ManuscriptA4PageCounterService $pageCounter)
+    {
+        $data = $request->validate([
+            'publishing_package_id' => ['required', 'exists:publishing_packages,id'],
+            'manuscript_file' => ['required', 'file', 'mimes:docx', 'max:51200'],
+        ]);
+
+        $package = PublishingPackage::findOrFail((int) $data['publishing_package_id']);
+
+        try {
+            $summary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Gagal membaca naskah DOCX: ' . $e->getMessage(),
+            ], 422);
+        }
+
+        $a4Pages = (int) ($summary['a4_pages'] ?? 1);
+        $a5Pages = (int) ($summary['a5_pages'] ?? 1);
+        $overage = $this->calculatePackageOverage($package, $a4Pages, $a5Pages);
+
+        $packagePrice = (float) ($package->price ?? 0);
+
+        return response()->json([
+            'ok' => true,
+            'data' => [
+                'a4_pages' => $a4Pages,
+                'a5_pages' => $a5Pages,
+                'a4_limit' => (int) $overage['a4_limit'],
+                'a4_over_pages' => (int) $overage['a4_over_pages'],
+                'a5_limit' => (int) $overage['a5_limit'],
+                'a5_print_over_pages' => (int) $overage['a5_print_over_pages'],
+                'layout_fee' => (float) $overage['layout_fee'],
+                'editing_fee' => (float) $overage['editing_fee'],
+                'print_fee' => (float) $overage['print_fee'],
+                'extra_fee' => (float) $overage['extra_fee'],
+                'package_price' => $packagePrice,
+                'total' => $packagePrice + (float) $overage['extra_fee'],
+                'includes_editing' => (bool) $package->includes_editing,
+                'supports_print' => (bool) $package->supports_print,
+            ],
+        ]);
     }
 
     public function reorderPrint(Request $request, RajaOngkirService $rajaOngkir)
@@ -250,5 +398,29 @@ class AuthorOrderController extends Controller
         ]);
 
         return back()->with('success', 'Pesanan layanan tambahan berhasil dibuat. Invoice diterbitkan.');
+    }
+
+    private function calculatePackageOverage(PublishingPackage $package, int $a4Pages, int $a5Pages): array
+    {
+        $a4Limit = 125;
+        $a5Limit = 100;
+
+        $a4OverPages = max(0, $a4Pages - $a4Limit);
+        $a5PrintOverPages = $package->supports_print ? max(0, $a5Pages - $a5Limit) : 0;
+
+        $layoutFee = $a4OverPages * 2000;
+        $editingFee = $package->includes_editing ? ($a4OverPages * 2000) : 0;
+        $printFee = $a5PrintOverPages * 500;
+
+        return [
+            'a4_limit' => $a4Limit,
+            'a5_limit' => $a5Limit,
+            'a4_over_pages' => $a4OverPages,
+            'a5_print_over_pages' => $a5PrintOverPages,
+            'layout_fee' => $layoutFee,
+            'editing_fee' => $editingFee,
+            'print_fee' => $printFee,
+            'extra_fee' => $layoutFee + $editingFee + $printFee,
+        ];
     }
 }

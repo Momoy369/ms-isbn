@@ -311,6 +311,11 @@ return [
             'can' => 'menu-authenticated',
         ],
         [
+            'type' => 'darkmode-widget',
+            'topnav_right' => true,
+            'can' => 'menu-authenticated',
+        ],
+        [
             'type' => 'sidebar-menu-search',
             'text' => 'search',
             'can' => 'menu-authenticated',
@@ -330,6 +335,12 @@ return [
             'route' => 'author.dashboard',
             'icon' => 'fas fa-feather-alt',
             'can' => 'menu-author',
+        ],
+        [
+            'text' => 'Hitung Halaman Naskah',
+            'route' => 'manuscript-page-counter.index',
+            'icon' => 'fas fa-calculator',
+            'can' => 'menu-authenticated',
         ],
         [
             'text' => 'Produksi Buku',
@@ -598,6 +609,16 @@ return [
                     'type' => 'js',
                     'asset' => false,
                     'location' => '//cdnjs.cloudflare.com/ajax/libs/pace/1.0.2/pace.min.js',
+                ],
+            ],
+        ],
+        'GlobalThemeTweaks' => [
+            'active' => true,
+            'files' => [
+                [
+                    'type' => 'css',
+                    'asset' => true,
+                    'location' => 'css/adminlte-dark-tweaks.css',
                 ],
             ],
         ],

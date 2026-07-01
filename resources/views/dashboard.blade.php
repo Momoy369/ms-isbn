@@ -178,6 +178,55 @@
         </div>
     </div>
 
+    <div class="card dash-card mb-3">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <strong>Insight Naskah</strong>
+            <span class="small text-muted">A4/A5 margin 2 cm</span>
+        </div>
+        <div class="card-body">
+            <div class="mb-2">
+                <span class="chip chip-info">Tercatat: {{ $manuscriptInsights['tracked_books'] }} naskah</span>
+                <span class="chip chip-warning">Belum isi halaman mentah: {{ $manuscriptInsights['unknown_books'] }}</span>
+                <span class="chip chip-success">Total halaman mentah A4:
+                    {{ number_format($manuscriptInsights['sum_a4_pages'], 0, ',', '.') }}</span>
+                <span class="chip chip-info">Rata-rata A4: {{ $manuscriptInsights['avg_a4_pages'] }}</span>
+                <span class="chip chip-danger">A4 >125: {{ $manuscriptInsights['over_125_a4'] }}</span>
+                <span class="chip chip-danger">A5 cetak >100: {{ $manuscriptInsights['over_100_a5_print'] }}</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>No Naskah</th>
+                            <th>Judul</th>
+                            <th class="text-center">Hal. Mentah A4</th>
+                            <th class="text-center">Hal. A5</th>
+                            <th class="text-right">Biaya Extra Paket</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($manuscriptInsights['top_books'] as $bookInsight)
+                            <tr>
+                                <td>{{ $bookInsight->nomor_naskah }}</td>
+                                <td>{{ $bookInsight->judul }}</td>
+                                <td class="text-center">{{ (int) ($bookInsight->manuscript_a4_pages ?? 0) }}</td>
+                                <td class="text-center">{{ (int) ($bookInsight->manuscript_a5_pages ?? 0) }}</td>
+                                <td class="text-right">Rp
+                                    {{ number_format((float) ($bookInsight->package_extra_fee ?? 0), 0, ',', '.') }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Belum ada data halaman mentah naskah.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     @if (
         $alerts['overdue_assignments'] > 0 ||
             $alerts['warning_assignments'] > 0 ||

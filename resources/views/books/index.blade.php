@@ -12,6 +12,32 @@
 @stop
 
 @section('content')
+    <style>
+        .mini-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 4px;
+            margin-top: 2px;
+        }
+
+        .mini-pill.good {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .mini-pill.warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .mini-pill.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
     <div class="card card-outline card-primary shadow-sm">
         <div class="card-header bg-white border-bottom-0">
             <h3 class="card-title font-weight-bold text-muted">Data Seluruh Naskah</h3>
@@ -25,16 +51,69 @@
                             <th width="15%">No Naskah</th>
                             <th>Judul</th>
                             <th>Penulis</th>
+                            <th>Workflow</th>
+                            <th>Paket</th>
+                            <th class="text-center">Hal. Mentah A4</th>
+                            <th class="text-center">Hal. A5</th>
                             <th class="text-center">Status</th>
                             <th width="15%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($books as $book)
+                            @php
+                                $a4Pages = (int) ($book->manuscript_a4_pages ?? 0);
+                                $a5Pages = (int) ($book->manuscript_a5_pages ?? 0);
+                                $a4Over = $a4Pages > 125;
+                                $a5OverPrint = ($book->publishingPackage?->supports_print ?? false) && $a5Pages > 100;
+                            @endphp
                             <tr>
                                 <td class="align-middle font-weight-bold">{{ $book->nomor_naskah }}</td>
-                                <td class="align-middle">{{ $book->judul }}</td>
+                                <td class="align-middle">
+                                    <div class="font-weight-bold">{{ $book->judul }}</div>
+                                    @if (!empty($book->subjudul))
+                                        <div class="small text-muted">{{ $book->subjudul }}</div>
+                                    @endif
+                                </td>
                                 <td class="align-middle">{{ $book->penulis_1 }}</td>
+                                <td class="align-middle">
+                                    <span class="badge badge-info">{{ strtoupper((string) $book->workflow_status) }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    @if ($book->publishingPackage)
+                                        <div>{{ $book->publishingPackage->name }}</div>
+                                        <div class="small text-muted">
+                                            {{ $book->publishingPackage->supports_print ? 'Cetak' : 'Non-Cetak' }}
+                                            {{ $book->publishingPackage->includes_editing ? ' | Editing' : ' | Tanpa Editing' }}
+                                        </div>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td class="align-middle text-center">
+                                    @if ($a4Pages > 0)
+                                        <div class="font-weight-bold">{{ $a4Pages }}</div>
+                                        <span class="mini-pill {{ $a4Over ? 'danger' : 'good' }}">
+                                            {{ $a4Over ? '>125' : 'OK' }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td class="align-middle text-center">
+                                    @if ($a5Pages > 0)
+                                        <div class="font-weight-bold">{{ $a5Pages }}</div>
+                                        @if ($book->publishingPackage?->supports_print)
+                                            <span class="mini-pill {{ $a5OverPrint ? 'warn' : 'good' }}">
+                                                {{ $a5OverPrint ? '>100 cetak' : 'OK cetak' }}
+                                            </span>
+                                        @else
+                                            <span class="mini-pill good">non-cetak</span>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
                                 <td class="align-middle text-center">
                                     {{-- Sesuaikan warna badge berdasarkan status --}}
                                     <span class="badge badge-info px-3 py-2">{{ strtoupper($book->status) }}</span>
@@ -54,7 +133,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
+                                <td colspan="9" class="text-center py-4 text-muted">
                                     <i class="fas fa-inbox fa-3x mb-3"></i><br>
                                     Belum ada data naskah yang tersedia.
                                 </td>
