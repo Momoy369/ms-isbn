@@ -149,6 +149,16 @@ class User extends Authenticatable
         return $this->hasMany(AuthorRoyaltyLedger::class, 'author_user_id');
     }
 
+    public function storeOrders()
+    {
+        return $this->hasMany(StoreOrder::class);
+    }
+
+    public function authorUpgradeRequests()
+    {
+        return $this->hasMany(AuthorUpgradeRequest::class);
+    }
+
     public function isAuthorProfileComplete(): bool
     {
         return !empty($this->ktp_number)

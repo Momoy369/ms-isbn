@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Event;
 use App\Models\Notification;
 use App\Models\AuthorBookOrder;
+use App\Models\AuthorUpgradeRequest;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,8 +30,11 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
 
         Gate::before(function ($user, string $ability) {
-            // Keep superadmin global bypass except author-only navigation abilities.
-            if ($user->role === 'superadmin' && $ability !== 'menu-author') {
+            // Keep superadmin global bypass except role-specific navigation abilities.
+            if (
+                $user->role === 'superadmin'
+                && !in_array($ability, ['menu-author', 'menu-customer-dashboard'], true)
+            ) {
                 return true;
             }
 
@@ -50,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
             'menu-finance' => ['admin', 'owner', 'finance', 'superadmin'],
             'menu-printing-workspace' => ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'],
             'menu-ebook-workspace' => ['admin', 'owner', 'finance', 'editor', 'layouter', 'designer', 'superadmin'],
+            'menu-customer-dashboard' => ['customer', 'reader'],
+            'menu-author-upgrade-review' => ['admin', 'isbn', 'superadmin'],
         ];
 
         foreach ($abilityRoles as $ability => $roles) {
@@ -74,6 +80,36 @@ class AppServiceProvider extends ServiceProvider
                 ->where('order_type', 'ebook_publication')
                 ->whereIn('status', ['paid', 'ebook_revision_requested'])
                 ->count();
+
+            $pendingUpgradeCount = AuthorUpgradeRequest::query()
+                ->where('status', 'pending')
+                ->count();
+
+            $event->menu->add([
+                'key' => 'customer-dashboard-dynamic',
+                'text' => 'Dashboard Customer',
+                'route' => 'customer.dashboard',
+                'icon' => 'fas fa-shopping-bag',
+                'can' => 'menu-customer-dashboard',
+            ]);
+
+            $event->menu->add([
+                'key' => 'customer-orders-dynamic',
+                'text' => 'Order & Invoice Store',
+                'route' => 'customer.orders.index',
+                'icon' => 'fas fa-file-invoice',
+                'can' => 'menu-customer-dashboard',
+            ]);
+
+            $event->menu->add([
+                'key' => 'author-upgrade-review-dynamic',
+                'text' => 'Review Upgrade Author',
+                'route' => 'admin.author-upgrades.index',
+                'icon' => 'fas fa-user-check',
+                'can' => 'menu-author-upgrade-review',
+                'label' => $pendingUpgradeCount > 0 ? (string) $pendingUpgradeCount : null,
+                'label_color' => $pendingUpgradeCount > 0 ? 'warning' : null,
+            ]);
 
             $event->menu->add([
                 'key' => 'operations-dashboard-dynamic',

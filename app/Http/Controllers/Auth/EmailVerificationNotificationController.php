@@ -55,7 +55,7 @@ class EmailVerificationNotificationController extends Controller
     private function resolveRedirectTarget(string $role): string
     {
         if (in_array($role, ['customer', 'reader'], true)) {
-            return route('store.index', absolute: false);
+            return route('customer.dashboard', absolute: false);
         }
 
         if ($role === 'author') {

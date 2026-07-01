@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" enctype="multipart/form-data">
         @csrf
         @method('patch')
 
@@ -72,13 +72,115 @@
         </div>
 
         @if (in_array($user->role, ['customer', 'reader'], true))
+            @if (session('success'))
+                <div class="rounded-md bg-green-100 text-green-900 px-3 py-2 text-sm">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (isset($latestUpgradeRequest) && $latestUpgradeRequest)
+                <div class="rounded-md border px-3 py-2 text-sm">
+                    <p class="font-semibold mb-1">Status Pengajuan Upgrade Author</p>
+                    <span
+                        class="inline-flex px-2 py-1 rounded text-white text-xs {{ $latestUpgradeRequest->status === 'approved' ? 'bg-green-600' : ($latestUpgradeRequest->status === 'rejected' ? 'bg-red-600' : 'bg-yellow-600') }}">
+                        {{ strtoupper($latestUpgradeRequest->status) }}
+                    </span>
+                    @if ($latestUpgradeRequest->review_notes)
+                        <p class="mt-2 text-gray-700"><strong>Catatan Admin:</strong>
+                            {{ $latestUpgradeRequest->review_notes }}</p>
+                    @endif
+                </div>
+            @endif
+
+            <div class="rounded-md border px-3 py-2 text-sm">
+                <p class="font-semibold mb-2">Checklist Data Author</p>
+                <p class="text-gray-600 mb-2">Lengkapi data berikut untuk pengajuan upgrade role ke author.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <x-input-label for="ktp_number" :value="__('Nomor KTP')" />
+                        <x-text-input id="ktp_number" name="ktp_number" type="text" class="mt-1 block w-full"
+                            :value="old('ktp_number', $user->ktp_number)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('ktp_number')" />
+                    </div>
+                    <div>
+                        <x-input-label for="ktp_name" :value="__('Nama Sesuai KTP')" />
+                        <x-text-input id="ktp_name" name="ktp_name" type="text" class="mt-1 block w-full"
+                            :value="old('ktp_name', $user->ktp_name)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('ktp_name')" />
+                    </div>
+                    <div>
+                        <x-input-label for="birth_date" :value="__('Tanggal Lahir')" />
+                        <x-text-input id="birth_date" name="birth_date" type="date" class="mt-1 block w-full"
+                            :value="old('birth_date', optional($user->birth_date)->format('Y-m-d'))" />
+                        <x-input-error class="mt-2" :messages="$errors->get('birth_date')" />
+                    </div>
+                    <div>
+                        <x-input-label for="bank_name" :value="__('Nama Bank')" />
+                        <x-text-input id="bank_name" name="bank_name" type="text" class="mt-1 block w-full"
+                            :value="old('bank_name', $user->bank_name)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('bank_name')" />
+                    </div>
+                    <div>
+                        <x-input-label for="bank_account_number" :value="__('Nomor Rekening')" />
+                        <x-text-input id="bank_account_number" name="bank_account_number" type="text"
+                            class="mt-1 block w-full" :value="old('bank_account_number', $user->bank_account_number)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('bank_account_number')" />
+                    </div>
+                    <div>
+                        <x-input-label for="bank_account_holder" :value="__('Nama Pemilik Rekening')" />
+                        <x-text-input id="bank_account_holder" name="bank_account_holder" type="text"
+                            class="mt-1 block w-full" :value="old('bank_account_holder', $user->bank_account_holder)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('bank_account_holder')" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <x-input-label for="bank_branch" :value="__('Cabang Bank (Opsional)')" />
+                        <x-text-input id="bank_branch" name="bank_branch" type="text" class="mt-1 block w-full"
+                            :value="old('bank_branch', $user->bank_branch)" />
+                        <x-input-error class="mt-2" :messages="$errors->get('bank_branch')" />
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <x-input-label for="author_upgrade_note" :value="__('Catatan Pengajuan Upgrade (Opsional)')" />
+                <textarea id="author_upgrade_note" name="author_upgrade_note"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                    rows="3">{{ old('author_upgrade_note') }}</textarea>
+                <x-input-error class="mt-2" :messages="$errors->get('author_upgrade_note')" />
+            </div>
+
+            <div>
+                <x-input-label for="author_upgrade_document" :value="__('Lampiran Dokumen (PDF/JPG/PNG, opsional)')" />
+                <input id="author_upgrade_document" name="author_upgrade_document" type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                <x-input-error class="mt-2" :messages="$errors->get('author_upgrade_document')" />
+
+                @if (isset($latestUpgradeRequest) && $latestUpgradeRequest && $latestUpgradeRequest->supporting_document_path)
+                    <p class="mt-2 text-xs text-gray-600">
+                        Dokumen terakhir sudah tersimpan dan dapat direview admin.
+                    </p>
+                @endif
+            </div>
+
             <label class="inline-flex items-center gap-2">
                 <input type="hidden" name="upgrade_to_author" value="0">
                 <input type="checkbox" name="upgrade_to_author" value="1"
                     class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                <span class="text-sm text-gray-700">Upgrade akun ini menjadi Author</span>
+                <span class="text-sm text-gray-700">Ajukan upgrade akun ini menjadi Author (butuh approval
+                    admin)</span>
             </label>
             <x-input-error class="mt-2" :messages="$errors->get('upgrade_to_author')" />
+
+            <div class="rounded-md bg-gray-50 border px-3 py-2 text-xs text-gray-700">
+                <p class="font-semibold mb-1">SOP Mini Pengajuan Author</p>
+                <ol class="list-decimal pl-5 space-y-1">
+                    <li>Lengkapi checklist data author (KTP, kontak, tanggal lahir, data bank).</li>
+                    <li>Simpan profile, lalu centang pengajuan upgrade author.</li>
+                    <li>Tunggu review admin pada menu Review Upgrade Author.</li>
+                    <li>Jika ditolak, perbaiki data sesuai catatan admin lalu ajukan ulang.</li>
+                </ol>
+            </div>
         @endif
 
         <div class="flex items-center gap-4">

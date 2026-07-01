@@ -42,6 +42,9 @@ use App\Http\Controllers\PublishingPackageController;
 use App\Http\Controllers\BookPackageItemController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\EbookPublishingWorkspaceController;
+use App\Http\Controllers\CustomerDashboardController;
+use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\AdminAuthorUpgradeRequestController;
 
 Route::get('/', function () {
 
@@ -64,7 +67,7 @@ Route::get('/', function () {
     }
 
     if (in_array($user->role, ['customer', 'reader'], true)) {
-        return redirect()->route('store.index');
+        return redirect()->route('customer.dashboard');
     }
 
     return redirect()
@@ -395,6 +398,24 @@ Route::middleware('auth')->group(function () {
             Route::post('/book-claims/{claim}/reject', [AdminBookClaimController::class, 'reject'])
                 ->name('book-claims.reject');
 
+            Route::get('/admin/author-upgrades', [AdminAuthorUpgradeRequestController::class, 'index'])
+                ->name('admin.author-upgrades.index');
+
+            Route::get('/admin/author-upgrades/export', [AdminAuthorUpgradeRequestController::class, 'exportCsv'])
+                ->name('admin.author-upgrades.export');
+
+            Route::get('/admin/author-upgrades/{upgradeRequest}/attachment', [AdminAuthorUpgradeRequestController::class, 'downloadAttachment'])
+                ->name('admin.author-upgrades.attachment');
+
+            Route::get('/admin/author-upgrades/{upgradeRequest}/attachment/preview', [AdminAuthorUpgradeRequestController::class, 'previewAttachment'])
+                ->name('admin.author-upgrades.attachment.preview');
+
+            Route::post('/admin/author-upgrades/{upgradeRequest}/approve', [AdminAuthorUpgradeRequestController::class, 'approve'])
+                ->name('admin.author-upgrades.approve');
+
+            Route::post('/admin/author-upgrades/{upgradeRequest}/reject', [AdminAuthorUpgradeRequestController::class, 'reject'])
+                ->name('admin.author-upgrades.reject');
+
             Route::get(
                 '/reports/production',
                 [
@@ -547,6 +568,20 @@ Route::middleware('auth')->group(function () {
             '/production/timeline',
             [ProductionTimelineController::class, 'index']
         )->name('production.timeline');
+    });
+
+    Route::middleware([
+        'auth',
+        'role:customer,reader'
+    ])->group(function () {
+        Route::get('/customer', [CustomerDashboardController::class, 'index'])
+            ->name('customer.dashboard');
+
+        Route::get('/customer/orders', [CustomerOrderController::class, 'index'])
+            ->name('customer.orders.index');
+
+        Route::get('/customer/orders/{order}', [CustomerOrderController::class, 'show'])
+            ->name('customer.orders.show');
     });
 
     Route::middleware([

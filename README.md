@@ -48,8 +48,19 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Ringkasan finansial untuk area finance.
 - Dashboard operasional gabungan untuk antrean Print, Ebook Publishing, Revisi, dan Adaptasi Cetak.
 - Filter operasional multi-kriteria (channel, status, keyword, adaptasi, rentang tanggal, umur SLA).
+- Alert SLA operasional dengan threshold per status (attention/critical) untuk prioritisasi antrean.
 - Export CSV berdasarkan filter aktif untuk kebutuhan monitoring dan handover.
 - Shortcut sidebar dinamis ke Dashboard Operasional dengan badge jumlah antrean aktif.
+
+### 12. Layout Generator dan Optimasi Kesiapan
+
+- Filter kesiapan layout diterapkan di level query database (bukan post-processing halaman) agar pagination akurat.
+- Validasi kesiapan layout menggunakan cache per buku dengan invalidasi versi saat section berubah.
+- Ringkasan global kesiapan layout ditampilkan di index (total, siap, belum siap) sesuai filter aktif.
+- Hardening proses generate DOCX dan template dengan fail-safe ketika template tidak tersedia atau proses build gagal.
+- Optimasi indeks database untuk kesiapan layout:
+    - `book_sections(book_id, section_type)`
+    - `book_files(book_id, type, is_active)`
 
 ### 5. Keuangan, Invoice, dan Pembayaran Author
 
@@ -117,6 +128,7 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Reader ebook: watermark yang tampil saat ini adalah watermark statis MS Publishing + nomor order (bukan watermark identitas pembeli dinamis per pixel).
 - Callback iPaymu belum memiliki idempotency key yang eksplisit dan audit log per event.
 - Dropdown provinsi/kota RajaOngkir fallback ke data dummy jika API key belum disetel.
+- Monitoring performa query (EXPLAIN plan) untuk Layout Generator belum terdokumentasi sebagai artefak rutin.
 
 ## To-Do Fitur Baru (Belum Ada)
 
@@ -198,9 +210,22 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
 - ✅ Workspace Ebook Publishing: status transition, revisi, notifikasi, audit trail.
 - ✅ Routing package channel (print/ebook) + fallback adaptasi cetak untuk buku paket ebook-only.
 - ✅ Dashboard Operasional gabungan + filter lanjutan + export CSV + shortcut sidebar.
+- ✅ Penyederhanaan widget produksi lama yang overlap dengan dashboard operasional baru.
+- ✅ Penajaman SLA alert berbasis threshold per status antrean.
 - Next:
-    - Penyederhanaan widget produksi lama yang overlap dengan dashboard operasional baru.
-    - Penajaman SLA alert berbasis umur antrean per status.
+    - Otomasi reminder SLA critical per status ke role terkait.
+    - Penyelarasan visual indikator SLA antar halaman dashboard/workspace.
+
+### Sprint 8 (Minggu 8) - Layout Generator Performance & Reliability (IN PROGRESS)
+
+- ✅ Query-level readiness filter untuk menjaga akurasi pagination.
+- ✅ Cache validasi kesiapan layout per buku + invalidasi eksplisit saat section berubah.
+- ✅ Ringkasan global kesiapan layout di halaman index.
+- ✅ Hardening generate layout/template dengan fail-safe dan error handling.
+- ✅ Optimasi indeks readiness pada tabel section/file.
+- Next:
+    - Dokumentasi baseline EXPLAIN query untuk mode base/ready/not_ready.
+    - Penambahan metrik hit-rate cache validasi layout.
 
 ### Sprint 5 (Minggu 5) - Fitur Pasca-Pembelian
 
@@ -231,6 +256,25 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
 - Optimasi performa query dashboard/storefront untuk skala data besar.
 
 ## Changelog
+
+### v1.5 - 2026-07-01: Layout Generator Optimization and SLA Refinement
+
+**Dashboard Operasional**
+
+- SLA operasional ditingkatkan menjadi threshold berbasis status sehingga prioritas antrean lebih presisi.
+- Panel legacy production monitoring tetap tersedia namun tidak lagi mendominasi tampilan operasional utama.
+
+**Layout Generator**
+
+- Filter readiness dipindahkan ke query level untuk konsistensi pagination dan hasil pencarian.
+- Ditambahkan cache validasi per buku dengan invalidasi eksplisit saat section ditambah, diubah, dihapus, atau diurut ulang.
+- Ditambahkan ringkasan global kesiapan layout sesuai filter agar monitoring tidak terbatas pada halaman aktif.
+- Proses generate DOCX/template diperkuat dengan fail-safe template path dan penanganan exception.
+- Ditambahkan indeks komposit pada tabel section/file untuk mempercepat query readiness.
+
+**Database Migrations**
+
+- `2026_07_01_150000_add_layout_generator_readiness_indexes` — menambahkan indeks komposit untuk kebutuhan readiness filter Layout Generator.
 
 ### v1.4 - 2026-07-01: Production Operations Workspace and Dashboard
 
