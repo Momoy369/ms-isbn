@@ -54,6 +54,15 @@
             </form>
 
             <div class="mt-3 d-flex flex-wrap">
+                <span class="badge badge-dark mr-2 mb-2 px-3 py-2">
+                    Global Filtered: <strong>{{ $globalSummary['total'] ?? 0 }}</strong>
+                </span>
+                <span class="badge badge-success mr-2 mb-2 px-3 py-2">
+                    Global Siap: <strong>{{ $globalSummary['ready'] ?? 0 }}</strong>
+                </span>
+                <span class="badge badge-warning mr-2 mb-2 px-3 py-2">
+                    Global Belum Siap: <strong>{{ $globalSummary['not_ready'] ?? 0 }}</strong>
+                </span>
                 <span class="badge badge-light border mr-2 mb-2 px-3 py-2">
                     Ditampilkan: <strong>{{ $summary['listed'] ?? $books->count() }}</strong>
                 </span>

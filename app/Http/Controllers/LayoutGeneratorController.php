@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\BookSection;
 use App\Services\BookLayoutGeneratorService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpWord\IOFactory;
@@ -23,9 +24,9 @@ class LayoutGeneratorController extends Controller
     {
         $query = Book::query()
             ->with([
-                'sectionsGenerator:id,book_id,section_type,sort_order,title',
+                'sectionsGenerator:id,book_id,section_type,sort_order,title,updated_at',
                 'files' => fn($fileQuery) => $fileQuery
-                    ->select('id', 'book_id', 'type', 'is_active')
+                    ->select('id', 'book_id', 'type', 'is_active', 'updated_at')
                     ->where('type', 'cover')
                     ->where('is_active', true),
             ])
@@ -47,18 +48,22 @@ class LayoutGeneratorController extends Controller
             $query->where('book_type', $bookType);
         }
 
+        $globalSummary = $this->resolveGlobalReadinessSummary($query, $search, $bookType);
+
         $this->applyReadinessFilter($query, $readiness);
 
         $books = $query
             ->latest()
-            ->withQueryString()
             ->paginate(20);
 
+        $books->withQueryString();
+
         $books->getCollection()->transform(function (Book $book) {
-            $validation = $this->buildLayoutValidation($book);
+            $layoutValidationData = $this->resolveLayoutValidationFromCache($book);
+            $validation = $layoutValidationData['validation'];
 
             $book->setAttribute('layout_validation', $validation);
-            $book->setAttribute('layout_ready', $this->isReadyForLayout($validation));
+            $book->setAttribute('layout_ready', $layoutValidationData['is_ready']);
 
             return $book;
         });
@@ -71,7 +76,7 @@ class LayoutGeneratorController extends Controller
 
         return view(
             'layout-generator.index',
-            compact('books', 'summary', 'search', 'bookType', 'readiness')
+            compact('books', 'summary', 'globalSummary', 'search', 'bookType', 'readiness')
         );
     }
 
@@ -83,8 +88,9 @@ class LayoutGeneratorController extends Controller
             'files'
         );
 
-        $validation = $this->buildLayoutValidation($book);
-        $isReadyForLayout = $this->isReadyForLayout($validation);
+        $layoutValidationData = $this->resolveLayoutValidationFromCache($book);
+        $validation = $layoutValidationData['validation'];
+        $isReadyForLayout = $layoutValidationData['is_ready'];
 
         $totalWords = (int) $book->getWordCount();
         $estimatedPages = (int) $book->getEstimatedPages();
@@ -177,6 +183,8 @@ class LayoutGeneratorController extends Controller
 
             ]);
 
+        $this->invalidateLayoutValidationCache($book->id);
+
         return back()
             ->with(
                 'success',
@@ -215,6 +223,8 @@ class LayoutGeneratorController extends Controller
 
         ]);
 
+        $this->invalidateLayoutValidationCache($section->book_id);
+
         return redirect()
             ->route(
                 'layout-generator.show',
@@ -234,6 +244,7 @@ class LayoutGeneratorController extends Controller
         $section->delete();
 
         $this->normalizeSortOrder($bookId);
+        $this->invalidateLayoutValidationCache($bookId);
 
         return back()
             ->with(
@@ -279,6 +290,7 @@ class LayoutGeneratorController extends Controller
             ]);
 
             $this->normalizeSortOrder($section->book_id);
+            $this->invalidateLayoutValidationCache($section->book_id);
         }
 
         return back();
@@ -321,6 +333,7 @@ class LayoutGeneratorController extends Controller
             ]);
 
             $this->normalizeSortOrder($section->book_id);
+            $this->invalidateLayoutValidationCache($section->book_id);
         }
 
         return back();
@@ -341,30 +354,39 @@ class LayoutGeneratorController extends Controller
             );
         }
 
-        $phpWord =
-            $generator->build(
-                $book
+        try {
+            $phpWord =
+                $generator->build(
+                    $book
+                );
+
+            $directory = storage_path('app/public/layout-exports');
+            File::ensureDirectoryExists($directory);
+
+            $safeTitle = $this->safeFileName($book->judul);
+            $fileName = 'layout-' . $book->id . '-' . $safeTitle . '-' . now()->format('YmdHis') . '.docx';
+            $file = $directory . DIRECTORY_SEPARATOR . $fileName;
+
+            IOFactory
+                ::createWriter(
+                    $phpWord,
+                    'Word2007'
+                )
+                ->save(
+                    $file
+                );
+
+            return response()
+                ->download($file)
+                ->deleteFileAfterSend();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with(
+                'error',
+                'Gagal menghasilkan file layout DOCX. Silakan cek data section atau template lalu coba lagi.'
             );
-
-        $directory = storage_path('app/public/layout-exports');
-        File::ensureDirectoryExists($directory);
-
-        $safeTitle = $this->safeFileName($book->judul);
-        $fileName = 'layout-' . $book->id . '-' . $safeTitle . '-' . now()->format('YmdHis') . '.docx';
-        $file = $directory . DIRECTORY_SEPARATOR . $fileName;
-
-        IOFactory
-            ::createWriter(
-                $phpWord,
-                'Word2007'
-            )
-            ->save(
-                $file
-            );
-
-        return response()
-            ->download($file)
-            ->deleteFileAfterSend();
+        }
     }
 
     // public function generateTemplate(
@@ -526,87 +548,103 @@ class LayoutGeneratorController extends Controller
             );
         }
 
-        $template =
-            new TemplateProcessor(
+        $templatePath = storage_path('app/templates/template-novel.docx');
+        if (!File::exists($templatePath)) {
+            return back()->with(
+                'error',
+                'Template DOCX tidak ditemukan di storage/app/templates/template-novel.docx.'
+            );
+        }
 
-                storage_path(
-                    'app/templates/template-novel.docx'
-                )
+        try {
+            $template =
+                new TemplateProcessor(
+                    $templatePath
+                );
 
+            $template->setValue(
+                'JUDUL',
+                $book->judul
             );
 
-        $template->setValue(
-            'JUDUL',
-            $book->judul
-        );
+            $template->setValue(
+                'SUBJUDUL',
+                $book->subjudul ?? ''
+            );
 
-        $template->setValue(
-            'SUBJUDUL',
-            $book->subjudul ?? ''
-        );
+            $template->setValue(
+                'PENULIS',
+                $book->penulis_1
+            );
 
-        $template->setValue(
-            'PENULIS',
-            $book->penulis_1
-        );
+            $template->setValue(
+                'isbn',
+                $book->isbn ?? '-'
+            );
 
-        $template->setValue(
-            'isbn',
-            $book->isbn ?? '-'
-        );
+            $template->setValue(
+                'editor',
+                $book->editor ?? '-'
+            );
 
-        $template->setValue(
-            'editor',
-            $book->editor ?? '-'
-        );
+            $template->setValue(
+                'layouter',
+                $book->layouter ?? '-'
+            );
 
-        $template->setValue(
-            'layouter',
-            $book->layouter ?? '-'
-        );
+            $template->setValue(
+                'designer',
+                $book->designer ?? '-'
+            );
 
-        $template->setValue(
-            'designer',
-            $book->designer ?? '-'
-        );
+            $kataPengantar = '';
+            $isiBuku = '';
 
-        $kataPengantar = '';
-        $isiBuku = '';
-
-        foreach (
-            $book->sectionsGenerator
-                ->sortBy('sort_order')
-            as $section
-        ) {
-
-            if (
-                $section->section_type
-                ===
-                'preface'
+            foreach (
+                $book->sectionsGenerator
+                    ->sortBy('sort_order')
+                as $section
             ) {
 
-                $kataPengantar .=
-                    strip_tags(
-                        $section->content
-                    );
+                if (
+                    $section->section_type
+                    ===
+                    'preface'
+                ) {
 
-                continue;
-            }
+                    $kataPengantar .=
+                        strip_tags(
+                            $section->content
+                        );
 
-            if (
-                $section->section_type
-                ===
-                'chapter'
-            ) {
+                    continue;
+                }
+
+                if (
+                    $section->section_type
+                    ===
+                    'chapter'
+                ) {
+
+                    $isiBuku .=
+
+                        "\n\n"
+
+                        .
+
+                        strtoupper(
+                            $section->title
+                        )
+
+                        .
+
+                        "\n\n";
+                }
 
                 $isiBuku .=
 
-                    "\n\n"
-
-                    .
-
-                    strtoupper(
-                        $section->title
+                    strip_tags(
+                        $section->content
                     )
 
                     .
@@ -614,53 +652,50 @@ class LayoutGeneratorController extends Controller
                     "\n\n";
             }
 
-            $isiBuku .=
+            $template->setValue(
+                'KATA_PENGANTAR',
+                $kataPengantar
+            );
 
-                strip_tags(
-                    $section->content
-                )
+            $template->setValue(
+                'ISI_BUKU',
+                $isiBuku
+            );
 
-                .
+            $fileName =
+                'layout-' .
+                $book->id .
+                '-' .
+                $this->safeFileName($book->judul) .
+                '-' .
+                now()->format('YmdHis') .
+                '.docx';
 
-                "\n\n";
-        }
+            $directory = storage_path('app/public/layout-exports');
+            File::ensureDirectoryExists($directory);
 
-        $template->setValue(
-            'KATA_PENGANTAR',
-            $kataPengantar
-        );
+            $path =
+                $directory .
+                DIRECTORY_SEPARATOR .
+                $fileName;
 
-        $template->setValue(
-            'ISI_BUKU',
-            $isiBuku
-        );
-
-        $fileName =
-            'layout-' .
-            $book->id .
-            '-' .
-            $this->safeFileName($book->judul) .
-            '-' .
-            now()->format('YmdHis') .
-            '.docx';
-
-        $directory = storage_path('app/public/layout-exports');
-        File::ensureDirectoryExists($directory);
-
-        $path =
-            $directory .
-            DIRECTORY_SEPARATOR .
-            $fileName;
-
-        $template->saveAs(
-            $path
-        );
-
-        return response()
-            ->download(
+            $template->saveAs(
                 $path
-            )
-            ->deleteFileAfterSend();
+            );
+
+            return response()
+                ->download(
+                    $path
+                )
+                ->deleteFileAfterSend();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with(
+                'error',
+                'Gagal menghasilkan template DOCX. Pastikan template valid dan data naskah lengkap.'
+            );
+        }
 
     }
 
@@ -790,5 +825,76 @@ class LayoutGeneratorController extends Controller
         $text = trim(preg_replace('/\s+/', '-', $text) ?? '');
 
         return $text !== '' ? strtolower($text) : 'dokumen';
+    }
+
+    private function resolveLayoutValidationFromCache(Book $book): array
+    {
+        $version = (int) Cache::get($this->layoutValidationVersionKey($book->id), 1);
+
+        $sectionsUpdatedAt = $book->sectionsGenerator
+            ->max('updated_at');
+
+        $coverUpdatedAt = $book->files
+            ->max('updated_at');
+
+        $fingerprint = implode('|', [
+            $version,
+            $book->id,
+            (string) $book->updated_at,
+            (string) $sectionsUpdatedAt,
+            (string) $coverUpdatedAt,
+            (int) $book->sectionsGenerator->count(),
+            (int) $book->files->count(),
+            (string) $book->judul,
+            (string) $book->penulis_1,
+            (string) $book->isbn,
+        ]);
+
+        $cacheKey = 'layout_validation:' . $book->id . ':' . md5($fingerprint);
+
+        return Cache::remember($cacheKey, now()->addMinutes(15), function () use ($book): array {
+            $validation = $this->buildLayoutValidation($book);
+
+            return [
+                'validation' => $validation,
+                'is_ready' => $this->isReadyForLayout($validation),
+            ];
+        });
+    }
+
+    private function invalidateLayoutValidationCache(int $bookId): void
+    {
+        $versionKey = $this->layoutValidationVersionKey($bookId);
+        $currentVersion = (int) Cache::get($versionKey, 1);
+
+        Cache::put($versionKey, $currentVersion + 1, now()->addDays(30));
+
+        $globalVersionKey = $this->layoutGlobalSummaryVersionKey();
+        $currentGlobalVersion = (int) Cache::get($globalVersionKey, 1);
+        Cache::put($globalVersionKey, $currentGlobalVersion + 1, now()->addDays(30));
+    }
+
+    private function layoutValidationVersionKey(int $bookId): string
+    {
+        return 'layout_validation_version:' . $bookId;
+    }
+
+    private function resolveGlobalReadinessSummary($baseQuery, string $search, string $bookType): array
+    {
+        $globalVersion = (int) Cache::get($this->layoutGlobalSummaryVersionKey(), 1);
+        $cacheKey = 'layout_global_summary:' . md5(implode('|', [$globalVersion, $search, $bookType]));
+
+        return Cache::remember($cacheKey, now()->addMinutes(3), function () use ($baseQuery): array {
+            return [
+                'total' => (clone $baseQuery)->count(),
+                'ready' => (clone $baseQuery)->tap(fn($readyQuery) => $this->applyReadinessFilter($readyQuery, 'ready'))->count(),
+                'not_ready' => (clone $baseQuery)->tap(fn($notReadyQuery) => $this->applyReadinessFilter($notReadyQuery, 'not_ready'))->count(),
+            ];
+        });
+    }
+
+    private function layoutGlobalSummaryVersionKey(): string
+    {
+        return 'layout_global_summary_version';
     }
 }
