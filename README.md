@@ -46,6 +46,10 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Dashboard backoffice (produksi, assignment, alert).
 - Dashboard author (status buku, invoice, royalty, kontrak).
 - Ringkasan finansial untuk area finance.
+- Dashboard operasional gabungan untuk antrean Print, Ebook Publishing, Revisi, dan Adaptasi Cetak.
+- Filter operasional multi-kriteria (channel, status, keyword, adaptasi, rentang tanggal, umur SLA).
+- Export CSV berdasarkan filter aktif untuk kebutuhan monitoring dan handover.
+- Shortcut sidebar dinamis ke Dashboard Operasional dengan badge jumlah antrean aktif.
 
 ### 5. Keuangan, Invoice, dan Pembayaran Author
 
@@ -186,7 +190,17 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
     - Auto-notify pembeli untuk status packed, shipped, completed.
     - Validasi status transition order yang lebih ketat di admin.
 - Prioritas rendah:
-    - Penyempurnaan komponen filter/order list admin.
+    - ✅ Penyempurnaan komponen filter/order list admin (operational dashboard filter + SLA + export + pagination per queue).
+
+### Sprint 7 (Minggu 7) - Orkestrasi Workspace Produksi (IN PROGRESS)
+
+- ✅ Workspace Printing: status transition, revisi, final file, notifikasi, shipping tracking.
+- ✅ Workspace Ebook Publishing: status transition, revisi, notifikasi, audit trail.
+- ✅ Routing package channel (print/ebook) + fallback adaptasi cetak untuk buku paket ebook-only.
+- ✅ Dashboard Operasional gabungan + filter lanjutan + export CSV + shortcut sidebar.
+- Next:
+    - Penyederhanaan widget produksi lama yang overlap dengan dashboard operasional baru.
+    - Penajaman SLA alert berbasis umur antrean per status.
 
 ### Sprint 5 (Minggu 5) - Fitur Pasca-Pembelian
 
@@ -217,6 +231,23 @@ Roadmap ini disusun agar item kritikal diselesaikan lebih dulu, lalu diikuti pen
 - Optimasi performa query dashboard/storefront untuk skala data besar.
 
 ## Changelog
+
+### v1.4 - 2026-07-01: Production Operations Workspace and Dashboard
+
+**Operasional Produksi dan Workspace**
+
+- Workspace Printing ditingkatkan dengan status transition guard, alur revisi, final file flow, dan tracking pengiriman.
+- Workspace Ebook Publishing ditambahkan dengan alur status, revisi, dan notifikasi operasional.
+- Audit trail status order ditambahkan agar perubahan status antar role dapat dilacak.
+- Orkestrasi order dari paket publishing kini mempertimbangkan channel print/ebook, termasuk skenario adaptasi cetak untuk pesanan print dari paket ebook-only.
+
+**Dashboard Operasional**
+
+- Dashboard produksi kini memiliki panel operasi gabungan untuk antrean print, ebook, revisi, dan adaptasi cetak.
+- Filter operasional ditambah: channel, status, adaptasi, keyword, tanggal mulai/akhir, umur SLA, dan baris per queue.
+- Setiap queue operasional mendukung pagination sendiri agar data panjang tetap terbaca.
+- Export CSV berdasarkan filter aktif tersedia melalui endpoint dashboard operasi.
+- Shortcut menu dinamis "Dashboard Operasional" ditambahkan ke sidebar dengan badge beban antrean aktif.
 
 ### v1.3 — 2026-06-26: Storefront Commerce & Security Hardening
 

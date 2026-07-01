@@ -114,6 +114,17 @@
                         <i class="fas fa-file-csv mr-1"></i> Export CSV
                     </a>
                 </div>
+                <div class="col-md-3 mb-2">
+                    <label class="mb-1">Baris per Queue</label>
+                    <select name="op_per_page" class="form-control form-control-sm">
+                        @foreach ($perPageOptions as $perPageOption)
+                            <option value="{{ $perPageOption }}"
+                                {{ (int) $operationsFilters['per_page'] === (int) $perPageOption ? 'selected' : '' }}>
+                                {{ $perPageOption }} baris
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-12 d-flex justify-content-end mt-2">
                     <a href="{{ route('production.dashboard') }}" class="btn btn-sm btn-light border mr-2">
                         Reset
@@ -214,6 +225,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($printQueue->hasPages())
+                    <div class="card-footer py-2">
+                        {{ $printQueue->appends(request()->except('print_page'))->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -259,6 +275,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($ebookQueue->hasPages())
+                    <div class="card-footer py-2">
+                        {{ $ebookQueue->appends(request()->except('ebook_page'))->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -297,6 +318,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($revisionQueue->hasPages())
+                    <div class="card-footer py-2">
+                        {{ $revisionQueue->appends(request()->except('revision_page'))->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -328,6 +354,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($adaptationQueue->hasPages())
+                    <div class="card-footer py-2">
+                        {{ $adaptationQueue->appends(request()->except('adaptation_page'))->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

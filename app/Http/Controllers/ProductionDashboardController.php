@@ -184,6 +184,7 @@ class ProductionDashboardController extends Controller
         $operationsFilters = $this->resolveOperationsFilters($request);
         $statusOptions = $this->statusOptions();
         $slaAgeOptions = $this->slaAgeOptions();
+        $perPageOptions = [10, 25, 50];
 
         $showPrintQueue = in_array($operationsFilters['channel'], ['all', 'print'], true);
         $showEbookQueue = in_array($operationsFilters['channel'], ['all', 'ebook'], true);
@@ -208,12 +209,12 @@ class ProductionDashboardController extends Controller
         $ebookQueueCount = $showEbookQueue ? (clone $ebookQueueQuery)->count() : 0;
 
         $printQueue = $showPrintQueue
-            ? (clone $printQueueQuery)->latest()->limit(10)->get()
-            : collect();
+            ? (clone $printQueueQuery)->latest()->paginate($operationsFilters['per_page'], ['*'], 'print_page')
+            : AuthorBookOrder::query()->whereRaw('1 = 0')->paginate($operationsFilters['per_page'], ['*'], 'print_page');
 
         $ebookQueue = $showEbookQueue
-            ? (clone $ebookQueueQuery)->latest()->limit(10)->get()
-            : collect();
+            ? (clone $ebookQueueQuery)->latest()->paginate($operationsFilters['per_page'], ['*'], 'ebook_page')
+            : AuthorBookOrder::query()->whereRaw('1 = 0')->paginate($operationsFilters['per_page'], ['*'], 'ebook_page');
 
         $revisionQueueQuery = AuthorBookOrder::with(['book', 'user'])
             ->whereIn('status', ['revision_requested', 'ebook_revision_requested']);
@@ -259,12 +260,11 @@ class ProductionDashboardController extends Controller
 
         $revisionQueue = $revisionQueueQuery
             ->latest()
-            ->limit(10)
-            ->get();
+            ->paginate($operationsFilters['per_page'], ['*'], 'revision_page');
 
         $adaptationQueue = $showPrintQueue
-            ? $adaptationQueueQuery->latest()->limit(10)->get()
-            : collect();
+            ? $adaptationQueueQuery->latest()->paginate($operationsFilters['per_page'], ['*'], 'adaptation_page')
+            : AuthorBookOrder::query()->whereRaw('1 = 0')->paginate($operationsFilters['per_page'], ['*'], 'adaptation_page');
 
         $operationsSummary = [
             'print_queue' => $printQueueCount,
@@ -296,7 +296,8 @@ class ProductionDashboardController extends Controller
                 'operationsSummary',
                 'operationsFilters',
                 'statusOptions',
-                'slaAgeOptions'
+                'slaAgeOptions',
+                'perPageOptions'
             )
         );
     }
@@ -391,6 +392,9 @@ class ProductionDashboardController extends Controller
             'sla_age' => array_key_exists($request->string('op_sla_age')->toString(), $this->slaAgeOptions())
                 ? $request->string('op_sla_age')->toString()
                 : 'all',
+            'per_page' => in_array((int) $request->integer('op_per_page', 10), [10, 25, 50], true)
+                ? (int) $request->integer('op_per_page', 10)
+                : 10,
         ];
     }
 
