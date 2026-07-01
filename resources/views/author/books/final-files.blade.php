@@ -25,7 +25,12 @@
                 <tbody>
                     @foreach ($checklist as $type => $row)
                         <tr>
-                            <td>{{ strtoupper(str_replace('_', ' ', $type)) }}</td>
+                            <td>
+                                {{ $row['label'] ?? strtoupper(str_replace('_', ' ', $type)) }}
+                                @if (!empty($row['optional']))
+                                    <span class="badge badge-light border ml-1">opsional</span>
+                                @endif
+                            </td>
                             <td>{{ $row['file']?->original_name ?? '-' }}</td>
                             <td>
                                 @if ($row['exists'])

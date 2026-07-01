@@ -10,6 +10,10 @@ class RoleFile extends Model
         'user_id',
         'book_id',
         'role',
+        'access_scope',
+        'allowed_roles',
+        'allowed_emails',
+        'allowed_domains',
         'category',
         'title',
         'description',
@@ -26,6 +30,10 @@ class RoleFile extends Model
         'book_id' => 'integer',
         'file_size' => 'integer',
         'is_image' => 'boolean',
+        'access_scope' => 'string',
+        'allowed_roles' => 'array',
+        'allowed_emails' => 'array',
+        'allowed_domains' => 'array',
         'share_expires_at' => 'datetime',
     ];
 

@@ -121,7 +121,7 @@ Route::post('/payments/ipaymu/callback', [PaymentGatewayController::class, 'call
 
 Route::middleware('auth')->group(function () {
 
-    Route::middleware(['role:admin,editor,layouter,designer,isbn,owner,finance,superadmin'])->group(function () {
+    Route::middleware(['role:admin,editor,layouter,designer,isbn,owner,finance,superadmin,author'])->group(function () {
         Route::get('/role-files', [RoleFileController::class, 'index'])
             ->name('role-files.index');
 
@@ -139,6 +139,15 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/role-files/{roleFile}', [RoleFileController::class, 'destroy'])
             ->name('role-files.destroy');
+
+        Route::post('/role-files/{roleFile}/rename', [RoleFileController::class, 'rename'])
+            ->name('role-files.rename');
+
+        Route::post('/role-files/{roleFile}/move', [RoleFileController::class, 'move'])
+            ->name('role-files.move');
+
+        Route::post('/role-files/{roleFile}/access', [RoleFileController::class, 'updateAccess'])
+            ->name('role-files.access');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

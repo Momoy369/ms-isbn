@@ -4,6 +4,27 @@
 
 @section('content')
 
+    @if (session('success'))
+        <div class="alert alert-success rounded-pill border-0 shadow-sm">
+            <i class="fas fa-check-circle mr-2"></i>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('danger'))
+        <div class="alert alert-danger rounded-pill border-0 shadow-sm">
+            <i class="fas fa-times-circle mr-2"></i>
+            {{ session('danger') }}
+        </div>
+    @endif
+
+    @if (session('info'))
+        <div class="alert alert-info rounded-pill border-0 shadow-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            {{ session('info') }}
+        </div>
+    @endif
+
     @if (session('warning'))
         <div class="alert alert-warning rounded-pill border-0 shadow-sm">
             <i class="fas fa-exclamation-triangle mr-2"></i>

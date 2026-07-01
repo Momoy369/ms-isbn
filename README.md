@@ -34,6 +34,11 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Generate dokumen pendukung (mis. halaman judul, surat, lampiran) sesuai modul yang aktif.
 - Workspace file role + share file internal.
 - Akses file final untuk author berdasarkan aturan status dan pembayaran.
+- Ruang File modern (Drive-like): view Table/Grid, folder chip, search/filter, drag-drop multi upload.
+- Aksi file manager: rename, move antar folder role, copy link, share publik, dan pengaturan akses via modal.
+- Semua file tetap terlihat lintas role (dengan indikator private/terbatas), namun preview/download mengikuti kontrol akses.
+- Permission matrix per file: scope akses + role tambahan + whitelist email + whitelist domain.
+- Audit log akses file (granted/denied) dengan filter aksi/hasil dan shortcut "Lihat Log" per file.
 
 ### 3. ISBN Queue dan Proses Approval
 
@@ -116,6 +121,7 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Register default ke customer.
 - Upgrade akun customer/reader ke author dari halaman profile (dengan syarat data tertentu).
 - Author dapat mengakses dashboard customer, riwayat order store, dan storefront melalui grup menu gabungan "Storefront & Customer".
+- Author kini dapat mengakses Ruang File sesuai kebijakan akses file per item.
 
 ### 11. Branding Dasar
 
@@ -241,6 +247,9 @@ Progress terbaru:
 - ✅ Layanan opsional configurator sekarang dinamis dari master Additional Services (tidak statis hardcoded).
 - ✅ Tahap berikutnya sudah berjalan: finance/admin bisa memantau lead configurator dan update status follow-up.
 - ✅ Follow-up finance sudah ditingkatkan: ada catatan internal dan tanggal next action per lead (dengan penanda due/overdue).
+- ✅ Ruang File telah ditingkatkan menjadi file manager modern: table/grid, rename/move, drag-drop multi upload, dan filter folder.
+- ✅ Kontrol akses Ruang File kini mendukung scope private/role/all_roles/public + permission matrix per role/email/domain.
+- ✅ Audit log akses file aktif (preview/download/shared) beserta panel monitoring dan filter log per file.
 
 ## Roadmap Sprint Mingguan
 

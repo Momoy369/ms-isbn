@@ -12,10 +12,12 @@ class BookFile extends Model
         'type',
         'original_name',
         'note',
+        'sender_role',
         'file_path',
         'mime_type',
         'file_size',
-        'is_active'
+        'is_active',
+        'version'
 
     ];
 

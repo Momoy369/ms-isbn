@@ -16,9 +16,34 @@ class FinalBookPackageService
         'final_cover',
     ];
 
+    public const EXTRA_AUTHOR_TYPES = [
+        'skk',
+        'hki',
+        'sertifikat_penulis',
+    ];
+
+    public const OPTIONAL_TYPES = [
+        'hki',
+    ];
+
+    public const TYPE_LABELS = [
+        'isbn_image' => 'ISBN Image',
+        'qrcbn_image' => 'QRCBN Image',
+        'final_layout' => 'Final Layout',
+        'final_cover' => 'Final Cover',
+        'skk' => 'SKK',
+        'hki' => 'HKI',
+        'sertifikat_penulis' => 'Sertifikat Penulis',
+    ];
+
     public function requiredTypes(): array
     {
         return self::FINAL_TYPES;
+    }
+
+    public function downloadableTypes(): array
+    {
+        return array_values(array_unique(array_merge(self::FINAL_TYPES, self::EXTRA_AUTHOR_TYPES)));
     }
 
     public function validateAndStore(Book $book, string $type, UploadedFile $file, ?string $note, string $senderRole): BookFile
@@ -62,7 +87,7 @@ class FinalBookPackageService
     {
         $items = [];
 
-        foreach (self::FINAL_TYPES as $type) {
+        foreach ($this->downloadableTypes() as $type) {
             $file = $book->files()
                 ->where('type', $type)
                 ->where('is_active', true)
@@ -72,6 +97,8 @@ class FinalBookPackageService
             $items[$type] = [
                 'exists' => (bool) $file,
                 'file' => $file,
+                'label' => self::TYPE_LABELS[$type] ?? strtoupper(str_replace('_', ' ', $type)),
+                'optional' => in_array($type, self::OPTIONAL_TYPES, true),
             ];
         }
 
@@ -80,7 +107,10 @@ class FinalBookPackageService
 
     public function syncDeliveryLink(Book $book): void
     {
-        $checklist = $this->checklist($book);
+        $checklist = collect($this->checklist($book))
+            ->only(self::FINAL_TYPES)
+            ->all();
+
         $allReady = collect($checklist)->every(fn($row) => $row['exists'] === true);
 
         if ($allReady) {
@@ -113,7 +143,7 @@ class FinalBookPackageService
                 $isbnOk = $isbnDigits === '' ? true : str_contains($this->normalizeIsbn($text), $isbnDigits);
 
                 if (!$titleOk || !$isbnOk) {
-                    throw new \RuntimeException('Scan metadata final layout gagal: judul/ISBN belum terdeteksi di dokumen.');
+                    return ['message' => 'SCAN_WARN: metadata final layout belum terdeteksi penuh (judul/ISBN). File tetap disimpan | SHA256:' . substr($checksum, 0, 12)];
                 }
             } else {
                 $binaryContent = file_get_contents($file->getRealPath() ?: '');
@@ -127,7 +157,7 @@ class FinalBookPackageService
                 $titleHintOk = $this->containsTitleTokens($name . ' ' . $noteText, $title);
 
                 if (!$isbnHintOk || !$titleHintOk) {
-                    throw new \RuntimeException('Scan metadata PDF belum valid: pastikan nama file/catatan memuat judul dan ISBN yang benar.');
+                    return ['message' => 'SCAN_WARN: metadata PDF final layout tidak teridentifikasi kuat. File tetap disimpan | SHA256:' . substr($checksum, 0, 12)];
                 }
             }
 
@@ -144,7 +174,7 @@ class FinalBookPackageService
                 || str_contains($noteText, substr($isbnDigits, -5));
 
             if (!$hasIsbnHint || !$hasQrcbnHint || !$isbnMatch) {
-                throw new \RuntimeException('Scan cover gagal: sertakan penanda ISBN dan QRCBN pada catatan/nama file.');
+                return ['message' => 'SCAN_WARN: cover belum memuat hint ISBN/QRCBN yang kuat. File tetap disimpan | SHA256:' . substr($checksum, 0, 12)];
             }
 
             return ['message' => 'SCAN_OK: cover terverifikasi ISBN + QRCBN | SHA256:' . substr($checksum, 0, 12)];
@@ -153,7 +183,7 @@ class FinalBookPackageService
         if ($type === 'isbn_image') {
             $isbnHint = str_contains($name, 'isbn') || ($isbnDigits !== '' && str_contains($name, substr($isbnDigits, -5)));
             if (!$isbnHint) {
-                throw new \RuntimeException('File gambar ISBN tidak cocok: nama file harus memuat ISBN atau kata isbn.');
+                return ['message' => 'SCAN_WARN: nama file ISBN tidak memuat pola ISBN. File tetap disimpan | SHA256:' . substr($checksum, 0, 12)];
             }
 
             return ['message' => 'SCAN_OK: gambar ISBN cocok | SHA256:' . substr($checksum, 0, 12)];
@@ -161,7 +191,7 @@ class FinalBookPackageService
 
         if ($type === 'qrcbn_image') {
             if (!str_contains($name, 'qr') && !str_contains($name, 'qrcbn')) {
-                throw new \RuntimeException('File gambar QRCBN tidak cocok: nama file harus memuat qr/qrcbn.');
+                return ['message' => 'SCAN_WARN: nama file QRCBN tidak memuat pola qr/qrcbn. File tetap disimpan | SHA256:' . substr($checksum, 0, 12)];
             }
 
             return ['message' => 'SCAN_OK: gambar QRCBN cocok | SHA256:' . substr($checksum, 0, 12)];

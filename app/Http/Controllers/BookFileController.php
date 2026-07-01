@@ -6,19 +6,66 @@ use App\Models\Book;
 use App\Models\BookFile;
 use Illuminate\Http\Request;
 use App\Services\BookActivityService;
+use App\Services\FinalBookPackageService;
 
 class BookFileController extends Controller
 {
     public function store(
         Request $request,
         Book $book,
-        \App\Services\NotificationService $notification
+        \App\Services\NotificationService $notification,
+        FinalBookPackageService $finalPackage
     ) {
         $request->validate([
             'type' => 'required|string',
             'file' => 'required|file|max:20480',
             'note' => 'nullable|string|max:1000',
         ]);
+
+        $reviewTypeToStatus = [
+            'edited_manuscript' => 'editing_review',
+            'layout_pdf' => 'layout_review',
+            'cover_final' => 'cover_review',
+        ];
+
+        if (isset($reviewTypeToStatus[$request->type])) {
+            $targetStatus = $reviewTypeToStatus[$request->type];
+            $targetIndex = array_search($targetStatus, Book::WORKFLOWS, true);
+            $currentIndex = $book->workflowIndex();
+
+            if ($targetIndex !== false && $currentIndex !== false && $currentIndex > $targetIndex) {
+                return back()->with(
+                    'warning',
+                    'Tahap review untuk berkas ini sudah lewat. Upload dibatalkan agar pipeline tidak kembali ke tahap sebelumnya.'
+                )->withInput();
+            }
+        }
+
+        if (in_array($request->type, $finalPackage->requiredTypes(), true)) {
+            if (!in_array(auth()->user()->role, ['admin', 'isbn', 'superadmin'], true)) {
+                abort(403, 'Hanya admin/isbn/superadmin yang dapat upload berkas final author.');
+            }
+
+            try {
+                $finalPackage->validateAndStore(
+                    $book,
+                    (string) $request->type,
+                    $request->file('file'),
+                    $request->note,
+                    (string) auth()->user()->role
+                );
+            } catch (\Throwable $e) {
+                return back()->with('danger', $e->getMessage())->withInput();
+            }
+
+            app(BookActivityService::class)->log(
+                $book,
+                'Upload Berkas Final',
+                auth()->user()->name . ' mengupload berkas final ' . $request->type
+            );
+
+            return back()->with('success', 'Berkas final berhasil diupload.');
+        }
 
         $book->files()
             ->where(
@@ -48,7 +95,13 @@ class BookFileController extends Controller
         if ($request->type === 'skk') {
 
             $request->validate([
-                'file' => 'required|mimes:jpg,jpeg,png,pdf'
+                'file' => 'required|mimes:doc,docx,jpg,jpeg,png,pdf'
+            ]);
+        }
+
+        if (in_array($request->type, ['hki', 'sertifikat_penulis'], true)) {
+            $request->validate([
+                'file' => 'required|mimes:doc,docx,jpg,jpeg,png,pdf'
             ]);
         }
 
@@ -128,12 +181,12 @@ class BookFileController extends Controller
             $request->type === 'edited_manuscript'
         ) {
 
-            $book->update([
-                'workflow_status' =>
-                    'editing_review'
-            ]);
+            $moved = $this->moveWorkflowForward(
+                $book,
+                'editing_review'
+            );
 
-            if ($authorId) {
+            if ($moved && $authorId) {
 
                 $notification->send(
 
@@ -155,12 +208,12 @@ class BookFileController extends Controller
             $request->type === 'layout_pdf'
         ) {
 
-            $book->update([
-                'workflow_status' =>
-                    'layout_review'
-            ]);
+            $moved = $this->moveWorkflowForward(
+                $book,
+                'layout_review'
+            );
 
-            if ($authorId) {
+            if ($moved && $authorId) {
 
                 $notification->send(
 
@@ -182,12 +235,12 @@ class BookFileController extends Controller
             $request->type === 'cover_final'
         ) {
 
-            $book->update([
-                'workflow_status' =>
-                    'cover_review'
-            ]);
+            $moved = $this->moveWorkflowForward(
+                $book,
+                'cover_review'
+            );
 
-            if ($authorId) {
+            if ($moved && $authorId) {
 
                 $notification->send(
 
@@ -270,5 +323,36 @@ class BookFileController extends Controller
             'Buku berhasil diajukan ke ISBN'
 
         );
+    }
+
+    private function moveWorkflowForward(
+        Book $book,
+        string $targetStatus
+    ): bool {
+        $targetIndex = array_search(
+            $targetStatus,
+            Book::WORKFLOWS,
+            true
+        );
+
+        if ($targetIndex === false) {
+            return false;
+        }
+
+        $currentIndex = array_search(
+            (string) $book->workflow_status,
+            Book::WORKFLOWS,
+            true
+        );
+
+        if ($currentIndex !== false && $currentIndex >= $targetIndex) {
+            return false;
+        }
+
+        $book->update([
+            'workflow_status' => $targetStatus,
+        ]);
+
+        return true;
     }
 }

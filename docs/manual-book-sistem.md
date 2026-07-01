@@ -163,6 +163,72 @@ MS ISBN Publishing System adalah platform penerbitan end-to-end untuk mengelola 
 3. Upload file kerja atau file final sesuai tahap.
 4. Gunakan catatan untuk menjelaskan revisi atau perubahan.
 
+### 4.3.1 Ruang File (File Manager Modern)
+
+#### Kegunaan
+
+- Menjadi pusat penyimpanan file lintas role dengan pola folder yang konsisten.
+- Menampilkan semua file (cross-role visibility) untuk kebutuhan koordinasi tim.
+- Menjaga keamanan akses baca menggunakan scope + whitelist.
+
+#### Fitur Utama
+
+- Tampilan Table/Grid.
+- Pencarian dan filter folder.
+- Drag-drop multi upload.
+- Aksi file: rename, move, share link, atur akses.
+- Shortcut `Lihat Log` per file untuk audit cepat.
+
+#### Aturan Akses
+
+- `private`: hanya owner file + superadmin + user yang ada di whitelist.
+- `role`: role file terkait + whitelist.
+- `all_roles`: semua role internal.
+- `public`: bisa diakses publik via link share.
+
+Whitelist tambahan per file:
+
+- Role tambahan.
+- Email spesifik.
+- Domain email (contoh: kampus.ac.id).
+
+#### Cara Pakai Singkat
+
+1. Buka menu Ruang File.
+2. Pilih mode view (Table/Grid) sesuai kebutuhan.
+3. Upload file (bisa multi file) dan pilih scope akses.
+4. Jika perlu, klik `Akses` untuk atur whitelist role/email/domain.
+5. Gunakan `Lihat Log` untuk memeriksa riwayat akses file tertentu.
+
+#### Catatan
+
+- Semua file tetap terlihat agar kolaborasi lintas tim lancar.
+- Jika user tidak berhak baca, sistem menampilkan peringatan akses private/terbatas.
+- Preview/download akan ditolak jika tidak lolos aturan akses.
+
+### 4.3.2 Audit Log Akses File
+
+#### Kegunaan
+
+- Merekam siapa mengakses file, kapan, dan apakah diizinkan.
+- Membantu investigasi akses gagal (forbidden/private/expired).
+
+#### Data yang Tercatat
+
+- waktu akses
+- aksi (`preview`, `download`, `shared-preview`, dll.)
+- user/email/role
+- hasil (`granted`/`denied`)
+- scope akses saat itu
+- IP address
+- catatan sistem (mis. `forbidden_by_scope`, `expired`, `file_not_found`)
+
+#### Cara Pakai
+
+1. Buka panel `Audit Log Akses File` di halaman Ruang File.
+2. Filter berdasarkan aksi dan hasil.
+3. Untuk audit spesifik, klik `Lihat Log` pada file yang ingin diperiksa.
+
 ### 4.4 ISBN Queue dan Approval
 
 #### Kegunaan

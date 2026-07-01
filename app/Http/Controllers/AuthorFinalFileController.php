@@ -28,7 +28,7 @@ class AuthorFinalFileController extends Controller
             abort(404);
         }
 
-        if (!in_array($file->type, $finalPackage->requiredTypes(), true)) {
+        if (!in_array($file->type, $finalPackage->downloadableTypes(), true)) {
             abort(403, 'Tipe file ini tidak termasuk paket final author.');
         }
 
