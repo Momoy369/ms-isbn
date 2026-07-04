@@ -495,31 +495,9 @@ class Book extends Model
 
     public function workflowSteps(): array
     {
-        $baseSteps = [
-            'draft',
-            'editing',
-            'editing_review',
-            'layout',
-            'layout_review',
-            'cover_design',
-            'cover_review',
-            'acc_penulis',
-            'audit_isbn',
-            'ready_for_isbn',
-            'isbn_submitted',
-            'isbn_approved',
-            'selesai',
-        ];
-
-        $package = $this->relationLoaded('publishingPackage')
-            ? $this->publishingPackage
-            : $this->publishingPackage()->first();
-
-        if ($package && !$package->includes_editing) {
-            $baseSteps = array_values(array_filter($baseSteps, static fn($step) => $step !== 'editing' && $step !== 'editing_review'));
-        }
-
-        return $baseSteps;
+        // Use dynamic steps based on package
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+        return $parallelService->getWorkflowSteps($this);
     }
 
     public function nextWorkflowStatus(): ?string
@@ -536,45 +514,9 @@ class Book extends Model
 
     public function progressPercent()
     {
-        $package = $this->relationLoaded('publishingPackage')
-            ? $this->publishingPackage
-            : $this->publishingPackage()->first();
-
-        if ($package && !$package->includes_editing) {
-            $progressSteps = [
-                'draft' => 0,
-                'layout' => 36,
-                'layout_review' => 45,
-                'cover_design' => 55,
-                'cover_review' => 65,
-                'acc_penulis' => 75,
-                'audit_isbn' => 80,
-                'ready_for_isbn' => 85,
-                'isbn_submitted' => 90,
-                'isbn_approved' => 100,
-                'selesai' => 100,
-            ];
-
-            return $progressSteps[$this->workflow_status] ?? 0;
-        }
-
-        $steps = [
-            'draft' => 0,
-            'editing' => 10,
-            'editing_review' => 20,
-            'layout' => 30,
-            'layout_review' => 40,
-            'cover_design' => 50,
-            'cover_review' => 60,
-            'acc_penulis' => 70,
-            'audit_isbn' => 80,
-            'ready_for_isbn' => 85,
-            'isbn_submitted' => 90,
-            'isbn_approved' => 100,
-            'selesai' => 100,
-        ];
-
-        return $steps[$this->workflow_status] ?? 0;
+        // All books use parallel workflow progress now
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+        return $parallelService->getProgressPercent($this);
     }
 
     public function workflowDate(

@@ -625,12 +625,57 @@ class BookController extends Controller
     }
 
     public function nextWorkflow(
-        Book $book
+        Book $book,
+        Request $request
     ) {
         $book->load('publishingPackage');
 
         if (!$book->hasPaidInitialPackageInvoice()) {
             return back()->with('warning', $book->dpPaymentWarningMessage());
+        }
+
+        // Check if parallel workflow and specific step was selected
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+        $isParallel = $parallelService->isParallelWorkflow($book);
+
+        if ($isParallel && $request->filled('next_step')) {
+            $selectedStep = $request->input('next_step');
+
+            // Validate the selected step is available
+            $availableSteps = $parallelService->getAvailableNextSteps($book, auth()->user());
+
+            if (!in_array($selectedStep, $availableSteps, true)) {
+                return back()->with('warning', 'Tahap yang dipilih tidak tersedia untuk buku ini.');
+            }
+
+            $nextWorkflow = $selectedStep;
+            $data = ['workflow_status' => $nextWorkflow];
+
+            if ($nextWorkflow === 'layout' && !$book->tanggal_mulai_layout) {
+                $data['tanggal_mulai_layout'] = now();
+            }
+
+            if ($nextWorkflow === 'cover_design' && !$book->tanggal_mulai_cover) {
+                $data['tanggal_mulai_cover'] = now();
+            }
+
+            if ($nextWorkflow === 'acc_penulis' && !$book->tanggal_acc_penulis) {
+                $data['tanggal_acc_penulis'] = now();
+            }
+
+            $book->update($data);
+
+            if ($nextWorkflow === 'selesai') {
+                app(BookCompletionOrchestratorService::class)->handle($book, 'workflow_next');
+            }
+
+            app(BookActivityService::class)->log(
+                $book,
+                'Workflow Paralel Berubah',
+                $nextWorkflow
+            );
+
+            return back()->with('success', 'Workflow berhasil dilanjutkan ke tahap ' . strtoupper(str_replace('_', ' ', $nextWorkflow)) . '.');
         }
 
         $workflows = $book->workflowSteps();

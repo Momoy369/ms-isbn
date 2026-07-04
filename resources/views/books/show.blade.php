@@ -39,8 +39,12 @@
         <div class="card-body p-3 p-md-4">
 
             <div class="row g-3">
+                <div class="col-12">
+                    @include('books.partials.pipeline')
+                </div>
+            </div>
 
-                @include('books.partials.pipeline')
+            <div class="row g-3 mt-1">
 
                 <div class="col-lg-4">
 

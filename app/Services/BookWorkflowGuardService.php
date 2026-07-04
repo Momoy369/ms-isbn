@@ -62,6 +62,18 @@ class BookWorkflowGuardService
 
         $approvals = $this->buildApprovalSummary($book);
 
+        // All books use parallel workflow
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+
+        // Check if admin can do ACC penulis (when author not registered)
+        $adminCanAccPenulis = $user ? $parallelService->canAccPenulisByAdmin($book, $user) : false;
+
+        // If admin can do ACC penulis, add it to available steps
+        $availableSteps = $parallelService->getAvailableNextSteps($book, $user);
+        if ($adminCanAccPenulis && !in_array('acc_penulis', $availableSteps, true)) {
+            $availableSteps[] = 'acc_penulis';
+        }
+
         return [
             'statusLabel' => strtoupper(str_replace('_', ' ', (string) $book->workflow_status)),
             'progressPercent' => $book->progressPercent(),
@@ -95,6 +107,14 @@ class BookWorkflowGuardService
             'canViewRoyaltyCuration' => $user
                 ? in_array($user->role, ['admin', 'owner', 'finance', 'superadmin'], true)
                 : false,
+
+            // Parallel workflow specific data
+            'isParallelWorkflow' => true,
+            'availableNextSteps' => $availableSteps,
+            'trackStatus' => $parallelService->getTrackStatus($book),
+            'pipelineStepStatus' => $parallelService->getPipelineStepStatus($book),
+            'adminCanAccPenulis' => $adminCanAccPenulis,
+            'authorRegistered' => $parallelService->isAuthorRegistered($book),
         ];
     }
 
@@ -114,7 +134,11 @@ class BookWorkflowGuardService
 
     private function buildApprovalSummary(Book $book): array
     {
-        $types = ['editor', 'layout', 'author'];
+        $hasEditing = app(\App\Services\ParallelWorkflowService::class)->hasEditing($book);
+
+        $types = $hasEditing
+            ? ['editor', 'layout', 'author']
+            : ['layout', 'author'];
         $items = [];
         $approvedCount = 0;
 

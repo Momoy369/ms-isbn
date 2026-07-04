@@ -32,7 +32,7 @@ class BookWorkflowActionService
             'submit' => $this->submitIsbn($book),
             'approve_isbn' => $this->approveIsbn($book, $payload),
             'author_approval' => $this->authorApproval($book, $user),
-            default => $this->nextWorkflow($book),
+            default => $this->nextWorkflow($book, $user),
         };
     }
 
@@ -82,7 +82,7 @@ class BookWorkflowActionService
         ];
     }
 
-    private function nextWorkflow(Book $book): array
+    private function nextWorkflow(Book $book, ?User $user = null): array
     {
         $book->load('publishingPackage');
 
@@ -93,6 +93,15 @@ class BookWorkflowActionService
             ];
         }
 
+        // Check if this is a parallel workflow (non-editing package)
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+        $isParallel = $parallelService->isParallelWorkflow($book);
+
+        if ($isParallel) {
+            return $this->nextWorkflowParallel($book, $parallelService, $user);
+        }
+
+        // Sequential workflow (editing package)
         $workflows = $book->workflowSteps();
         $current = array_search($book->workflow_status, $workflows, true);
 
@@ -140,6 +149,93 @@ class BookWorkflowActionService
             'status' => 'success',
             'message' => 'Workflow berhasil dilanjutkan ke tahap ' . strtoupper(str_replace('_', ' ', $nextWorkflow)) . '.',
         ];
+    }
+
+    private function nextWorkflowParallel(Book $book, ParallelWorkflowService $parallelService, ?User $user = null): array
+    {
+        $current = $book->workflow_status;
+        $availableNextSteps = $parallelService->getAvailableNextSteps($book, $user);
+
+        if (empty($availableNextSteps)) {
+            return [
+                'status' => 'info',
+                'message' => 'Tidak ada tahap lanjutan yang tersedia.',
+            ];
+        }
+
+        // For parallel workflow, we need to determine which step to advance to
+        $nextWorkflow = $this->determineBestNextStep($book, $availableNextSteps);
+
+        $data = [
+            'workflow_status' => $nextWorkflow,
+        ];
+
+        // Set timestamps based on the new status
+        if ($nextWorkflow === 'layout' && !$book->tanggal_mulai_layout) {
+            $data['tanggal_mulai_layout'] = now();
+        }
+
+        if ($nextWorkflow === 'cover_design' && !$book->tanggal_mulai_cover) {
+            $data['tanggal_mulai_cover'] = now();
+        }
+
+        if ($nextWorkflow === 'acc_penulis' && !$book->tanggal_acc_penulis) {
+            $data['tanggal_acc_penulis'] = now();
+        }
+
+        $book->update($data);
+
+        if ($nextWorkflow === 'selesai') {
+            app(BookCompletionOrchestratorService::class)->handle($book, 'workflow_next');
+        }
+
+        app(BookActivityService::class)->log(
+            $book,
+            'Workflow Paralel Berubah',
+            $nextWorkflow
+        );
+
+        return [
+            'status' => 'success',
+            'message' => 'Workflow berhasil dilanjutkan ke tahap ' . strtoupper(str_replace('_', ' ', $nextWorkflow)) . '.',
+        ];
+    }
+
+    private function determineBestNextStep(Book $book, array $availableSteps): string
+    {
+        $current = $book->workflow_status;
+
+        // If only one option, return it
+        if (count($availableSteps) === 1) {
+            return $availableSteps[0];
+        }
+
+        // At draft, prefer layout first
+        if ($current === 'draft') {
+            return 'layout';
+        }
+
+        // If layout is in review and cover hasn't started, continue with cover
+        if ($current === 'layout_review' && in_array('cover_design', $availableSteps)) {
+            return 'cover_design';
+        }
+
+        // If cover is in review and layout hasn't started, continue with layout
+        if ($current === 'cover_review' && in_array('layout', $availableSteps)) {
+            return 'layout';
+        }
+
+        // If both are available and user is on one track, prefer the other track
+        // to encourage parallel progression
+        if (in_array($current, ['layout_review', 'cover_review'], true)) {
+            if (in_array('cover_design', $availableSteps))
+                return 'cover_design';
+            if (in_array('layout', $availableSteps))
+                return 'layout';
+        }
+
+        // Default: return first available step
+        return $availableSteps[0];
     }
 
     private function runAudit(Book $book): array
@@ -272,10 +368,24 @@ class BookWorkflowActionService
             ];
         }
 
-        if (!$user || $user->role !== 'author' || (int) ($book->author_user_id ?? 0) !== (int) $user->id) {
+        $parallelService = app(\App\Services\ParallelWorkflowService::class);
+        $isAdminApproval = $user && in_array($user->role, ['admin', 'superadmin', 'owner'], true)
+            && !$parallelService->isAuthorRegistered($book);
+
+        if (!$user) {
             return [
                 'status' => 'warning',
-                'message' => 'ACC Penulis hanya dapat dilakukan oleh author pemilik naskah.',
+                'message' => 'Anda harus login untuk melakukan ACC Penulis.',
+            ];
+        }
+
+        // Allow if: user is the author owner, OR admin can do manual ACC for unregistered author
+        $isAuthorOwner = $user->role === 'author' && (int) ($book->author_user_id ?? 0) === (int) $user->id;
+
+        if (!$isAuthorOwner && !$isAdminApproval) {
+            return [
+                'status' => 'warning',
+                'message' => 'ACC Penulis hanya dapat dilakukan oleh author pemilik naskah, atau Admin jika penulis tidak terdaftar.',
             ];
         }
 
@@ -284,15 +394,19 @@ class BookWorkflowActionService
             'tanggal_acc_penulis' => now(),
         ]);
 
+        $logMessage = $isAdminApproval
+            ? 'ACC Penulis dilakukan manual oleh Admin (penulis tidak terdaftar).'
+            : 'Naskah disetujui penulis dari Action Center.';
+
         app(BookActivityService::class)->log(
             $book,
             'ACC Penulis',
-            'Naskah disetujui penulis dari Action Center.'
+            $logMessage
         );
 
         return [
             'status' => 'success',
-            'message' => 'ACC Penulis berhasil.',
+            'message' => 'ACC Penulis berhasil' . ($isAdminApproval ? ' (manual oleh Admin)' : '') . '.',
         ];
     }
 
