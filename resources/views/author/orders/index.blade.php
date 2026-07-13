@@ -102,11 +102,12 @@
                                 Sistem menghitung halaman format A4 dan A5 (margin rata 2 cm) secara otomatis.
                             </small>
                             <small class="text-muted d-block">
-                                Jika lebih dari 125 halaman A4: biaya tambahan Rp 2.000/halaman untuk layout,
-                                dan tambahan Rp 2.000/halaman untuk editing jika paket termasuk editing.
+                                Jika halaman A4 melebihi limit paket, biaya lebih layout dan editing dihitung otomatis
+                                berdasarkan pengaturan dinamis admin.
                             </small>
                             <small class="text-muted d-block">
-                                Jika paket termasuk cetak: maksimal 100 halaman A5, kelebihan dikenakan Rp 500/halaman.
+                                Jika paket termasuk cetak, limit dan biaya lebih halaman mengikuti ukuran buku pada
+                                Master Harga Cetak + aturan dinamis di System Settings.
                             </small>
                         </div>
                         <div class="form-group">
@@ -122,6 +123,22 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label>Ukuran Buku (Master Harga Cetak)</label>
+                            <select name="package_print_price_rule_id" id="package-print-rule-id" class="form-control">
+                                <option value="">- Default (A5) -</option>
+                                @foreach ($printRules as $rule)
+                                    <option value="{{ $rule->id }}">
+                                        {{ $rule->name }}
+                                        @if ($rule->paper_size)
+                                            [{{ strtoupper($rule->paper_size) }}]
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Ukuran ini dipakai untuk limit halaman cetak dan biaya
+                                lebih per halaman.</small>
+                        </div>
+                        <div class="form-group">
                             <label>Catatan</label>
                             <textarea name="notes" class="form-control" rows="2"></textarea>
                         </div>
@@ -135,8 +152,9 @@
                                 <div id="pv-badges" class="mb-2"></div>
                                 <div>A4: <span id="pv-a4-pages">0</span> hal (limit <span id="pv-a4-limit">125</span>) |
                                     Lebih: <span id="pv-a4-over">0</span> hal</div>
-                                <div>A5: <span id="pv-a5-pages">0</span> hal (limit cetak <span id="pv-a5-limit">100</span>)
-                                    | Lebih cetak: <span id="pv-a5-over">0</span> hal</div>
+                                <div><span id="pv-selected-paper-label">A5</span>: <span id="pv-selected-pages">0</span> hal
+                                    (limit cetak <span id="pv-selected-limit">100</span>)
+                                    | Lebih cetak: <span id="pv-selected-over">0</span> hal</div>
                                 <hr class="my-2">
                                 <div>Biaya paket: <strong id="pv-package-price">Rp 0</strong></div>
                                 <div>Biaya lebih layout: <strong id="pv-layout-fee">Rp 0</strong></div>
@@ -329,7 +347,8 @@
                                             @endif
                                         @endif
                                         @if ((int) ($order->manuscript_a5_pages ?? 0) > 0)
-                                            | A5: {{ (int) $order->manuscript_a5_pages }} hal.
+                                            | {{ strtoupper(optional($order->printPriceRule)->paper_size ?: 'A5') }}:
+                                            {{ (int) $order->manuscript_a5_pages }} hal.
                                         @endif
                                         @if ((int) ($order->print_over_limit_pages ?? 0) > 0)
                                             | Cetak lebih {{ (int) $order->print_over_limit_pages }} hal.
@@ -440,6 +459,7 @@
             const reprintBook = document.getElementById('reprint-book-id');
             const adaptationHint = document.getElementById('reprint-adaptation-hint');
             const packageSelect = document.getElementById('publishing-package-id');
+            const packagePrintRuleSelect = document.getElementById('package-print-rule-id');
             const manuscriptFileInput = document.getElementById('manuscript-file');
             const previewBox = document.getElementById('package-preview-box');
             const previewLoading = document.getElementById('package-preview-loading');
@@ -511,6 +531,8 @@
                 const formData = new FormData();
                 formData.append('_token', '{{ csrf_token() }}');
                 formData.append('publishing_package_id', packageId);
+                formData.append('package_print_price_rule_id', packagePrintRuleSelect ? packagePrintRuleSelect
+                    .value : '');
                 formData.append('manuscript_file', file);
 
                 try {
@@ -536,9 +558,10 @@
                     setPreviewText('pv-a4-pages', data.a4_pages || 0);
                     setPreviewText('pv-a4-limit', data.a4_limit || 125);
                     setPreviewText('pv-a4-over', data.a4_over_pages || 0);
-                    setPreviewText('pv-a5-pages', data.a5_pages || 0);
-                    setPreviewText('pv-a5-limit', data.a5_limit || 100);
-                    setPreviewText('pv-a5-over', data.a5_print_over_pages || 0);
+                    setPreviewText('pv-selected-paper-label', data.selected_print_paper || 'A5');
+                    setPreviewText('pv-selected-pages', data.selected_print_pages || 0);
+                    setPreviewText('pv-selected-limit', data.print_limit || 100);
+                    setPreviewText('pv-selected-over', data.print_over_pages || 0);
                     setPreviewText('pv-package-price', formatRupiah(data.package_price || 0));
                     setPreviewText('pv-layout-fee', formatRupiah(data.layout_fee || 0));
                     setPreviewText('pv-editing-fee', formatRupiah(data.editing_fee || 0));
@@ -554,7 +577,7 @@
 
                         if (data.supports_print) {
                             badges.push(
-                                `<span class="pv-chip ${Number(data.a5_print_over_pages || 0) > 0 ? 'warn' : 'good'}">A5 Cetak ${Number(data.a5_print_over_pages || 0) > 0 ? 'Melebihi Batas' : 'Aman'}</span>`
+                                `<span class="pv-chip ${Number(data.print_over_pages || 0) > 0 ? 'warn' : 'good'}">${String(data.selected_print_paper || 'A5')} Cetak ${Number(data.print_over_pages || 0) > 0 ? 'Melebihi Batas' : 'Aman'}</span>`
                             );
                         } else {
                             badges.push('<span class="pv-chip good">Paket Non-Cetak</span>');
@@ -588,6 +611,7 @@
             if (packageSelect && manuscriptFileInput) {
                 packageSelect.addEventListener('change', refreshPackagePreview);
                 manuscriptFileInput.addEventListener('change', refreshPackagePreview);
+                packagePrintRuleSelect?.addEventListener('change', refreshPackagePreview);
             }
 
             if (prov && city && cityId) {

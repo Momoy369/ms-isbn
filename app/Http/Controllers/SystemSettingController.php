@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemSettingAudit;
 use App\Services\LicenseService;
+use App\Services\PublishingOverageService;
 use App\Services\SystemSettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SystemSettingController extends Controller
 {
-    public function index(Request $request, SystemSettingService $settings)
+    public function index(Request $request, SystemSettingService $settings, PublishingOverageService $overage)
     {
         /** @var LicenseService $license */
         $license = app(LicenseService::class);
@@ -78,6 +79,10 @@ class SystemSettingController extends Controller
                 'reminder_sms_enabled' => $settings->getBool('reminder.sms_enabled', (bool) config('services.reminder.sms_enabled', false)),
                 'reminder_whatsapp_webhook_url' => (string) $settings->get('reminder.whatsapp_webhook_url', config('services.reminder.whatsapp_webhook_url', '')),
                 'reminder_sms_webhook_url' => (string) $settings->get('reminder.sms_webhook_url', config('services.reminder.sms_webhook_url', '')),
+                'publishing_a4_layout_limit' => (string) $settings->get('publishing.a4_layout_limit', (string) $overage->getA4Limit()),
+                'publishing_a4_layout_overage_per_page' => (string) $settings->get('publishing.a4_layout_overage_per_page', (string) $overage->getLayoutOveragePerPage()),
+                'publishing_a4_editing_overage_per_page' => (string) $settings->get('publishing.a4_editing_overage_per_page', (string) $overage->getEditingOveragePerPage()),
+                'publishing_print_overage_rules_json' => (string) $settings->get('publishing.print_overage_rules_json', json_encode($overage->getPrintPaperRules(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)),
             ],
             'effective' => [
                 'system_brand_name_source' => $settings->has('system.brand_name') ? 'database' : 'env/config',
@@ -111,6 +116,10 @@ class SystemSettingController extends Controller
                 'reminder_sms_enabled_source' => $settings->has('reminder.sms_enabled') ? 'database' : 'env/config',
                 'reminder_whatsapp_webhook_url_source' => $settings->has('reminder.whatsapp_webhook_url') ? 'database' : 'env/config',
                 'reminder_sms_webhook_url_source' => $settings->has('reminder.sms_webhook_url') ? 'database' : 'env/config',
+                'publishing_a4_layout_limit_source' => $settings->has('publishing.a4_layout_limit') ? 'database' : 'default',
+                'publishing_a4_layout_overage_per_page_source' => $settings->has('publishing.a4_layout_overage_per_page') ? 'database' : 'default',
+                'publishing_a4_editing_overage_per_page_source' => $settings->has('publishing.a4_editing_overage_per_page') ? 'database' : 'default',
+                'publishing_print_overage_rules_json_source' => $settings->has('publishing.print_overage_rules_json') ? 'database' : 'default',
             ],
             'audits' => $auditQuery->limit(20)->get(),
             'filters' => [
@@ -203,7 +212,20 @@ class SystemSettingController extends Controller
             'perpusnas_password' => ['nullable', 'string', 'max:4000'],
             'reminder_whatsapp_webhook_url' => ['nullable', 'url', 'max:255'],
             'reminder_sms_webhook_url' => ['nullable', 'url', 'max:255'],
+            'publishing_a4_layout_limit' => ['nullable', 'integer', 'min:1', 'max:20000'],
+            'publishing_a4_layout_overage_per_page' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'publishing_a4_editing_overage_per_page' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'publishing_print_overage_rules_json' => ['nullable', 'string', 'max:20000'],
         ]);
+
+        if (!empty($data['publishing_print_overage_rules_json'])) {
+            $decoded = json_decode((string) $data['publishing_print_overage_rules_json'], true);
+            if (!is_array($decoded)) {
+                return back()->withInput()->withErrors([
+                    'publishing_print_overage_rules_json' => 'Format JSON aturan biaya cetak tidak valid.',
+                ]);
+            }
+        }
 
         $payload = [
             'assistant.openrouter_model' => $this->nullableTrim($data['openrouter_model'] ?? null),
@@ -243,6 +265,10 @@ class SystemSettingController extends Controller
             'reminder.sms_enabled' => $request->boolean('reminder_sms_enabled') ? '1' : '0',
             'reminder.whatsapp_webhook_url' => $this->nullableTrim($data['reminder_whatsapp_webhook_url'] ?? null),
             'reminder.sms_webhook_url' => $this->nullableTrim($data['reminder_sms_webhook_url'] ?? null),
+            'publishing.a4_layout_limit' => isset($data['publishing_a4_layout_limit']) ? (string) $data['publishing_a4_layout_limit'] : null,
+            'publishing.a4_layout_overage_per_page' => isset($data['publishing_a4_layout_overage_per_page']) ? (string) $data['publishing_a4_layout_overage_per_page'] : null,
+            'publishing.a4_editing_overage_per_page' => isset($data['publishing_a4_editing_overage_per_page']) ? (string) $data['publishing_a4_editing_overage_per_page'] : null,
+            'publishing.print_overage_rules_json' => $this->nullableTrim($data['publishing_print_overage_rules_json'] ?? null),
         ];
 
         if ($request->boolean('clear_license_issuer_secret')) {

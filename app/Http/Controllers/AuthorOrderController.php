@@ -10,6 +10,7 @@ use App\Models\AdditionalService;
 use App\Models\PrintPriceRule;
 use App\Models\PublishingPackage;
 use App\Services\ManuscriptA4PageCounterService;
+use App\Services\PublishingOverageService;
 use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
 
@@ -63,8 +64,11 @@ class AuthorOrderController extends Controller
         return response()->json($result);
     }
 
-    public function buyPackage(Request $request, ManuscriptA4PageCounterService $pageCounter)
-    {
+    public function buyPackage(
+        Request $request,
+        ManuscriptA4PageCounterService $pageCounter,
+        PublishingOverageService $overageService
+    ) {
         $user = auth()->user();
 
         if (!$user->isAuthorProfileComplete()) {
@@ -74,6 +78,7 @@ class AuthorOrderController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'publishing_package_id' => ['required', 'exists:publishing_packages,id'],
+            'package_print_price_rule_id' => ['nullable', 'exists:print_price_rules,id'],
             'manuscript_file' => ['required', 'file', 'mimes:docx', 'max:51200'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -97,24 +102,43 @@ class AuthorOrderController extends Controller
             return back()->with('danger', 'Paket tidak ditemukan atau tidak aktif.');
         }
 
+        $selectedPrintRule = null;
+        $selectedPrintPaper = 'A5';
+        if (!empty($data['package_print_price_rule_id'])) {
+            $selectedPrintRule = PrintPriceRule::where('is_active', true)->find($data['package_print_price_rule_id']);
+            if ($selectedPrintRule && !empty($selectedPrintRule->paper_size)) {
+                $selectedPrintPaper = strtoupper((string) $selectedPrintRule->paper_size);
+            }
+        }
+
         try {
-            $pageSummary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+            $pageSummary = $pageCounter->countFromUploadedFileByPapers(
+                $request->file('manuscript_file'),
+                $overageService->getTrackedPapers()
+            );
         } catch (\Throwable $e) {
             return back()->with('danger', 'Gagal membaca naskah DOCX: ' . $e->getMessage());
         }
 
-        $a4Pages = (int) ($pageSummary['a4_pages'] ?? 1);
-        $a5Pages = (int) ($pageSummary['a5_pages'] ?? 1);
+        $pageMap = [];
+        foreach ($pageSummary as $paper => $count) {
+            $pageMap[strtoupper((string) $paper)] = (int) $count;
+        }
 
-        $overage = $this->calculatePackageOverage($package, $a4Pages, $a5Pages);
+        $a4Pages = (int) ($pageMap['A4'] ?? 1);
+        $a5Pages = (int) ($pageMap['A5'] ?? 1);
+
+        $overage = $overageService->calculateForPackage($package, $pageMap, $selectedPrintPaper);
 
         $a4Limit = (int) $overage['a4_limit'];
         $overLimitPages = (int) $overage['a4_over_pages'];
         $layoutOverageFee = (float) $overage['layout_fee'];
         $editingOverageFee = (float) $overage['editing_fee'];
-        $a5Limit = (int) $overage['a5_limit'];
-        $printOverLimitPages = (int) $overage['a5_print_over_pages'];
+        $a5Limit = (int) $overage['print_limit'];
+        $printOverLimitPages = (int) $overage['print_over_pages'];
         $printOverageFee = (float) $overage['print_fee'];
+        $selectedPrintPages = (int) $overage['selected_print_pages'];
+        $selectedPrintPaper = (string) $overage['selected_print_paper'];
         $extraFee = (float) $overage['extra_fee'];
 
         $book->update([
@@ -174,7 +198,7 @@ class AuthorOrderController extends Controller
         }
 
         if ($printOverLimitPages > 0) {
-            $printBreakdown = 'A5: ' . $a5Pages
+            $printBreakdown = $selectedPrintPaper . ': ' . $selectedPrintPages
                 . ' halaman (limit ' . $a5Limit
                 . ', paket cetak aktif). Kelebihan: ' . $printOverLimitPages
                 . ' halaman. Biaya lebih cetak Rp ' . number_format($printOverageFee, 0, ',', '.') . '.';
@@ -186,12 +210,13 @@ class AuthorOrderController extends Controller
             'user_id' => $user->id,
             'book_id' => $book->id,
             'publishing_package_id' => $book->publishing_package_id,
+            'print_price_rule_id' => $selectedPrintRule?->id,
             'author_invoice_id' => $invoice?->id,
             'order_type' => 'new_package',
             'title' => $book->judul,
             'pages' => $a4Pages,
             'manuscript_a4_pages' => $a4Pages,
-            'manuscript_a5_pages' => $a5Pages,
+            'manuscript_a5_pages' => $selectedPrintPages,
             'a4_page_limit' => $a4Limit,
             'a5_page_limit' => $a5Limit,
             'over_limit_pages' => $overLimitPages,
@@ -215,17 +240,33 @@ class AuthorOrderController extends Controller
         return back()->with('success', $message);
     }
 
-    public function previewPackageCharge(Request $request, ManuscriptA4PageCounterService $pageCounter)
-    {
+    public function previewPackageCharge(
+        Request $request,
+        ManuscriptA4PageCounterService $pageCounter,
+        PublishingOverageService $overageService
+    ) {
         $data = $request->validate([
             'publishing_package_id' => ['required', 'exists:publishing_packages,id'],
+            'package_print_price_rule_id' => ['nullable', 'exists:print_price_rules,id'],
             'manuscript_file' => ['required', 'file', 'mimes:docx', 'max:51200'],
         ]);
 
         $package = PublishingPackage::findOrFail((int) $data['publishing_package_id']);
 
+        $selectedPrintRule = null;
+        $selectedPrintPaper = 'A5';
+        if (!empty($data['package_print_price_rule_id'])) {
+            $selectedPrintRule = PrintPriceRule::where('is_active', true)->find($data['package_print_price_rule_id']);
+            if ($selectedPrintRule && !empty($selectedPrintRule->paper_size)) {
+                $selectedPrintPaper = strtoupper((string) $selectedPrintRule->paper_size);
+            }
+        }
+
         try {
-            $summary = $pageCounter->summarizeFromUploadedFile($request->file('manuscript_file'));
+            $summary = $pageCounter->countFromUploadedFileByPapers(
+                $request->file('manuscript_file'),
+                $overageService->getTrackedPapers()
+            );
         } catch (\Throwable $e) {
             return response()->json([
                 'ok' => false,
@@ -233,9 +274,14 @@ class AuthorOrderController extends Controller
             ], 422);
         }
 
-        $a4Pages = (int) ($summary['a4_pages'] ?? 1);
-        $a5Pages = (int) ($summary['a5_pages'] ?? 1);
-        $overage = $this->calculatePackageOverage($package, $a4Pages, $a5Pages);
+        $pageMap = [];
+        foreach ($summary as $paper => $count) {
+            $pageMap[strtoupper((string) $paper)] = (int) $count;
+        }
+
+        $a4Pages = (int) ($pageMap['A4'] ?? 1);
+        $a5Pages = (int) ($pageMap['A5'] ?? 1);
+        $overage = $overageService->calculateForPackage($package, $pageMap, $selectedPrintPaper);
 
         $packagePrice = (float) ($package->price ?? 0);
 
@@ -246,8 +292,11 @@ class AuthorOrderController extends Controller
                 'a5_pages' => $a5Pages,
                 'a4_limit' => (int) $overage['a4_limit'],
                 'a4_over_pages' => (int) $overage['a4_over_pages'],
-                'a5_limit' => (int) $overage['a5_limit'],
-                'a5_print_over_pages' => (int) $overage['a5_print_over_pages'],
+                'selected_print_paper' => (string) $overage['selected_print_paper'],
+                'selected_print_pages' => (int) $overage['selected_print_pages'],
+                'print_limit' => (int) $overage['print_limit'],
+                'print_over_pages' => (int) $overage['print_over_pages'],
+                'print_overage_rate' => (float) $overage['print_overage_rate'],
                 'layout_fee' => (float) $overage['layout_fee'],
                 'editing_fee' => (float) $overage['editing_fee'],
                 'print_fee' => (float) $overage['print_fee'],
@@ -256,6 +305,7 @@ class AuthorOrderController extends Controller
                 'total' => $packagePrice + (float) $overage['extra_fee'],
                 'includes_editing' => (bool) $package->includes_editing,
                 'supports_print' => (bool) $package->supports_print,
+                'selected_print_rule_name' => $selectedPrintRule?->name,
             ],
         ]);
     }
@@ -400,27 +450,4 @@ class AuthorOrderController extends Controller
         return back()->with('success', 'Pesanan layanan tambahan berhasil dibuat. Invoice diterbitkan.');
     }
 
-    private function calculatePackageOverage(PublishingPackage $package, int $a4Pages, int $a5Pages): array
-    {
-        $a4Limit = 125;
-        $a5Limit = 100;
-
-        $a4OverPages = max(0, $a4Pages - $a4Limit);
-        $a5PrintOverPages = $package->supports_print ? max(0, $a5Pages - $a5Limit) : 0;
-
-        $layoutFee = $a4OverPages * 2000;
-        $editingFee = $package->includes_editing ? ($a4OverPages * 2000) : 0;
-        $printFee = $a5PrintOverPages * 500;
-
-        return [
-            'a4_limit' => $a4Limit,
-            'a5_limit' => $a5Limit,
-            'a4_over_pages' => $a4OverPages,
-            'a5_print_over_pages' => $a5PrintOverPages,
-            'layout_fee' => $layoutFee,
-            'editing_fee' => $editingFee,
-            'print_fee' => $printFee,
-            'extra_fee' => $layoutFee + $editingFee + $printFee,
-        ];
-    }
 }

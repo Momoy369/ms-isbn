@@ -16,6 +16,8 @@ use App\Http\Controllers\AuthorDashboardController;
 use App\Http\Controllers\AuthorReviewController;
 use App\Http\Controllers\AuthorInvoiceController;
 use App\Http\Controllers\FinanceInvoiceController;
+use App\Http\Controllers\FinancePosController;
+use App\Http\Controllers\PosInvoiceDocumentController;
 use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\InvoiceDocumentController;
 use App\Http\Controllers\AdminFinanceReportController;
@@ -516,6 +518,33 @@ Route::middleware('auth')->group(function () {
         Route::middleware(['role:admin,owner,finance,superadmin'])->group(function () {
             Route::get('/finance/invoices', [FinanceInvoiceController::class, 'index'])
                 ->name('finance.invoices.index');
+
+            Route::get('/finance/pos', [FinancePosController::class, 'index'])
+                ->name('finance.pos.index');
+
+            Route::post('/finance/pos/orders', [FinancePosController::class, 'storeOrder'])
+                ->name('finance.pos.orders.store');
+
+            Route::post('/finance/pos/overage/preview', [FinancePosController::class, 'previewPublishingOverage'])
+                ->name('finance.pos.overage.preview');
+
+            Route::post('/finance/pos/orders/{order}/extra-service', [FinancePosController::class, 'addExtraService'])
+                ->name('finance.pos.orders.extra-service');
+
+            Route::post('/finance/pos/orders/{order}/invoices', [FinancePosController::class, 'createInvoice'])
+                ->name('finance.pos.invoices.store');
+
+            Route::post('/finance/pos/invoices/{invoice}/update', [FinancePosController::class, 'updateInvoice'])
+                ->name('finance.pos.invoices.update');
+
+            Route::post('/finance/pos/invoices/{invoice}/mark-paid', [FinancePosController::class, 'markInvoicePaid'])
+                ->name('finance.pos.invoices.mark-paid');
+
+            Route::post('/finance/pos/invoices/{invoice}/mark-pending', [FinancePosController::class, 'markInvoicePending'])
+                ->name('finance.pos.invoices.mark-pending');
+
+            Route::get('/finance/pos/invoices/{invoice}/pdf', [PosInvoiceDocumentController::class, 'download'])
+                ->name('finance.pos.invoices.pdf');
 
             Route::post('/finance/invoices/{invoice}/mark-paid', [FinanceInvoiceController::class, 'markPaid'])
                 ->name('finance.invoices.mark-paid');

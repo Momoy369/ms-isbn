@@ -20,6 +20,7 @@ class ManuscriptA4PageCounterService
             'A4' => 'A4',
             'A5' => 'A5',
             'B5' => 'B5',
+            'B6' => 'B6',
             'UNESCO' => 'UNESCO (15.5 x 23 cm)',
         ];
     }
@@ -195,6 +196,13 @@ HTML;
             return [
                 'css_size' => '176mm 250mm',
                 'dompdf_paper' => [0, 0, $this->mmToPt(176), $this->mmToPt(250)],
+            ];
+        }
+
+        if ($normalized === 'B6') {
+            return [
+                'css_size' => '125mm 176mm',
+                'dompdf_paper' => [0, 0, $this->mmToPt(125), $this->mmToPt(176)],
             ];
         }
 

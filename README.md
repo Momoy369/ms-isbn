@@ -75,6 +75,17 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Halaman instalasi modern tersedia di `/install`:
     - Menampilkan checklist requirement runtime (PHP, ekstensi, APP_KEY, koneksi DB).
     - Menampilkan langkah instalasi cepat agar onboarding instance lebih rapi.
+- Fitur baru: **Finance POS (Point of Sale) untuk order eksternal**.
+    - Role akses: `admin`, `owner`, `finance`, `superadmin`.
+    - Input order eksternal multi-item (Jasa Penerbitan, Buku, Ebook) untuk pencatatan kas/penjualan rapi.
+    - Untuk item Jasa Penerbitan, paket diambil langsung dari master Paket Penerbitan.
+    - Mendukung layanan extra pada order POS dan nilainya ikut total pembayaran.
+    - Menerbitkan invoice POS Termin 1 dan Termin 2 per order, termasuk status pending/lunas.
+    - Invoice POS bisa diedit (deskripsi, nominal, jatuh tempo) ketika ada koreksi/penyesuaian.
+    - Tersedia ekspor/cetak PDF per invoice POS.
+    - Saat invoice Termin 1 Jasa Penerbitan ditandai lunas, data customer+naskah otomatis dibuat menjadi data naskah produksi.
+    - Customer POS bisa otomatis terhubung ke akun user existing jika email/nomor HP sudah terdaftar.
+    - Rekap nilai order, nilai invoice pending, dan nilai invoice lunas pada satu dashboard POS.
 
 ### Fitur yang Diupdate / Dikurangi
 
@@ -149,6 +160,18 @@ Sistem ini adalah platform manajemen penerbitan end-to-end berbasis Laravel, mul
 - Pembuatan dan pengelolaan invoice author.
 - Alur pembayaran dengan iPaymu untuk invoice author.
 - Callback pembayaran untuk update status invoice otomatis.
+
+### 5.1 Finance POS untuk Order Eksternal
+
+- Input order di luar alur aplikasi utama (offline/WA/IG/marketplace/website).
+- Mendukung item campuran: jasa penerbitan, buku cetak, dan ebook.
+- Jasa penerbitan terhubung langsung ke master paket penerbitan.
+- Mendukung layanan extra per order yang ikut menambah total tagihan.
+- Pembentukan invoice termin per order (`Termin 1` dan `Termin 2`).
+- Invoice POS dapat diedit dan diunduh/cetak PDF.
+- Sinkron otomatis ke data naskah produksi saat Termin 1 jasa penerbitan lunas.
+- Auto-link customer ke user existing (berdasarkan email/telepon) saat tersedia.
+- Monitoring status pembayaran invoice POS oleh tim finance.
 
 ### 6. Royalty System
 

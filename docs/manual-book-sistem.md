@@ -648,6 +648,50 @@ Whitelist tambahan per file:
 - Nilai biaya tambahan tersimpan pada order dan book.
 - Nilai tersebut ikut ke breakdown dan total invoice.
 
+### 4.16.2 Finance POS (Point of Sale) untuk Order Eksternal
+
+#### Kegunaan
+
+- Mencatat pesanan dari luar aplikasi (offline/chat/marketplace) secara terstruktur.
+- Menyatukan pencatatan jasa penerbitan, buku, dan ebook dalam satu order POS.
+- Menerbitkan invoice termin 1 dan termin 2 untuk kebutuhan penagihan bertahap.
+- Menjaga keterhubungan data customer dengan akun user bila akun sudah ada.
+
+#### Role Akses
+
+- `admin`, `owner`, `finance`, `superadmin`.
+
+#### Cara Pakai
+
+1. Buka menu `Modul Finance > POS Eksternal`.
+2. Isi data customer dan sumber order.
+3. Tambahkan item order sesuai jenis (`Jasa Penerbitan`, `Buku`, `Ebook`) beserta qty dan harga.
+4. Untuk item `Buku` dan `Ebook`, pilih produk existing dari dropdown deteksi otomatis (sumber: Katalog Store, Katalog Legacy, dan Naskah Selesai).
+5. Khusus `Jasa Penerbitan`, pilih paket dari master Paket Penerbitan.
+6. Isi `No Ref Jasa Terbit` dan `Ref Marketing` untuk tracking performa penjualan paket.
+7. Jika ada penyesuaian, tambahkan `Layanan Extra` dari panel order.
+8. Pilih tipe diskon (`Nominal` atau `Persen`) lalu isi nilai diskon sesuai tipe.
+9. Simpan order POS.
+10. Dari daftar order, buat invoice `Termin 1` atau `Termin 2`.
+11. Jika nominal/deskripsi perlu koreksi, gunakan fitur edit invoice.
+12. Gunakan tombol PDF untuk cetak/simpan invoice.
+13. Saat pembayaran diterima, tandai invoice menjadi `Lunas`.
+
+#### Hasil
+
+- Nilai order, sisa tagihan, invoice pending, dan invoice lunas terpantau pada satu halaman.
+- Riwayat termin per order tersimpan untuk audit keuangan.
+- Item Buku/Ebook dapat ditarik otomatis dari data produk existing untuk meminimalkan input manual.
+- Untuk order jasa penerbitan, saat Termin 1 lunas data penulis + naskah otomatis masuk ke modul Produksi Buku/Naskah.
+
+#### Catatan
+
+- Sistem membatasi 1 invoice per termin pada setiap order POS.
+- Jika invoice salah status, finance dapat mengembalikan status dari `Lunas` ke `Pending`.
+- Koneksi akun user dilakukan otomatis jika email/telepon customer cocok dengan akun yang sudah terdaftar.
+- `No Ref Jasa Terbit` dan `Ref Marketing` disimpan agar tim finance dapat menelusuri sumber penjualan paket.
+- Diskon persen dihitung dari subtotal order, sedangkan diskon nominal dianggap potongan rupiah tetap.
+
 ### 4.17 Royalty System
 
 #### Kegunaan

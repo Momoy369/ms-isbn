@@ -425,6 +425,12 @@ return [
                     'can' => 'menu-finance',
                 ],
                 [
+                    'text' => 'POS Eksternal',
+                    'route' => 'finance.pos.index',
+                    'icon' => 'fas fa-cash-register',
+                    'can' => 'menu-finance',
+                ],
+                [
                     'text' => 'Harga Cetak',
                     'route' => 'print-prices.index',
                     'icon' => 'fas fa-print',
